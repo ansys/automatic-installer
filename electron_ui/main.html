@@ -26,7 +26,7 @@
             <div class="menu">
                 <nav role="navigation" class="navigation-items w-nav-menu">
                     <a href="main.html" aria-current="page" class="navigation-item w-nav-link w--current">Downloader</a>
-                    <a href="settings.html" class="navigation-item w-nav-link">settings</a>
+                    <a href="settings.html" class="navigation-item w-nav-link">advanced settings</a>
                 </nav>
                 <div class="menu-button w-nav-button"></div>
             </div>
@@ -82,20 +82,14 @@
                         <label for="name">update time</label>
                         <input type="text" class="w-input" maxlength="256" name="name-2" data-name="Name 2" placeholder="" id="time">
                     </form>
-                    <div class="w-form-done">
-                        <div>Thank you! Your submission has been received!</div>
-                    </div>
-                    <div class="w-form-fail">
-                        <div>Oops! Something went wrong while submitting the form.</div>
-                    </div>
                 </div>
             </div>
             <div id="schedule-table"></div>
         </div>
     </div>
     <div class="w-row">
-        <div class="w-col w-col-6"><a id="interact" href="#" class="button-2 w-button">Install Once</a></div>
-        <div class="w-col w-col-6"><a id="interact" href="#" class="button-2 w-button">Schedule Update</a></div>
+        <div class="w-col w-col-6"><a id="install-once-button" href="#" class="button-2 w-button">Install Once</a></div>
+        <div class="w-col w-col-6"><a id="schedule-button" href="#" class="button-2 w-button">Schedule Update</a></div>
     </div>
     
     
@@ -103,6 +97,7 @@
     
     <script src="js/timepicker.js" type="text/javascript"></script>
     <script src="js/my_timepicker.js" type="text/javascript"></script>
+    <script src="js/communicator.js" type="text/javascript"></script>
     <div class="_jw-tpk-container _jw-tpk-dark" style="z-index: 1010; display: none;">
     <div class="_jw-tpk-header">
         <div class="_jw-tpk-hour">Hour</div>

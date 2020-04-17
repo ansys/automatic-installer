@@ -30,7 +30,7 @@ app.on('ready', () => {
             nodeIntegration: true
         },
 		height: 600,
-		width: 1000,
+		width: 2*1000,
 		resizable: false
 	});
 	ui.loadURL('file://' + __dirname + '/main.html');
