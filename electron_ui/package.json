@@ -1,0 +1,13 @@
+{
+  "name": "your-app",
+  "version": "0.1.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "date-time-picker": "^0.5.3",
+    "python-shell": "^1.0.8"
+  },
+  "type": "module"
+}
