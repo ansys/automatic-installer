@@ -1,5 +1,5 @@
 const {app, BrowserWindow, Menu} = require('electron');
-const { dialog } = require('electron');
+const {dialog} = require('electron');
 const ipc = require('electron').ipcMain;
 
 
@@ -19,13 +19,12 @@ const about_options = {
     message: 'Ansys Beta build Downloader v' + version,
     detail: 'Build date: ' + build_date + "\nCreated by: Maksim Beliaev\nEmail: maksim.beliaev@ansys.com",
   };
-  
-  
-  
+
 
 app.on('ready', () => {
 
-	var ui = new BrowserWindow({
+	var MainWindow = new BrowserWindow({
+	    show: false,  // disable show from the beginning to avoid white screen, see ready-to-show
         webPreferences: {
             nodeIntegration: true
         },
@@ -33,20 +32,25 @@ app.on('ready', () => {
 		width: 2*1000,
 		resizable: false
 	});
+	
+    MainWindow.once('ready-to-show', () => {
+        MainWindow.show()
+    })
 
+    // load main page only after we show starting logo
 	setTimeout(function(){
-        ui.loadURL('file://' + __dirname + '/main.html');
+        MainWindow.loadURL('file://' + __dirname + '/main.html');
     }, 3700);
 
-    ui.loadURL('file://' + __dirname + '/starter.html');
+    MainWindow.loadURL('file://' + __dirname + '/starter.html');
 
 
-	ui.on('closed', () => {
+	MainWindow.on('closed', () => {
   		app.quit()
 	})
 
 	const mainMenuTemplate =  [
-      // Each object is a dropdown
+      // Each object (dictionary) is a dropdown
       {
         label: 'Menu',
         submenu:[
@@ -59,7 +63,7 @@ app.on('ready', () => {
           {
             label:'Help',
             click(){
-              mainWindow.webContents.send('item:clear');
+              MainWindow.webContents.send('item:clear');
             }
           },
           {

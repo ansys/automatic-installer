@@ -22,11 +22,24 @@ $("#install-path, #download-path").click(
 window.onload = function() {
     if (fs.existsSync(settings_path)) {
         var settings_data = fs.readFileSync(settings_path);
-        settings_dict = JSON.parse(settings_data);
+        settings = JSON.parse(settings_data);
 
-        $("#install-path").val(settings_dict.install_path);
-        $("#download-path").val(settings_dict.download_path);
-        $("#delete-zip").prop("checked", settings_dict.delete_zip);
-        $("#wb-flags").val(settings_dict.wb_flags);
+        $("#install_path").val(settings.install_path);
+        $("#download_path").val(settings.download_path);
+        $("#delete_zip").prop("checked", settings.delete_zip);
+        $("#force_install").prop("checked", settings.force_install);
+        $("#wb_flags").val(settings.wb_flags);
     }
 }
+
+$("#install-path, #download-path, #password, #force_install, #delete_zip, #wb_flags").change(function(){
+  if (this.id == "force_install" || this.id == "delete_zip"){
+    settings[this.id] = this.checked;
+  } else {
+    settings[this.id] = this.value;
+  }
+
+  let data = JSON.stringify(settings, null, 4);
+  fs.writeFileSync(settings_path, data);
+
+});
