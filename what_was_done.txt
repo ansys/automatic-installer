@@ -1,0 +1,11 @@
+1. To download and install electron ( OS X or Linux ) you have to download it from npm-electron using :
+npm install electron --save-dev
+npm install -g electron
+
+2. npm install python-shell
+
+3. modified python-shell to make it run exe files, also I use a trick that I say path to python is my compile python_code.exe
+and my script is null, then I commented lines in python-shell where check for script length occured
+
+4. to run electron use in win shell:
+electron .

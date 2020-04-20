@@ -2,6 +2,14 @@ var path = require('path');
 const ipc = require('electron').ipcRenderer;
 let {PythonShell} = require('python-shell');
 
+//options to run when compiled to exe
+//let options = {
+//  mode: 'text',
+//  pythonPath: "dist/pythonExample/pythonExample.exe"
+//};
+//
+//pyshell = new PythonShell(' ', options);
+
 pyshell = new PythonShell('pythonExample.py');
 pyshell.on('message', function (message) {
           // received a message sent from the Python script (a simple "print" statement)

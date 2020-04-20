@@ -37,17 +37,15 @@
         <div class="w-col w-col-6">
             <div class="w-form">
                 <form id="wf-form-Email-Form" name="wf-form-Email-Form" data-name="Email Form">
-                    <label for="email-3">Artifactory</label>
-                    <select id="field" name="field" class="select-field w-select">
-                        <option value="" selected="selected">Select one...</option>
-                        <option value="First">First Choice</option>
-                        <option value="Second">Second Choice</option>
-                        <option value="Third">Third Choice</option>
-                    </select>
-                    <label for="email">username</label>
-                    <input type="email" class="text-field-2 w-input" maxlength="256" name="email" data-name="Email" placeholder="" id="email" required="">
-                    <label for="password_field">artifactory encrypted password</label>
-                    <input type="password" class="text-field-3 w-input" maxlength="256" name="password_field" data-name="password_field" id="password_field" required="">
+                    <label for="artifactory">Artifactory</label>
+                    <select class="select-field w-select" id="artifactory"></select>
+
+                    <label for="username">username</label>
+                    <input type="text" class="text-field-2 w-input" maxlength="256" placeholder="" id="username" required="">
+
+                    <label for="password">artifactory encrypted password</label>
+                    <input type="password" class="text-field-3 w-input" maxlength="256" name="password" data-name="password" id="password" required="">
+
                     <label for="email-3">Version and product</label>
                     <select id="field-2" name="field-2" data-name="Field 2" class="select-field-2 w-select">
                         <option value="" selected="selected">Select one...</option>
@@ -61,25 +59,39 @@
         <div class="w-col w-col-6">
             <div>
                 <div class="w-form">
-                    <form id="email-form" name="email-form" data-name="Email Form">
-                        <label for="name-2">update days</label>
+                    <form>
+                        <label>update days</label>
                         <div class="w-layout-grid grid">
                             <label class="w-checkbox">
-                                <input type="checkbox" id="checkbox-2" name="checkbox-2" data-name="Checkbox 2" class="w-checkbox-input"><span class="w-form-label">Mo</span></label>
+                                <input type="checkbox" id="mo-checkbox" name="checkbox-2" data-name="Checkbox 2" class="days-checkbox"><span class="w-form-label">mo</span>
+                            </label>
+
                             <label id="w-node-6337aa21f6aa-cefa8fca" class="w-checkbox">
-                                <input type="checkbox" id="checkbox-3" name="checkbox-3" data-name="Checkbox 3" class="w-checkbox-input"><span class="w-form-label">Tu</span></label>
+                                <input type="checkbox" id="tu-checkbox" name="checkbox-3" data-name="Checkbox 3" class="days-checkbox"><span class="w-form-label">tu</span>
+                            </label>
+
                             <label class="w-checkbox">
-                                <input type="checkbox" id="checkbox-4" name="checkbox-4" data-name="Checkbox 4" class="w-checkbox-input"><span class="w-form-label">we</span></label>
+                                <input type="checkbox" id="we-checkbox" name="checkbox-4" data-name="Checkbox 4" class="days-checkbox"><span class="w-form-label">we</span>
+                            </label>
+
                             <label id="w-node-0e1ca3779406-cefa8fca" class="w-checkbox">
-                                <input type="checkbox" id="checkbox-5" name="checkbox-5" data-name="Checkbox 5" class="w-checkbox-input"><span class="w-form-label">th</span></label>
+                                <input type="checkbox" id="th-checkbox" name="checkbox-5" data-name="Checkbox 5" class="days-checkbox"><span class="w-form-label">th</span>
+                            </label>
+
                             <label id="w-node-4c83d058a673-cefa8fca" class="w-checkbox">
-                                <input type="checkbox" id="checkbox-6" name="checkbox-6" data-name="Checkbox 6" class="w-checkbox-input"><span class="w-form-label">fr</span></label>
+                                <input type="checkbox" id="fr-checkbox" name="checkbox-6" data-name="Checkbox 6" class="days-checkbox"><span class="w-form-label">fr</span>
+                            </label>
+
                             <label class="w-checkbox">
-                                <input type="checkbox" id="checkbox-7" name="checkbox-7" data-name="Checkbox 7" class="w-checkbox-input"><span class="w-form-label">sa</span></label>
+                                <input type="checkbox" id="sa-checkbox" name="checkbox-7" data-name="Checkbox 7" class="days-checkbox"><span class="w-form-label">sa</span>
+                            </label>
+
                             <label class="w-checkbox">
-                                <input type="checkbox" id="checkbox-8" name="checkbox-8" data-name="Checkbox 8" class="w-checkbox-input"><span class="w-form-label">su</span></label>
+                                <input type="checkbox" id="su-checkbox" name="checkbox-8" data-name="Checkbox 8" class="days-checkbox"><span class="w-form-label">su</span>
+                            </label>
                         </div>
-                        <label for="name">update time</label>
+
+                        <label for="time">update time</label>
                         <input type="text" class="w-input" maxlength="256" name="name-2" data-name="Name 2" placeholder="" id="time">
                     </form>
                 </div>
@@ -94,10 +106,15 @@
     
     
     <script src="js/jquery-3.js" type="text/javascript" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="js/jquery-3.5.0.min.js" type="text/javascript"></script>
+
     
     <script src="js/timepicker.js" type="text/javascript"></script>
     <script src="js/my_timepicker.js" type="text/javascript"></script>
     <script src="js/communicator.js" type="text/javascript"></script>
+    <script src="js/init_main.js" type="text/javascript"></script>
+
+
     <div class="_jw-tpk-container _jw-tpk-dark" style="z-index: 1010; display: none;">
     <div class="_jw-tpk-header">
         <div class="_jw-tpk-hour">Hour</div>
