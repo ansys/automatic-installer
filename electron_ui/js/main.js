@@ -64,25 +64,36 @@ function set_selector(id, dict, default_item="") {
     }
 }
 
-$("#artifactory, #username, #password, #time, .days-checkbox").change(function(){
-
+var save_settings = function() {
     const all_checkboxes = ["mo-checkbox", "tu-checkbox", "we-checkbox", "th-checkbox", "fr-checkbox",
-  "sa-checkbox", "su-checkbox"];
+      "sa-checkbox", "su-checkbox"];
 
-  if (all_checkboxes.includes(this.id)) {
-    var new_days = [];
-    for (var i in all_checkboxes) {
-        checkbox = $("#" + all_checkboxes[i])[0];
-        if (checkbox.checked == true) {
-            new_days.push(all_checkboxes[i].slice(0, 2));
+      if (all_checkboxes.includes(this.id)) {
+        var new_days = [];
+        for (var i in all_checkboxes) {
+            checkbox = $("#" + all_checkboxes[i])[0];
+            if (checkbox.checked == true) {
+                new_days.push(all_checkboxes[i].slice(0, 2));
+            }
         }
-    }
-    settings.days = new_days;
-  } else {
-    settings[this.id] = this.value;
-  }
+        settings.days = new_days;
+      } else {
+        settings[this.id] = this.value;
+      }
 
-  let data = JSON.stringify(settings, null, 4);
-  fs.writeFileSync(settings_path, data);
+      let data = JSON.stringify(settings, null, 4);
+      fs.writeFileSync(settings_path, data);
+}
 
+var timepicker = new TimePicker('time', {
+  lang: 'en',
+  theme: 'dark'
 });
+
+timepicker.on('change', function(evt) {
+  var value = (evt.hour || '00') + ':' + (evt.minute || '00');
+  evt.element.value = value;
+  save_settings.call(evt.element);
+});
+
+$("#artifactory, #username, #password, .days-checkbox").bind("change", save_settings);
