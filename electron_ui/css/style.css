@@ -24,6 +24,14 @@
   grid-column-gap: 16px;
 }
 
+#starter-logo {
+    position: absolute;
+    opacity: 0;
+    top: 50%;
+    left: 50%;
+    margin: -100px 0 0 -50px;
+}
+
 .w-checkbox {
   display: block;
   margin-bottom: 5px;
@@ -93,7 +101,7 @@
   border-bottom-color: #3898ec;
   border-left-color: #3898ec;
   border-right-color: #3898ec;
-  background-image: url(https://d3e54v103j8qbb.cloudfront.net/static/custom-checkbox-checkmark.589d534424.svg);
+  background-image: url("../images/background.png");
   background-position: 50% 50%;
   background-size: cover;
   background-repeat: no-repeat;
@@ -663,7 +671,7 @@ figcaption {
   -ms-flex-align: center;
   align-items: center;
   background-color: #f4f4f4;
-  background-image: url("https://uploads-ssl.webflow.com/5e98cf24fe11de5975fc7d7a/5e98cf240d80dc2fb7fa8ff5_portfolio%202%20-%20wide.svg");
+  background-image: url();
   background-position: 0px 0px;
   background-size: cover;
   color: #fff;
@@ -1017,14 +1025,14 @@ figcaption {
   -ms-flex-align: center;
   align-items: center;
   background-color: #f4f4f4;
-  background-image: url("https://uploads-ssl.webflow.com/5e98cf24fe11de5975fc7d7a/5e98cf240d80dcece9fa8ffa_portfolio%201%20-%20wide.svg");
+  background-image: url();
   background-position: 50% 50%;
   background-size: cover;
   color: #fff;
 }
 
 .project-overview-header.cc-project-2-header {
-  background-image: url("https://uploads-ssl.webflow.com/5e98cf24fe11de5975fc7d7a/5e98cf240d80dc2fb7fa8ff5_portfolio%202%20-%20wide.svg");
+  background-image: url();
   background-position: 50% 50%;
 }
 
@@ -1063,7 +1071,7 @@ figcaption {
   width: 100%;
   height: 620px;
   margin-bottom: 60px;
-  background-image: url("https://d3e54v103j8qbb.cloudfront.net/img/example-bg.png");
+  background-image: url();
   background-position: 0px 0px;
   background-size: cover;
 }
@@ -1098,7 +1106,7 @@ figcaption {
   width: 100%;
   height: 620px;
   margin-bottom: 45px;
-  background-image: url("https://d3e54v103j8qbb.cloudfront.net/img/example-bg.png");
+  background-image: url();
   background-position: 0px 0px;
   background-size: cover;
   -webkit-transition: opacity 600ms ease;
@@ -1335,7 +1343,7 @@ figcaption {
 }
 
 .body {
-  background-image: url("https://uploads-ssl.webflow.com/5e98cf24fe11de5975fc7d7a/5e98d3aa21e59615f991be36_Picture1.png");
+  background-image: url("../images/background.png");
   background-position: 0px 0px;
   background-size: 125px;
   color: #9b9eab;
@@ -1377,7 +1385,7 @@ figcaption {
 }
 
 .body-2 {
-  background-image: url("https://uploads-ssl.webflow.com/5e98cf24fe11de5975fc7d7a/5e98d3aa21e59615f991be36_Picture1.png");
+  background-image: url("../images/background.png");
   background-position: 0px 0px;
   background-size: 125px;
 }
