@@ -204,7 +204,7 @@ class MainWindow(Ansys_Beta_Downloader_UI):
         self.download_path_textbox.Value = setting_dict["download_path"]
         self.version_dropmenu.Value = setting_dict["version"]
         self.wb_flags_text.Value = setting_dict["wb_flags"]
-        self.time_picker.Value = datetime.strptime(setting_dict["time"], '%H:%M:%S')
+        self.time_picker.Value = datetime.strptime(setting_dict["time"], '%H:%M')
 
         for day in setting_dict["days"]:
             self.days_checkboxes[day].Value = True

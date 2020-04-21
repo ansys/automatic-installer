@@ -45,6 +45,8 @@ window.onload = function() {
     }
 
     set_selector("artifactory", artifactory_dict, default_artfactory);
+
+    pyshell.send('get_active_tasks');
 }
 
 function set_selector(id, dict, default_item="") {

@@ -32,6 +32,74 @@
     margin: -100px 0 0 -50px;
 }
 
+/* schedule table */
+#schedule-table-div {
+    max-height: 162.857px;
+    overflow-y: auto;
+}
+
+.table-label {
+    margin-top: 20px;
+}
+
+.tg {
+    border-collapse: collapse;
+    border-spacing: 0;
+    border-color: #93a1a1;
+    width: 100%
+}
+
+#schedule-column {
+    width: 45%;
+}
+
+.product-column, .version-column {
+    width: 25%;
+}
+
+/* all table rows */
+.tg td {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    padding: 1.5px 5px;
+    border-style: solid;
+    border-width: 1px;
+    overflow: hidden;
+    word-break: normal;
+    border-color: #93a1a1;
+    color: #002b36;
+    background-color: #fdf6e3;
+    height: 30.86px;
+}
+
+.tg th {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    font-weight: normal;
+    padding: 3px 5px;
+    border-style: solid;
+    border-width: 1px;
+    overflow: hidden;
+    word-break: normal;
+    border-color: #93a1a1;
+    color: #fdf6e3;
+    background-color: #657b83;
+}
+
+.tg .tg-baqh {
+    text-align: center;
+    vertical-align: top;
+}
+/* header row */
+.tg .tg-4wcp {
+    background-color: #ffb71b;
+    color: #002b36;
+    text-align: center;
+    vertical-align: top;
+    max-height: 25px;
+}
+/* end of schedule table */
+
 .w-checkbox {
   display: block;
   margin-bottom: 5px;

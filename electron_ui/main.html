@@ -5,7 +5,6 @@
     <link href="css/style.css" rel="stylesheet" type="text/css">
     <link href="css/timepicker.css" rel="stylesheet">
 </head>
-
 <body class="body">
     <div data-collapse="medium" data-animation="default" data-duration="400" class="navigation w-nav">
         <div class="navigation-wrap">
@@ -88,7 +87,17 @@
                     </form>
                 </div>
             </div>
-            <div id="schedule-table"></div>
+
+            <label for="schedule-table-div" class="table-label">timetable</label>
+            <div id="schedule-table-div">
+                <table id="schedule-table" class="tg">
+                  <tr>
+                    <th class="tg-4wcp product-column">Product</th>
+                    <th class="tg-4wcp version-column">Version</th>
+                    <th class="tg-4wcp schedule-column">Schedule</th>
+                  </tr>
+                </table>
+            </div>
         </div>
     </div>
     <div class="w-row">
@@ -104,7 +113,6 @@
     <script src="js/jquery-3.5.0.min.js" type="text/javascript"></script>
 
     <script src="js/timepicker.js" type="text/javascript"></script>
-    <script src="js/my_timepicker.js" type="text/javascript"></script>
     <script src="js/communicator.js" type="text/javascript"></script>
     <script src="js/main.js" type="text/javascript"></script>
 
