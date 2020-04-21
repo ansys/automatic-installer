@@ -5,7 +5,7 @@ let {PythonShell} = require('python-shell');
 //options to run when compiled to exe
 //let options = {
 //  mode: 'text',
-//  pythonPath: "dist/pythonExample/pythonExample.exe"
+//  pythonPath: "resources/app/python_build/electron_backend.exe"
 //};
 //
 //pyshell = new PythonShell(' ', options);
@@ -44,7 +44,6 @@ function add_task_rows(tasks_list) {
         cell_schedule.classList.add("schedule-column");
     }
 
-    console.log(tasks_list.length);
     if (tasks_list.length < 3) {
         for (i = 0; i < 3 - tasks_list.length; i++) {
             var row = table.insertRow(-1); // at the end

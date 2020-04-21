@@ -5,12 +5,13 @@ const { dialog } = require('electron').remote;
 
 settings_path = os_path.join(process.env.APPDATA, "build_downloader", "default_settings.json");
 
-$("#install-path, #download-path").click(
+$("#install_path, #download_path").click(
     function(){
         dialog.showOpenDialog(remote.getCurrentWindow(), {properties: [ 'openDirectory' ] }).then(
             result => {
                 if (result.canceled == false) {
-                    $(`#${this.id}`).val(result.filePaths);
+                    this.value = result.filePaths;
+                    save_settings.call(this);
                 }
             }).catch(err => {
                   console.log(err)
@@ -32,7 +33,9 @@ window.onload = function() {
     }
 }
 
-$("#install-path, #download-path, #password, #force_install, #delete_zip, #wb_flags").change(function(){
+$("#install_path, #download_path, #password, #force_install, #delete_zip, #wb_flags").bind("change", save_settings);
+
+var save_settings = function(){
   if (this.id == "force_install" || this.id == "delete_zip"){
     settings[this.id] = this.checked;
   } else {
@@ -42,4 +45,4 @@ $("#install-path, #download-path, #password, #force_install, #delete_zip, #wb_fl
   let data = JSON.stringify(settings, null, 4);
   fs.writeFileSync(settings_path, data);
 
-});
+};

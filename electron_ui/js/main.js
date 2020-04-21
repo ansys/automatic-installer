@@ -21,32 +21,75 @@ artifactory_dict = {
     'Waterloo': 'http://watatsrv01.ansys.com:8080/artifactory'
 };
 
-settings_path = os_path.join(process.env.APPDATA, "build_downloader", "default_settings.json");
+app_folder = os_path.join(process.env.APPDATA, "build_downloader")
+settings_path = os_path.join(app_folder, "default_settings.json");
 all_days = ["mo", "tu", "we", "th", "fr", "sa", "su"]
 
 window.onload = function() {
 
-    var default_artfactory = "Otterfing";
-
-    if (fs.existsSync(settings_path)) {
-        var settings_data = fs.readFileSync(settings_path);
-        settings = JSON.parse(settings_data);
-
-        default_artfactory = settings.artifactory;
-        $("#username").val(settings.username);
-        $("#password").val(settings.password);
-
-
-        for (var i in all_days) {
-            $(`#${all_days[i]}-checkbox`).prop("checked", settings.days.includes(all_days[i]));
+    if (!fs.existsSync(settings_path)) {
+        settings = {
+            "username": process.env.USERNAME,
+            "install_path": get_previous_edt_path(),
+            "artifactory": "Otterfing",
+            "password": "",
+            "delete_zip": true,
+            "download_path": process.env.TEMP,
+            "version": "",
+            "wb_flags": "",
+            "days": [
+                "sa"
+            ],
+            "time": "01:30",
+            "force_install": false
         }
 
-        $("#time").val(settings.time);
+        if (!fs.existsSync(app_folder)) fs.mkdirSync(app_folder);
+        let data = JSON.stringify(settings, null, 4);
+        fs.writeFileSync(settings_path, data);
+    } else {
+        var settings_data = fs.readFileSync(settings_path);
+        settings = JSON.parse(settings_data);
     }
 
-    set_selector("artifactory", artifactory_dict, default_artfactory);
+    $("#username").val(settings.username);
+    $("#password").val(settings.password);
+
+
+    for (var i in all_days) {
+        $(`#${all_days[i]}-checkbox`).prop("checked", settings.days.includes(all_days[i]));
+    }
+
+    $("#time").val(settings.time);
+
+
+    set_selector("artifactory", artifactory_dict, settings.artifactory);
 
     pyshell.send('get_active_tasks');
+}
+
+window.onbeforeunload = function(){
+    pyshell.send('exit');
+    pyshell.end(function (err,code,signal) {
+        if (err) throw err;
+        console.log('The exit code was: ' + code);
+        console.log('The exit signal was: ' + signal);
+        console.log('finished');
+    });
+}
+
+function get_previous_edt_path() {
+    all_vars = Object.keys(process.env);
+    var env_var = ""
+    for (var i in all_vars){
+        if (all_vars[i].includes("ANSYSEM")) env_var = process.env[all_vars[i]];
+    }
+
+    if (!env_var){
+        return "C:\\Program Files";
+    } else {
+        return path.dirname(path.dirname(path.dirname(env_var)));
+    }
 }
 
 function set_selector(id, dict, default_item="") {
