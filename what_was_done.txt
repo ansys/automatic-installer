@@ -22,3 +22,6 @@ d. D:\build_env\Scripts\pyinstaller.exe electron_backend.py --distpath python_bu
 
 7. package app
 electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite
+
+8. to send requests from JS
+npm install axios

@@ -1,5 +1,6 @@
 var os_path = require('path');
 var fs = require('fs');
+var axios = require('axios');
 
 artifactory_dict = {
     'Austin': 'http://ausatsrv01.ansys.com:8080/artifactory',
@@ -142,3 +143,47 @@ timepicker.on('change', function(evt) {
 });
 
 $("#artifactory, #username, #password, .days-checkbox").bind("change", save_settings);
+
+$("#version").on("click", function(){
+
+    if (!settings.username) {
+        error_tooltip.call($('#username'), "Provide your Ansys User ID");
+        return;
+    }
+
+    if (!settings.password) {
+        error_tooltip.call($('#password'), "Provide Artifactory unique password");
+        return;
+    }
+
+    axios.get(artifactory_dict[settings.artifactory] + '/api/repositories', {
+      auth: {
+        username: settings.username,
+        password: settings.password
+      }
+    })
+      .then((response) => {
+        console.log(response.data);
+        console.log(response.status);
+        console.log(response.statusText);
+        console.log(response.headers);
+        console.log(response.config);
+      });
+})
+
+var error_tooltip = function(prop_title) {
+    this.tooltip('destroy');
+    setTimeout(() => {this.tooltip({
+                                title: prop_title,
+                                placement: 'bottom'
+                             }).tooltip('show');
+
+    }, 150);
+    this.attr('style', "border:#FF0000 2px solid;");
+
+    setTimeout(() => {
+        this.tooltip('destroy');
+        this.attr('style', "border:#cccccc 1px solid;");
+
+    }, 3500);
+}
