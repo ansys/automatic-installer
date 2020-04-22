@@ -14,7 +14,7 @@
 .tooltip-inner {
     background-color: #f00;
 }
-.tooltip-arrow {
+.tooltip.bottom .tooltip-arrow {
     border-bottom-color: #f00;
 }
 
