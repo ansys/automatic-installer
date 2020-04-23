@@ -64,9 +64,10 @@ window.onload = function() {
     $("#time").val(settings.time);
 
 
-    set_selector("artifactory", artifactory_dict, settings.artifactory);
+    set_selector("artifactory", Object.keys(artifactory_dict), settings.artifactory);
 
     pyshell.send('get_active_tasks');
+    request_builds();
 }
 
 window.onbeforeunload = function(){
@@ -93,24 +94,23 @@ function get_previous_edt_path() {
     }
 }
 
-function set_selector(id, dict, default_item="") {
+function set_selector(id, obj_list, default_item="") {
     var selector = document.getElementById(id);
+    $("#" + id).empty();
 
-    for (var key in dict) {
-        if(artifactory_dict.hasOwnProperty(key)) {
-            option = document.createElement("option");
-            option.textContent = key;
-            option.value = key;
-            selector.add(option);
-        }
+    for (var i in obj_list) {
+        option = document.createElement("option");
+        option.textContent = obj_list[i];
+        option.value = obj_list[i];
+        selector.add(option);
     }
 
-    if(dict.hasOwnProperty(default_item)) {
+    if(obj_list.includes(default_item)) {
         selector.value = default_item;
     }
 }
 
-var save_settings = function() {
+var save_settings = function () {
     const all_checkboxes = ["mo-checkbox", "tu-checkbox", "we-checkbox", "th-checkbox", "fr-checkbox",
       "sa-checkbox", "su-checkbox"];
 
@@ -142,10 +142,7 @@ timepicker.on('change', function(evt) {
   save_settings.call(evt.element);
 });
 
-$("#artifactory, #username, #password, .days-checkbox").bind("change", save_settings);
-
-$("#version").on("click", function(){
-
+var request_builds = function (){
     if (!settings.username) {
         error_tooltip.call($('#username'), "Provide your Ansys User ID");
         return;
@@ -160,16 +157,28 @@ $("#version").on("click", function(){
       auth: {
         username: settings.username,
         password: settings.password
-      }
+      },
+      timeout: 5000
     })
       .then((response) => {
-        console.log(response.data);
         console.log(response.status);
-        console.log(response.statusText);
-        console.log(response.headers);
-        console.log(response.config);
+         if (response.status == 200) {
+            get_builds(response.data);
+         }
+      })
+      .catch((err) => {
+        if (!err.response) {
+            error_tooltip.call($('#artifactory'), "Check that you are on VPN");
+        } else if (err.code === 'ECONNABORTED'){
+            error_tooltip.call($('#username'), "Timeout on connection, check Ansys User ID");
+            error_tooltip.call($('#password'), "Timeout on connection, check Artifactory unique password");
+        } else if (err.response.status == 401){
+            error_tooltip.call($('#username'), "Bad credentials, check Ansys User ID");
+            error_tooltip.call($('#password'), "Bad credentials, check Artifactory unique password");
+         }
       });
-})
+}
+
 
 var error_tooltip = function(prop_title) {
     this.tooltip('destroy');
@@ -187,3 +196,33 @@ var error_tooltip = function(prop_title) {
 
     }, 3500);
 }
+
+function get_builds(artifacts_list){
+
+    let version_list = [];
+    for (var i  in artifacts_list) {
+        repo = artifacts_list[i]["key"];
+        if (repo.includes("EBU_Certified")){
+            var version = repo.split("_")[0] + "_EDT"
+            if (!version_list.includes(version)) {
+                version_list.push(version);
+            }
+        } else if (repo.includes("Certified") &&
+                   !repo.includes("Licensing") &&
+                   !repo.includes("TEST")){
+            var version = repo.split("_")[0] + "_WB";
+            if (!version_list.includes(version)) {
+                version_list.push(version);
+            }
+        }
+    }
+    version_list.sort(function (a, b) {
+        if (a.slice(1, 6) > b.slice(1, 6)) {return -1;}
+        else if (b.slice(1, 6) > a.slice(1, 6)) {return 1;}
+        return 0;
+    });
+    set_selector("version", version_list);
+}
+
+$("#artifactory, #username, #password, .days-checkbox").bind("change", save_settings);
+$("#artifactory").bind("change", request_builds);
