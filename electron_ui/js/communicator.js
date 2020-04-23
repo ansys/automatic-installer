@@ -1,5 +1,6 @@
 var path = require('path');
-const ipc = require('electron').ipcRenderer;
+const {remote} = require('electron');
+const {dialog} = require('electron').remote;
 let {PythonShell} = require('python-shell');
 
 //options to run when compiled to exe
@@ -24,10 +25,12 @@ pyshell.on('message', function (message) {
         });
 
 function add_task_rows(tasks_list) {
-    var table = document.getElementById("schedule-table");
+    var table_container = document.getElementById("schedule-table");
+    var table = table_container.getElementsByTagName("tbody")[0];
+    $('#schedule-table tbody').empty();
 
     for (var i in tasks_list) {
-        var row = table.insertRow(1); // after header
+        var row = table.insertRow(0); // after header
         var cell_product = row.insertCell(0);
         cell_product.innerHTML = tasks_list[i].product;
         cell_product.classList.add("tg-baqh");
@@ -42,6 +45,28 @@ function add_task_rows(tasks_list) {
         cell_schedule.innerHTML = tasks_list[i].schedule_time;
         cell_schedule.classList.add("tg-baqh");
         cell_schedule.classList.add("schedule-column");
+
+        var createClickHandler = function(selected_row) {
+                return function() {
+                                        product = selected_row.getElementsByTagName("td")[0].innerHTML;
+                                        version = selected_row.getElementsByTagName("td")[1].innerHTML;
+                                        answer = dialog.showMessageBoxSync(remote.getCurrentWindow(), {
+                                                type: "question",
+                                                buttons: ["Yes", "No"],
+                                                message: "Do you want to delete scheduled task " + product +
+                                                           " "+ version + "?"
+                                            }
+                                        )
+
+                                        if (answer == 0) {
+                                            pyshell.send('delete_task ' + product  + "_" + version);
+                                            pyshell.send('get_active_tasks');
+                                        }
+
+                                 };
+        };
+
+        row.onclick = createClickHandler(row);
     }
 
     if (tasks_list.length < 3) {

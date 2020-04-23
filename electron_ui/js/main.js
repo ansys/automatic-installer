@@ -3,7 +3,6 @@ var fs = require('fs');
 var axios = require('axios');
 
 // todo on click install once/schedule make just copy of default settings
-// todo allow delete when double click on table row
 // todo add HPC options to advanced settings
 // todo add tooltips
 // todo add show installation history and paths to the configuration used for this
@@ -11,6 +10,7 @@ var axios = require('axios');
 // todo make documentation in .md file
 // todo exclude python source from electron compiled build
 // todo check that after installer we do not have issues with bit9
+// todo modify task if the same version is scheduled
 
 artifactory_dict = {
     'Austin': 'http://ausatsrv01.ansys.com:8080/artifactory',

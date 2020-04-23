@@ -60,6 +60,11 @@ def get_active_schtasks():
     print(f"active_tasks {ansys_tasks}", flush=True)
 
 
+def delete_task(task):
+    command = fr'schtasks /DELETE /TN "AnsysDownloader\{task}" /f'  # /f - silent
+    subprocess.check_output(command, shell=True).decode("ascii", errors="ignore")
+
+
 def start():
     print('I STARTED and asked to install FROM WITHIN NODE.JS', flush=True)
     with open(r"D:\1.txt", "w") as file:
@@ -83,6 +88,9 @@ while True:
     line = sys.stdin.readline()
     if "get_active_tasks" in line:
         get_active_schtasks()
+    elif "delete_task" in line:
+        task = line.split()[1]
+        delete_task(task)
 
     elif "exit" in line:
         stop_run()
@@ -91,4 +99,4 @@ while True:
     elif "install_once" in line:
         start()
     elif line:
-        print('dunno')
+        print('unrecognized command', flush=True)
