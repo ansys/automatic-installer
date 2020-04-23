@@ -86,8 +86,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.getElementById("install-once-button").addEventListener("click", launchPython);
   document.getElementById("schedule-button").addEventListener("click", launchPython);
-  // document.getElementById("exit").addEventListener("click", launchPython);
-
-  // document.getElementById("json").addEventListener("click", jsonForSettingsUse);
 
 })

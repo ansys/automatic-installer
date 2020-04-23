@@ -2,6 +2,16 @@ var os_path = require('path');
 var fs = require('fs');
 var axios = require('axios');
 
+// todo on click install once/schedule make just copy of default settings
+// todo allow delete when double click on table row
+// todo add HPC options to advanced settings
+// todo add tooltips
+// todo add show installation history and paths to the configuration used for this
+// todo add docstrings to functions
+// todo make documentation in .md file
+// todo exclude python source from electron compiled build
+// todo check that after installer we do not have issues with bit9
+
 artifactory_dict = {
     'Austin': 'http://ausatsrv01.ansys.com:8080/artifactory',
     'Boulder': 'http://bouatsrv01:8080/artifactory',
@@ -33,7 +43,7 @@ window.onload = function() {
             "username": process.env.USERNAME,
             "install_path": get_previous_edt_path(),
             "artifactory": "Otterfing",
-            "password": "",
+            "password": {"Otterfing": ""},
             "delete_zip": true,
             "download_path": process.env.TEMP,
             "version": "",
@@ -54,7 +64,7 @@ window.onload = function() {
     }
 
     $("#username").val(settings.username);
-    $("#password").val(settings.password);
+    change_pass()  // set password
 
 
     for (var i in all_days) {
@@ -123,6 +133,8 @@ var save_settings = function () {
             }
         }
         settings.days = new_days;
+      } else if (this.id === "password"){
+        settings.password[settings.artifactory] = this.value;
       } else {
         settings[this.id] = this.value;
       }
@@ -145,30 +157,32 @@ timepicker.on('change', function(evt) {
 var request_builds = function (){
     if (!settings.username) {
         error_tooltip.call($('#username'), "Provide your Ansys User ID");
+        $("#version").empty();
         return;
     }
 
-    if (!settings.password) {
+    if (!settings.password[settings.artifactory]) {
         error_tooltip.call($('#password'), "Provide Artifactory unique password");
+        $("#version").empty();
         return;
     }
 
     axios.get(artifactory_dict[settings.artifactory] + '/api/repositories', {
       auth: {
         username: settings.username,
-        password: settings.password
+        password: settings.password[settings.artifactory]
       },
-      timeout: 5000
+      timeout: 20000
     })
       .then((response) => {
-        console.log(response.status);
          if (response.status == 200) {
             get_builds(response.data);
          }
       })
       .catch((err) => {
-        if (!err.response) {
-            error_tooltip.call($('#artifactory'), "Check that you are on VPN");
+        $("#version").empty();
+        if (!err.response && !err.code) {
+            error_tooltip.call($('#artifactory'), "Check that you are on VPN and retry in 10s (F5)");
         } else if (err.code === 'ECONNABORTED'){
             error_tooltip.call($('#username'), "Timeout on connection, check Ansys User ID");
             error_tooltip.call($('#password'), "Timeout on connection, check Artifactory unique password");
@@ -224,5 +238,11 @@ function get_builds(artifacts_list){
     set_selector("version", version_list);
 }
 
+var change_pass = function (){
+    password = (settings.password.hasOwnProperty(settings.artifactory)) ? settings.password[settings.artifactory] : "";
+    $("#password").val(password);
+}
+
 $("#artifactory, #username, #password, .days-checkbox").bind("change", save_settings);
-$("#artifactory").bind("change", request_builds);
+$("#artifactory").bind("change", change_pass);
+$("#artifactory, #username, #password").bind("change", request_builds);

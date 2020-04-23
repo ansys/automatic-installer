@@ -4,7 +4,7 @@ const ipc = require('electron').ipcMain;
 
 
 const version = "0.1";
-const build_date = "02 May 2020";
+const build_date = "28 April 2020";
 
 
 app.on('window-all-closed', () => {
@@ -16,7 +16,7 @@ const about_options = {
     buttons: ['OK'],
     defaultId: 2,
     title: 'About',
-    message: 'Ansys Beta build Downloader v' + version,
+    message: 'Ansys Beta Build Downloader v' + version,
     detail: 'Build date: ' + build_date + "\nCreated by: Maksim Beliaev\nEmail: maksim.beliaev@ansys.com",
   };
 
@@ -55,6 +55,18 @@ app.on('ready', () => {
         label: 'Menu',
         submenu:[
           {
+            label:'Refresh Page',
+            accelerator:process.platform == 'darwin' ? 'Command+R' : 'F5',
+            click(){
+              MainWindow.reload();
+            }
+          },
+          {
+            label:'Developer Tools',
+            accelerator:process.platform == 'darwin' ? 'Command+R' : 'Ctrl+Shift+I',
+            role: "toggleDevTools"
+          },
+          {
             label:'About',
             click(){
               dialog.showMessageBox(null, about_options);
@@ -68,7 +80,7 @@ app.on('ready', () => {
           },
           {
             label: 'Quit',
-            accelerator:process.platform == 'darwin' ? 'Command+Q' : 'Ctrl+Q',
+            accelerator: "CmdOrCtrl+Q",
             click(){
               app.quit();
             }
@@ -78,6 +90,6 @@ app.on('ready', () => {
     ];
     
     const mainMenu = Menu.buildFromTemplate(mainMenuTemplate);
-    // Menu.setApplicationMenu(mainMenu);
+     Menu.setApplicationMenu(mainMenu);
 
 });
