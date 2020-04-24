@@ -9,5 +9,9 @@
     "axios": "^0.19.2",
     "python-shell": "^1.0.8"
   },
-  "type": "module"
+  "build": {
+    "files":
+      "!electron_backend.py"
+    
+  }
 }

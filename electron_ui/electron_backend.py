@@ -5,10 +5,10 @@ import xml.etree.ElementTree as ET
 
 
 # FUNCTIONS
-def get_task_details(task):
+def get_task_details(task_name):
     """
     Function that extracts parameters of individual task
-    :param task: XML string contained all data about the task
+    :param task_name: XML string contained all data about the task
     :return task_data_dict = {"days": [],
                               "time": "00:00",
                               "product": "EDT",
@@ -20,9 +20,9 @@ def get_task_details(task):
                       "product": "EDT",
                       "version": "v201"}
 
-    task = "\n".join(task.replace("\r\n", "").split("\r")[1:])  # remove empty lines
+    task_name = "\n".join(task_name.replace("\r\n", "").split("\r")[1:])  # remove empty lines
 
-    schtasks = ET.fromstring(task)
+    schtasks = ET.fromstring(task_name)
     ns = {"win": re.search("{(.*)}Task", schtasks.tag).group(1)}  # name space
 
     calendar_trig = schtasks.find("win:Triggers/win:CalendarTrigger", ns)
@@ -51,17 +51,17 @@ def get_active_schtasks():
     all_tasks = all_tasks.split("\r\n\r\n\r\n")
 
     ansys_tasks = []
-    for task in all_tasks:
-        if "AnsysDownloader" in task:
-            task_data_dict = get_task_details(task)
+    for task_name in all_tasks:
+        if "AnsysDownloader" in task_name:
+            task_data_dict = get_task_details(task_name)
             task_data_dict["schedule_time"] = ", ".join(task_data_dict["days"]) + " at " + task_data_dict["time"]
             ansys_tasks.append(task_data_dict)
 
     print(f"active_tasks {ansys_tasks}", flush=True)
 
 
-def delete_task(task):
-    command = fr'schtasks /DELETE /TN "AnsysDownloader\{task}" /f'  # /f - silent
+def delete_task(task_name):
+    command = fr'schtasks /DELETE /TN "AnsysDownloader\{task_name}" /f'  # /f - silent
     subprocess.check_output(command, shell=True).decode("ascii", errors="ignore")
 
 
