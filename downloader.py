@@ -167,7 +167,7 @@ class MainWindow(Ansys_Beta_Downloader_UI):
             "install_path": self.install_path_textbox.Value,
             "username": self.username_text.Value,
             "artifactory": self.artifactory_dropmenu.Value,
-            "password": self.password_field.Value,
+            "password": self.password.Value,
             "delete_zip": self.delete_zip_check.Value,
             "download_path": self.download_path_textbox.Value,
             "version": self.version_dropmenu.Value,
@@ -199,12 +199,12 @@ class MainWindow(Ansys_Beta_Downloader_UI):
         self.install_path_textbox.Value = setting_dict["install_path"]
         self.username_text.Value = setting_dict["username"]
         self.artifactory_dropmenu.Value = setting_dict["artifactory"]
-        self.password_field.Value = setting_dict["password"]
+        self.password.Value = setting_dict["password"]
         self.delete_zip_check.Value = setting_dict["delete_zip"]
         self.download_path_textbox.Value = setting_dict["download_path"]
         self.version_dropmenu.Value = setting_dict["version"]
         self.wb_flags_text.Value = setting_dict["wb_flags"]
-        self.time_picker.Value = datetime.strptime(setting_dict["time"], '%H:%M:%S')
+        self.time_picker.Value = datetime.strptime(setting_dict["time"], '%H:%M')
 
         for day in setting_dict["days"]:
             self.days_checkboxes[day].Value = True
@@ -253,17 +253,17 @@ class MainWindow(Ansys_Beta_Downloader_UI):
         event.Skip()  # need to skip, otherwise stuck on field
 
         # erase_pass: password key exists and user wants to delete it, thus question is needed
-        erase_pass = not self.password_field.Value and self.password_dict.get(self.artifactory_dropmenu.Value, "")
-        password_not_changed = self.password_field.Value == self.password_dict.get(self.artifactory_dropmenu.Value, "")
+        erase_pass = not self.password.Value and self.password_dict.get(self.artifactory_dropmenu.Value, "")
+        password_not_changed = self.password.Value == self.password_dict.get(self.artifactory_dropmenu.Value, "")
 
-        if (not self.password_field.Value or password_not_changed) and not erase_pass:
+        if (not self.password.Value or password_not_changed) and not erase_pass:
             return
 
         answer = self._add_message("Do you want to save password for {}?".format(self.artifactory_dropmenu.Value),
                                    "Save password?", "?")
 
         if answer == wx.ID_YES:
-            self.password_dict[self.artifactory_dropmenu.Value] = self.password_field.Value
+            self.password_dict[self.artifactory_dropmenu.Value] = self.password.Value
             with open(self.password_json, "w") as file:
                 json.dump(self.password_dict, file)
 
@@ -277,7 +277,7 @@ class MainWindow(Ansys_Beta_Downloader_UI):
             Callback on change of artifact drop menu
             Fills the password field and calls get_artifacts_info
         """
-        self.password_field.Value = self.password_dict.get(self.artifactory_dropmenu.Value, "")
+        self.password.Value = self.password_dict.get(self.artifactory_dropmenu.Value, "")
         self.get_artifacts_info()
 
     def get_artifacts_info(self, _unused_event=None):
@@ -291,7 +291,7 @@ class MainWindow(Ansys_Beta_Downloader_UI):
 
         server = artifactory_dict[self.artifactory_dropmenu.Value]
         username = self.username_text.Value
-        password = self.password_field.Value
+        password = self.password.Value
 
         if not username or not password:
             self.add_status_msg("Please provide username and artifactory password", "!")

@@ -136,10 +136,10 @@ class Ansys_Beta_Downloader_UI ( wx.Frame ):
 
 		bSizer152 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.password_field = wx.TextCtrl( self.m_panel2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 300,-1 ), wx.TE_PASSWORD )
-		self.password_field.SetToolTip( u"Retrieval of Artifactory Encrypted Password Instructions:\n\n1. Log into Artifactory\n\n2. Click on your username (top right)\n\n3. Enter your password to Unlock Artifactory Encrypted Password\n\n[Note] You cannot use the same artifactory password for other artifactories. Also, your encrypted password will change anytime your SSO password changes." )
+		self.password = wx.TextCtrl( self.m_panel2, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( 300,-1 ), wx.TE_PASSWORD )
+		self.password.SetToolTip( u"Retrieval of Artifactory Encrypted Password Instructions:\n\n1. Log into Artifactory\n\n2. Click on your username (top right)\n\n3. Enter your password to Unlock Artifactory Encrypted Password\n\n[Note] You cannot use the same artifactory password for other artifactories. Also, your encrypted password will change anytime your SSO password changes." )
 
-		bSizer152.Add( self.password_field, 0, wx.ALL, 5 )
+		bSizer152.Add( self.password, 0, wx.ALL, 5 )
 
 
 		bSizer152.Add( ( 0, 0), 1, wx.EXPAND, 5 )
@@ -423,7 +423,7 @@ class Ansys_Beta_Downloader_UI ( wx.Frame ):
 		# Connect Events
 		self.set_install_path_but.Bind( wx.EVT_BUTTON, self.set_install_path )
 		self.artifactory_dropmenu.Bind( wx.EVT_COMBOBOX, self.populate_password )
-		self.password_field.Bind( wx.EVT_KILL_FOCUS, self.save_question )
+		self.password.Bind( wx.EVT_KILL_FOCUS, self.save_question )
 		self.delete_zip_check.Bind( wx.EVT_CHECKBOX, self.delete_zip_check_click )
 		self.set_download_path_but.Bind( wx.EVT_BUTTON, self.set_download_path )
 		self.install_once_button.Bind( wx.EVT_BUTTON, self.install_once_click )

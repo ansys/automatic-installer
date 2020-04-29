@@ -1,0 +1,27 @@
+1. To download and install electron ( OS X or Linux ) you have to download it from npm-electron using :
+npm install electron --save-dev
+npm install -g electron
+
+2. npm install python-shell
+
+3. modified python-shell to make it run exe files, also I use a trick that I say path to python is my compile python_code.exe
+and my script is null, then I commented lines in python-shell where check for script length occured
+
+4. to run electron use in win shell:
+electron .
+
+5. to create electron build you need packager
+npm install electron-packager --save-dev
+npm install -g electron electron-packager
+
+6. Create fresh environment for python:
+a. pip install --user pipenv
+b. python -m venv D:\build_env
+c. D:\build_env\Scripts\pip.exe install pyinstaller
+d. D:\build_env\Scripts\pyinstaller.exe electron_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefiles
+
+7. package app
+electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite
+
+8. to send requests from JS
+npm install axios

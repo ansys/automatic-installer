@@ -1,0 +1,17 @@
+{
+  "name": "Ansys-Build-Downloader",
+  "version": "0.1.0",
+  "main": "electron_main_win.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "axios": "^0.19.2",
+    "python-shell": "^1.0.8"
+  },
+  "build": {
+    "files":
+      "!electron_backend.py"
+    
+  }
+}
