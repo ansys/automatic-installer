@@ -136,17 +136,6 @@ var save_settings = function () {
       fs.writeFileSync(settings_path, data);
 }
 
-var timepicker = new TimePicker('time', {
-  lang: 'en',
-  theme: 'dark'
-});
-
-timepicker.on('change', function(evt) {
-  var value = (evt.hour || '00') + ':' + (evt.minute || '00');
-  evt.element.value = value;
-  save_settings.call(evt.element);
-});
-
 var request_builds = function (){
     if (!settings.username) {
         error_tooltip.call($('#username'), "Provide your Ansys User ID");
@@ -186,6 +175,7 @@ var request_builds = function (){
       });
 }
 
+
 function get_builds(artifacts_list){
 
     let version_list = [];
@@ -213,11 +203,17 @@ function get_builds(artifacts_list){
     set_selector("version", version_list);
 }
 
+
 var change_pass = function (){
     password = (settings.password.hasOwnProperty(settings.artifactory)) ? settings.password[settings.artifactory] : "";
     $("#password").val(password);
 }
 
-$("#artifactory, #username, #password, .days-checkbox").bind("change", save_settings);
+$('.clockpicker').clockpicker({
+    autoclose: true,
+    placement: 'left'
+});
+
+$("#artifactory, #username, #password, #time, .days-checkbox").bind("change", save_settings);
 $("#artifactory").bind("change", change_pass);
 $("#artifactory, #username, #password").bind("change", request_builds);
