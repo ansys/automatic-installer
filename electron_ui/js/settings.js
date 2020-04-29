@@ -31,6 +31,8 @@ window.onload = function() {
         $("#force_install").prop("checked", settings.force_install);
         $("#wb_flags").val(settings.wb_flags);
     }
+
+    set_default_tooltips_settings();
 }
 
 $("#install_path, #download_path, #password, #force_install, #delete_zip, #wb_flags").bind("change", save_settings);

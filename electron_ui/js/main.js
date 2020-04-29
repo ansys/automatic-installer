@@ -2,15 +2,6 @@ var os_path = require('path');
 var fs = require('fs');
 var axios = require('axios');
 
-// todo on click install once/schedule make just copy of default settings
-// todo add HPC options to advanced settings
-// todo add tooltips
-// todo add show installation history and paths to the configuration used for this
-// todo add docstrings to functions
-// todo make documentation in .md file
-// todo exclude python source from electron compiled build
-// todo check that after installer we do not have issues with bit9
-// todo modify task if the same version is scheduled
 
 artifactory_dict = {
     'Austin': 'http://ausatsrv01.ansys.com:8080/artifactory',
@@ -78,7 +69,9 @@ window.onload = function() {
 
     pyshell.send('get_active_tasks');
     request_builds();
+    set_default_tooltips_main();
 }
+
 
 window.onbeforeunload = function(){
     pyshell.send('exit');
@@ -191,24 +184,6 @@ var request_builds = function (){
             error_tooltip.call($('#password'), "Bad credentials, check Artifactory unique password");
          }
       });
-}
-
-
-var error_tooltip = function(prop_title) {
-    this.tooltip('destroy');
-    setTimeout(() => {this.tooltip({
-                                title: prop_title,
-                                placement: 'bottom'
-                             }).tooltip('show');
-
-    }, 150);
-    this.attr('style', "border:#FF0000 2px solid;");
-
-    setTimeout(() => {
-        this.tooltip('destroy');
-        this.attr('style', "border:#cccccc 1px solid;");
-
-    }, 3500);
 }
 
 function get_builds(artifacts_list){
