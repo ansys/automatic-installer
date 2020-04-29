@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Advanced Settings</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css">
     <link href="css/style.css" rel="stylesheet" type="text/css">
 </head>
 
@@ -31,7 +32,7 @@
     <div class="w-row">
         <div class="w-col w-col-6">
             <div class="w-form">
-                <form id="wf-form-Email-Form" name="wf-form-Email-Form" data-name="Email Form">
+                <form>
                     <label for="install_path" class="field-label">installation root path</label>
                     <input type="text" class="text-field-4 w-input" maxlength="256" id="install_path" required="">
 
@@ -43,21 +44,21 @@
         <div class="w-col w-col-6">
             <div>
                 <div class="w-form">
-                    <form id="wf-form-Email-Form" name="wf-form-Email-Form" data-name="Email Form">
-                        <label class="w-checkbox checkbox-field">
+                    <form>
+                        <label id="force_install_label" class="w-checkbox checkbox-field">
                             <input type="checkbox" id="force_install" class="w-checkbox-input">
                             <span class="checkbox-label w-form-label">force install of the same build date</span>
                         </label>
 
                         <label class="w-checkbox checkbox-field-2">
                             <input type="checkbox" id="delete_zip" checked="checked" class="w-checkbox-input">
-                            <span class="checkbox-label w-form-label">Delete zip after installation</span>
+                            <span id="delete_zip_label" class="checkbox-label w-form-label">Delete zip after installation</span>
                         </label>
                     </form>
                 </div>
             </div>
             <div class="w-form">
-                <form id="wf-form-Email-Form" name="wf-form-Email-Form" data-name="Email Form">
+                <form>
                     <label for="wb_flags" class="field-label">workbench silent installation flags</label>
                     <input type="text" class="w-input" placeholder="" id="wb_flags" required="">
                 </form>
@@ -66,6 +67,9 @@
     </div>
     <script src="js/jquery-3.js" type="text/javascript"></script>
     <script src="js/jquery-3.5.0.min.js" type="text/javascript"></script>
+    <script src="js/bootstrap.min.js" type="text/javascript"></script>
+
+    <script src="js/tooltips.js" type="text/javascript"></script>
     <script src="js/settings.js" type="text/javascript"></script>
 </body>
 </html>
