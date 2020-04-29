@@ -34,10 +34,10 @@
             <div class="w-form">
                 <form>
                     <label for="install_path" class="field-label">installation root path</label>
-                    <input type="text" class="text-field-4 w-input" maxlength="256" id="install_path" required="">
+                    <input type="text" class="w-input" maxlength="256" id="install_path" onfocus="this.blur()">
 
                     <label for="download_path" class="field-label">download path</label>
-                    <input type="text" class="w-input" maxlength="256" id="download_path" required="">
+                    <input type="text" class="w-input" maxlength="256" id="download_path" onfocus="this.blur()">
                 </form>
             </div>
         </div>
@@ -52,7 +52,9 @@
 
                         <label class="w-checkbox checkbox-field-2">
                             <input type="checkbox" id="delete_zip" checked="checked" class="w-checkbox-input">
-                            <span id="delete_zip_label" class="checkbox-label w-form-label">Delete zip after installation</span>
+                            <span id="delete_zip_label" class="checkbox-label w-form-label">
+                                Delete zip after installation
+                            </span>
                         </label>
                     </form>
                 </div>

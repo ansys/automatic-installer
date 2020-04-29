@@ -84,12 +84,6 @@ class FlashStatusBarThread(threading.Thread):
             time.sleep(0.5)
 
 
-# todo check if WB exists make automatic integration with EDT
-# todo add windows notification when build is updated (maybe if password is wrong but need to check that it persists)
-# todo https://wxpython.org/Phoenix/docs/html/wx.adv.NotificationMessage.html
-# todo check if versions in settings exists on server then add set it as value, else throw an error
-# todo check that the same version (build date) is not yet installed
-# todo add killbit9 argument to run executables for the first time
 class MainWindow(Ansys_Beta_Downloader_UI):
     def __init__(self, parent):
         Ansys_Beta_Downloader_UI.__init__(self, parent)
