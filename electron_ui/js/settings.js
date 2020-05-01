@@ -7,7 +7,10 @@ settings_path = os_path.join(process.env.APPDATA, "build_downloader", "default_s
 
 $("#install_path, #download_path").click(
     function(){
-        dialog.showOpenDialog(remote.getCurrentWindow(), {properties: [ 'openDirectory' ] }).then(
+        dialog.showOpenDialog(remote.getCurrentWindow(), {
+                defaultPath: this.value,
+                properties: [ 'openDirectory' ]
+            }).then(
             result => {
                 if (result.canceled == false) {
                     this.value = result.filePaths;

@@ -4,7 +4,6 @@ import re
 import xml.etree.ElementTree as ET
 
 
-# FUNCTIONS
 def get_task_details(task_name):
     """
     Function that extracts parameters of individual task
