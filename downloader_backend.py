@@ -85,6 +85,9 @@ class Downloader:
             logging.error("Timeout on connection, please verify your username and password for {}".format(
                 self.settings.artifactory))
             sys.exit(1)
+        except requests.exceptions.ConnectionError:
+            logging.error("Connection error, please verify that you are on VPN")
+            sys.exit(1)
 
         # catch 401 for bad credentials or similar
         if url_request.status_code != 200:
