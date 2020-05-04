@@ -43,6 +43,8 @@ class Downloader:
         5. downloads zip archive with BETA build
         """
     def __init__(self):
+        self.zip_file = None
+
         set_log.set_logger()
 
         settings_path = self.parse_args()
@@ -72,13 +74,15 @@ class Downloader:
         password
         :return: (str) self.build_url: URL link to the latest build that will be used to download .zip archive
         """
-        if not self.settings.username or not self.settings.password:
+        password = getattr(self.settings.password, self.settings.artifactory)
+
+        if not self.settings.username or not password:
             logging.error("Please provide username and artifactory password")
             sys.exit(1)
 
         server = artifactory_dict[self.settings.artifactory]
         try:
-            with requests.get(server + "/api/repositories", auth=(self.settings.username, self.settings.password),
+            with requests.get(server + "/api/repositories", auth=(self.settings.username, password),
                               timeout=30) as url_request:
                 artifacts_list = json.loads(url_request.text)
         except requests.exceptions.ReadTimeout:
@@ -112,11 +116,11 @@ class Downloader:
                 if version not in artifacts_dict:
                     artifacts_dict[version] = repo
 
-        repo = artifacts_dict[self.settings.version]
+        repo = artifacts_dict[self.settings.version]  # todo catch if version does not exist KeyError
 
         if "EDT" in self.settings.version:
             url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
-            with requests.get(url, auth=(self.settings.username, self.settings.password), timeout=30) as url_request:
+            with requests.get(url, auth=(self.settings.username, password), timeout=30) as url_request:
                 folder_dict_list = json.loads(url_request.text)['files']
 
             builds_dates = []
@@ -146,7 +150,8 @@ class Downloader:
         the same function but with new_url, however to prevent infinity loop we need this arg
         :return: (str) destination_file: link to the zip file
         """
-        with requests.get(url, auth=(self.settings.username, self.settings.password),
+        password = getattr(self.settings.password, self.settings.artifactory)
+        with requests.get(url, auth=(self.settings.username, password),
                           timeout=30, stream=True) as url_request:
             if url_request.status_code == 404 and not recursion:
                 # in HQ cached build does not exist and will return 404. Recursively start download with new url
