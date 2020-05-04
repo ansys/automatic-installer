@@ -21,7 +21,7 @@ c. D:\build_env\Scripts\pip.exe install pyinstaller
 d. D:\build_env\Scripts\pyinstaller.exe electron_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefiles
 
 7. package app
-electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite
+electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite --ignore="^.*\.py" --ignore="\/node_modules" --ignore="__pycache__"
 
 8. to send requests from JS
 npm install axios
