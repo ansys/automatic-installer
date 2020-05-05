@@ -41,7 +41,7 @@ class Downloader:
         3. loads JSON to named tuple
         4. gets URL for selected version based on server
         5. downloads zip archive with BETA build
-        """
+    """
     def __init__(self):
         """
         self.build_url (str): URL to the latest build that will be used to download .zip archive
@@ -63,6 +63,10 @@ class Downloader:
             self.settings = json.load(file, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
 
     def run(self):
+        """
+        Function that executes the download-installation process
+        :return: None
+        """
         self.get_build_link()
         self.download_file()
         self.install()
@@ -205,25 +209,19 @@ class Downloader:
         :return: None
         """
         self.parse_iss()
-        if self.product_id:
-            logging.info(f"Product ID is {self.product_id}")
-            if os.path.isfile(self.product_info_file_new):
-                # file with build date exists and we can check version
-                versions_different = self.compare_edt_version()
-            else:
-                # file does not exist for some reason, need to install any case
-                pass
-        else:
 
-            return
+        if not os.path.isfile(self.product_info_file_new) or not self.edt_versions_identical:
+            # file with version description does not exist for some reason, need to install any case
+            pass
 
     def uninstall(self):
         pass
 
-    def compare_edt_version(self):
+    @property
+    def edt_versions_identical(self):
         """
         Function to compare build dates of just downloaded daily build and already installed version of EDT
-        :return: (bool) True if builds dates are the same or False if different
+        :return: (bool) True if builds' dates are the same or False if different
         """
         build_date, product_version = self.get_build_date(self.product_info_file_new)
 
@@ -286,9 +284,24 @@ class Downloader:
 
         if product_id_match:
             self.product_id = product_id_match[0]
+            logging.info(f"Product ID is {self.product_id}")
         else:
             logging.error("Unable to extract product ID")
             sys.exit(1)
+
+    def generate_installation_iss(self):
+        iss_file = os.path.join(self.target_unpack_dir, "install.iss")
+        with open(iss_file, "w") as file:
+            for line in self.iss_template_content:
+                if "szDir" in line:
+                    updated_line = f"szDir={self.settings.install_path}"
+                elif "sTempPath" in line:
+                    updated_line = f"sTempPath={os.environ['TEMP']}"
+                elif "l3_IntegrateWithWB" in line:
+                    updated_line = line  # todo make property of WB installation check
+                else:
+                    updated_line = line
+                file.write(updated_line)
 
     @staticmethod
     def parse_args():
