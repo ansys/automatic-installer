@@ -43,16 +43,28 @@ class Downloader:
         5. downloads zip archive with BETA build
         """
     def __init__(self):
+        """
+        self.build_url (str): URL to the latest build that will be used to download .zip archive
+        self.zip_file (str): path to the zip file on the PC
+        self.target_unpack_dir (str): path where to unpack .zip
+        self.product_id (str): product GUID extracted from iss template
+        self.product_info_file_new (str): product.info file from downloaded build
+        self.iss_template_content (list): content of EDT silent installation template
+        """
+        self.build_url = None
         self.zip_file = None
-
-        set_log.set_logger()
+        self.target_unpack_dir = None
+        self.product_id = None
+        self.product_info_file_new = None
+        self.iss_template_content = []
 
         settings_path = self.parse_args()
         with open(settings_path, "r") as file:
             self.settings = json.load(file, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
 
+    def run(self):
         self.get_build_link()
-        self.download_file(self.build_url)
+        self.download_file()
         self.install()
 
     def check_directories(self):
@@ -72,7 +84,7 @@ class Downloader:
         """
         Function that sends HTTP request to JFrog and get the list of folders with builds for EDT and checks user
         password
-        :return: (str) self.build_url: URL link to the latest build that will be used to download .zip archive
+        :modify: (str) self.build_url: URL link to the latest build that will be used to download .zip archive
         """
         password = getattr(self.settings.password, self.settings.artifactory)
 
@@ -116,7 +128,12 @@ class Downloader:
                 if version not in artifacts_dict:
                     artifacts_dict[version] = repo
 
-        repo = artifacts_dict[self.settings.version]  # todo catch if version does not exist KeyError
+        try:
+            repo = artifacts_dict[self.settings.version]
+        except KeyError:
+            logging.error(f"Version {self.settings.version} that you have specified " +
+                          f"does not exists on {self.settings.artifactory}")
+            sys.exit(1)
 
         if "EDT" in self.settings.version:
             url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
@@ -133,8 +150,8 @@ class Downloader:
 
             latest_build = max(builds_dates)
 
-            self.build_url = (f"{server}/{repo}/{latest_build}/Electronics_{self.settings.version.split('_')[0][1:]}" +
-                              "_winx64.zip")
+            version_number = self.settings.version.split('_')[0][1:]
+            self.build_url = f"{server}/{repo}/{latest_build}/Electronics_{version_number}_winx64.zip"
         elif "WB" in self.settings.version:
             self.build_url = f"{server}/api/archive/download/{repo}-cache/winx64?archiveType=zip"
 
@@ -142,20 +159,21 @@ class Downloader:
             logging.error("Cannot receive URL")
             sys.exit(1)
 
-    def download_file(self, url, recursion=False):
+    def download_file(self, recursion=False):
         """
         Downloads file in chunks and saves to the temp.zip file
-        :param (str) url: to the zip archive or special JFrog API to download WB folder
+        Uses url to the zip archive or special JFrog API to download WB folder
         :param (bool) recursion: Some artifactories do not have cached folders with WB  and we need recursively run
         the same function but with new_url, however to prevent infinity loop we need this arg
-        :return: (str) destination_file: link to the zip file
+        :modify: (str) zip_file: link to the zip file
         """
         password = getattr(self.settings.password, self.settings.artifactory)
-        with requests.get(url, auth=(self.settings.username, password),
-                          timeout=30, stream=True) as url_request:
+        url = self.build_url.replace("-cache", "") if recursion else self.build_url
+
+        with requests.get(url, auth=(self.settings.username, password), timeout=30, stream=True) as url_request:
             if url_request.status_code == 404 and not recursion:
                 # in HQ cached build does not exist and will return 404. Recursively start download with new url
-                self.download_file(url.replace("-cache", ""), recursion=True)
+                self.download_file(recursion=True)
                 return
 
             self.zip_file = os.path.join(self.settings.download_path, f"temp_build_{self.settings.version}.zip")
@@ -171,22 +189,27 @@ class Downloader:
 
     def install(self):
         # todo check that the same version is already installed or not before deletion
-        target_dir = self.zip_file.replace(".zip", "")
+        self.target_unpack_dir = self.zip_file.replace(".zip", "")
         with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
-            zip_ref.extractall(target_dir)
+            zip_ref.extractall(self.target_unpack_dir)
 
-        logging.info(f"File is unpacked to {target_dir}")
+        logging.info(f"File is unpacked to {self.target_unpack_dir}")
 
         if "EDT" in self.settings.version:
-            self.install_edt(target_dir)
+            self.install_edt()
 
-    def install_edt(self, target_dir):
-        product_id, product_info_file_new = self.parse_iss(target_dir)
-        if product_id:
-            logging.info(f"Product ID is {product_id}")
-            if os.path.isfile(product_info_file_new):
+    def install_edt(self):
+        """
+        Install Electronics Desktop. Make verification that the same version is not yet installed and makes
+        silent installation
+        :return: None
+        """
+        self.parse_iss()
+        if self.product_id:
+            logging.info(f"Product ID is {self.product_id}")
+            if os.path.isfile(self.product_info_file_new):
                 # file with build date exists and we can check version
-                versions_different = self.compare_version(product_info_file_new)
+                versions_different = self.compare_edt_version()
             else:
                 # file does not exist for some reason, need to install any case
                 pass
@@ -197,13 +220,12 @@ class Downloader:
     def uninstall(self):
         pass
 
-    def compare_version(self, product_info_file_new):
+    def compare_edt_version(self):
         """
-        Function to compare build dates of just downloaded daily build and already installed version
-        :param product_info_file_new: path to product.info from downloaded folder
+        Function to compare build dates of just downloaded daily build and already installed version of EDT
         :return: (bool) True if builds dates are the same or False if different
         """
-        build_date, product_version = self.get_build_date(product_info_file_new)
+        build_date, product_version = self.get_build_date(self.product_info_file_new)
 
         installed_product = os.path.join(self.settings.install_path, "AnsysEM", f"AnsysEM{product_version}",
                                          "Win64", "product.info")
@@ -233,39 +255,40 @@ class Downloader:
 
         return build_date, product_version
 
-    @staticmethod
-    def parse_iss(dir_name):
+    def parse_iss(self):
         """
         Open directory with unpacked build of EDT and search for SilentInstallationTemplate.iss to extract
         product ID which is GUID hash
-        :param dir_name: path to unpacked zip with build
-        :return: product_id: GUID of downloaded version
-        :return: product_info_file_new: path to the product.info file
+        :modify: self.product_id: GUID of downloaded version
+        :modify: self.product_info_file_new: path to the product.info file
+        :modify: self.iss_template_content: append lines from template file
         """
         default_iss_file = ""
-        product_id, product_info_file_new = False, False
-        for dir_path, dir_names, file_names in os.walk(dir_name):
+        product_id_match = []
+
+        for dir_path, dir_names, file_names in os.walk(self.target_unpack_dir):
             for filename in file_names:
                 if "AnsysEM" in dir_path and filename.endswith(".iss"):
                     default_iss_file = os.path.join(dir_path, filename)
-                    product_info_file_new = os.path.join(dir_path, "product.info")
+                    self.product_info_file_new = os.path.join(dir_path, "product.info")
                     break
 
         if not default_iss_file:
             logging.error("SilentInstallationTemplate.iss does not exist")
             sys.exit(1)
 
-        try:
-            with open(default_iss_file, "r") as iss_file:
-                for line in iss_file:
-                    if "DlgOrder" in line:
-                        product_id = re.findall("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", line)[0]
-                        break
-        except IndexError:
+        with open(default_iss_file, "r") as iss_file:
+            for line in iss_file:
+                self.iss_template_content.append(line)
+                if "DlgOrder" in line:
+                    guid_regex = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                    product_id_match = re.findall(guid_regex, line)
+
+        if product_id_match:
+            self.product_id = product_id_match[0]
+        else:
             logging.error("Unable to extract product ID")
             sys.exit(1)
-
-        return product_id, product_info_file_new
 
     @staticmethod
     def parse_args():
@@ -287,5 +310,8 @@ class Downloader:
             logging.info(f"Settings path is set to {settings_path}")
             return settings_path
 
+
 if __name__ == "__main__":
-    Downloader()
+    set_log.set_logger()
+    app = Downloader()
+    app.run()
