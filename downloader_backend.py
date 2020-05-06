@@ -6,11 +6,13 @@ import re
 import shutil
 import zipfile
 import sys
+import subprocess
 from collections import namedtuple, OrderedDict
 
 import requests
 
 import set_log
+import iss_templates
 
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
@@ -48,15 +50,23 @@ class Downloader:
         self.zip_file (str): path to the zip file on the PC
         self.target_unpack_dir (str): path where to unpack .zip
         self.product_id (str): product GUID extracted from iss template
+        self.installshield_version (str): version of the InstallShield
         self.product_info_file_new (str): product.info file from downloaded build
-        self.iss_template_content (list): content of EDT silent installation template
+        self.installed_product (str): path to the product.info of the installed build
+        self.product_version (str): version to use in env variables eg 202
+        self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
         """
         self.build_url = None
         self.zip_file = None
         self.target_unpack_dir = None
         self.product_id = None
+        self.installshield_version = None
         self.product_info_file_new = None
-        self.iss_template_content = []
+        self.installed_product = None
+        self.product_version = None
+        self.setup_exe = None
+
+        set_log.set_logger()
 
         settings_path = self.parse_args()
         with open(settings_path, "r") as file:
@@ -192,7 +202,10 @@ class Downloader:
                 sys.exit(1)
 
     def install(self):
-        # todo check that the same version is already installed or not before deletion
+        """
+        Unpack downloaded zip and proceed to installation. Different executions for EDT and WB
+        :return:
+        """
         self.target_unpack_dir = self.zip_file.replace(".zip", "")
         with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
             zip_ref.extractall(self.target_unpack_dir)
@@ -206,29 +219,94 @@ class Downloader:
         """
         Install Electronics Desktop. Make verification that the same version is not yet installed and makes
         silent installation
+        Get Workbench installation path from environment variable and enables integration if exists.
         :return: None
         """
         self.parse_iss()
 
-        if not os.path.isfile(self.product_info_file_new) or not self.edt_versions_identical:
-            # file with version description does not exist for some reason, need to install any case
-            pass
+        if not os.path.isfile(self.product_info_file_new) or not self.edt_versions_identical():
+            # product.info does not exist for some reason, need to install any case or versions different
+            self.uninstall_edt()
 
-    def uninstall(self):
-        pass
+            install_iss_file = os.path.join(self.target_unpack_dir, "install.iss")
+            install_log_file = os.path.join(self.target_unpack_dir, "install.log")
 
-    @property
+            integrate_wb = 0
+            if f"ANSYS{self.product_version}_DIR" in os.environ:
+                run_wb = os.path.join(os.pardir(os.environ[f"ANSYS{self.product_version}_DIR"]), "Framework", "bin",
+                                      "Win64", "RunWB2.exe")
+
+                if os.path.isfile(run_wb):
+                    integrate_wb = 1
+                    logging.info("Integration with WB turned ON")
+
+            with open(install_iss_file, "w") as file:
+                install_iss = iss_templates.install_iss + iss_templates.existing_server
+                file.write(install_iss.format(self.product_id, os.path.join(self.settings.install_path, "AnsysEM"),
+                                              os.environ["TEMP"], integrate_wb, self.installshield_version))
+
+            command = f'{self.setup_exe} -s -f1"{install_iss_file}" -f2"{install_log_file}"'
+            logging.info(f"Execute installation: {command}")
+            subprocess.call(command)
+
+            self.check_result_code(install_log_file)
+
+    def uninstall_edt(self):
+        """
+        Silently uninstall build of the same version
+        :return: None
+        """
+        if not os.path.isfile(self.setup_exe):
+            logging.error("setup.exe does not exist")
+            sys.exit(1)
+
+        if os.path.isfile(self.installed_product):
+            uninstall_iss_file = os.path.join(self.target_unpack_dir, "uninstall.iss")
+            uninstall_log_file = os.path.join(self.target_unpack_dir, "uninstall.log")
+            with open(uninstall_iss_file, "w") as file:
+                file.write(iss_templates.uninstall_iss.format(self.product_id, self.installshield_version))
+
+            command = f'{self.setup_exe} -uninst -s -f1"{uninstall_iss_file}" -f2"{uninstall_log_file}"'
+            logging.info(f"Execute uninstallation: {command}")
+            subprocess.call(command)
+
+            self.check_result_code(uninstall_log_file, False)
+        else:
+            logging.info("Version is not installed, skip uninstallation")
+
+    @staticmethod
+    def check_result_code(log_file, installation=True):
+        """
+        Verify result code of the InstallShield log file
+        :param log_file: installation log file
+        :param installation: True if verify log after installation elif after uninstallation False
+        :return: None
+        """
+        success = "New build was successfully installed" if installation else "Previous build was uninstalled"
+        fail = "Installation went wrong" if installation else "Uninstallation went wrong"
+        with open(log_file) as file:
+            for line in file:
+                if "ResultCode=0" in line:
+                    logging.info(success)
+                    break
+            else:
+                logging.error(fail)
+                sys.exit(1)
+
     def edt_versions_identical(self):
         """
         Function to compare build dates of just downloaded daily build and already installed version of EDT
         :return: (bool) True if builds' dates are the same or False if different
         """
-        build_date, product_version = self.get_build_date(self.product_info_file_new)
+        build_date, self.product_version = self.get_build_date(self.product_info_file_new)
 
-        installed_product = os.path.join(self.settings.install_path, "AnsysEM", f"AnsysEM{product_version}",
-                                         "Win64", "product.info")
+        env_var = "ANSYSEM_ROOT" + self.product_version
+        if env_var not in os.environ:
+            return False
 
-        installed_build_date, _unused = self.get_build_date(installed_product)
+        self.installed_product = os.path.join(os.environ[env_var], "product.info")
+
+        installed_build_date, _unused = self.get_build_date(self.installed_product)
 
         if all([build_date, installed_build_date]) and build_date == installed_build_date:
             return True
@@ -239,7 +317,7 @@ class Downloader:
         """
         extract information about EDT build date and version
         :param product_info_file: path to the product.info
-        :return:
+        :return: build_date, product_version
         """
         build_date = False
         product_version = False
@@ -249,7 +327,7 @@ class Downloader:
                     if "AnsProductBuildDate" in line:
                         build_date = line.split("=")[1]
                     elif "AnsProductVersion" in line:
-                        product_version = line.split("=")[1]
+                        product_version = (line.split("=")[1]).rstrip().replace('"', '').replace(".", "")
 
         return build_date, product_version
 
@@ -260,6 +338,8 @@ class Downloader:
         :modify: self.product_id: GUID of downloaded version
         :modify: self.product_info_file_new: path to the product.info file
         :modify: self.iss_template_content: append lines from template file
+        :modify: self.setup_exe: set path to setup.exe if exists
+        :modify: self.installshield_version: set version from file
         """
         default_iss_file = ""
         product_id_match = []
@@ -269,6 +349,7 @@ class Downloader:
                 if "AnsysEM" in dir_path and filename.endswith(".iss"):
                     default_iss_file = os.path.join(dir_path, filename)
                     self.product_info_file_new = os.path.join(dir_path, "product.info")
+                    self.setup_exe = os.path.join(dir_path, "setup.exe")
                     break
 
         if not default_iss_file:
@@ -277,10 +358,11 @@ class Downloader:
 
         with open(default_iss_file, "r") as iss_file:
             for line in iss_file:
-                self.iss_template_content.append(line)
                 if "DlgOrder" in line:
                     guid_regex = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
                     product_id_match = re.findall(guid_regex, line)
+                if "InstallShield Silent" in line:
+                    self.installshield_version = next(iss_file).split("=")[1]
 
         if product_id_match:
             self.product_id = product_id_match[0]
@@ -288,20 +370,6 @@ class Downloader:
         else:
             logging.error("Unable to extract product ID")
             sys.exit(1)
-
-    def generate_installation_iss(self):
-        iss_file = os.path.join(self.target_unpack_dir, "install.iss")
-        with open(iss_file, "w") as file:
-            for line in self.iss_template_content:
-                if "szDir" in line:
-                    updated_line = f"szDir={self.settings.install_path}"
-                elif "sTempPath" in line:
-                    updated_line = f"sTempPath={os.environ['TEMP']}"
-                elif "l3_IntegrateWithWB" in line:
-                    updated_line = line  # todo make property of WB installation check
-                else:
-                    updated_line = line
-                file.write(updated_line)
 
     @staticmethod
     def parse_args():
@@ -322,9 +390,11 @@ class Downloader:
 
             logging.info(f"Settings path is set to {settings_path}")
             return settings_path
+        else:
+            logging.error("Please provide --path argument")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
-    set_log.set_logger()
     app = Downloader()
     app.run()
