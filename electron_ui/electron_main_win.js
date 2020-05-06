@@ -6,7 +6,7 @@ const ipc = require('electron').ipcMain;
 const version = "0.1";
 const build_date = "28 April 2020";
 
-
+app.allowRendererProcessReuse = true;  // change default deprecated method
 app.on('window-all-closed', () => {
   app.quit()
 })
@@ -22,7 +22,6 @@ const about_options = {
 
 
 app.on('ready', () => {
-
 	var MainWindow = new BrowserWindow({
 	    show: false,  // disable show from the beginning to avoid white screen, see ready-to-show
         webPreferences: {
