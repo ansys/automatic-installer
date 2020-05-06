@@ -214,6 +214,11 @@ class Downloader:
 
         if "EDT" in self.settings.version:
             self.install_edt()
+        else:
+            self.install_wb()
+
+        if self.settings.delete_zip:
+            self.clean_temp()
 
     def install_edt(self):
         """
@@ -381,6 +386,20 @@ class Downloader:
         else:
             logging.error("Unable to extract product ID")
             sys.exit(1)
+
+    def install_wb(self):
+        pass
+
+    def clean_temp(self):
+        """
+        Cleans downloaded zip and unpacked folder with content
+        :return: None
+        """
+        if os.path.isfile(self.zip_file):
+            os.remove(self.zip_file)
+
+        if os.path.isdir(self.target_unpack_dir):
+            shutil.rmtree(self.target_unpack_dir)
 
     @staticmethod
     def parse_args():
