@@ -16,6 +16,7 @@ class InstallUninstallTest(unittest.TestCase):
             # following setup is overwritten in full_run_test
             self.downloader.installed_product = test_settings["installed_product"]
             self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
+            self.downloader.zip_file = test_settings["zip_file"]
 
     def uninstall_test(self):
         self.downloader.parse_iss()
@@ -23,6 +24,9 @@ class InstallUninstallTest(unittest.TestCase):
 
     def install_test(self):
         self.downloader.install_edt()
+
+    def clean_temp_test(self):
+        self.downloader.clean_temp()
 
     def full_run_test(self):
         self.downloader.run()
@@ -33,6 +37,7 @@ if __name__ == '__main__':
     suite = unittest.TestSuite()
     # suite.addTest(InstallUninstallTest("install_test"))
     # suite.addTest(InstallUninstallTest("uninstall_test"))
+    # suite.addTest(InstallUninstallTest("clean_temp_test"))
     suite.addTest(InstallUninstallTest("full_run_test"))
     runner = unittest.TextTestRunner()
     runner.run(suite)
