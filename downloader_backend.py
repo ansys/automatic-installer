@@ -4,15 +4,15 @@ import logging
 import os
 import re
 import shutil
-import zipfile
-import sys
 import subprocess
+import sys
+import zipfile
 from collections import namedtuple, OrderedDict
 
 import requests
 
-import set_log
 import iss_templates
+import set_log
 
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
@@ -240,8 +240,17 @@ class Downloader:
                     integrate_wb = 1
                     logging.info("Integration with WB turned ON")
 
-            with open(install_iss_file, "w") as file:
+            # the "shared files" is created at the same level as the "AnsysEMxx.x" so if installing to unique folders,
+            # the Shared Files folder will be unique as well. Thus we can check install folder for license
+            if os.path.isfile(os.path.join(self.settings.install_path, "AnsysEM", "Shared Files",
+                                           "Licensing", "ansyslmd.ini")):
                 install_iss = iss_templates.install_iss + iss_templates.existing_server
+                logging.info("Install using existing license configuration")
+            else:
+                install_iss = iss_templates.install_iss + iss_templates.new_server
+                logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
+
+            with open(install_iss_file, "w") as file:
                 file.write(install_iss.format(self.product_id, os.path.join(self.settings.install_path, "AnsysEM"),
                                               os.environ["TEMP"], integrate_wb, self.installshield_version))
 
@@ -250,6 +259,8 @@ class Downloader:
             subprocess.call(command)
 
             self.check_result_code(install_log_file)
+        else:
+            logging.info("Versions are identical, skip installation")
 
     def uninstall_edt(self):
         """

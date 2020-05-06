@@ -12,6 +12,8 @@ class InstallUninstallTest(unittest.TestCase):
     def setUp(self):
         with mock.patch('sys.argv', ["__file__", r'-p', test_settings["settings_file"]]):
             self.downloader = downloader_backend.Downloader()
+
+            # following setup is overwritten in full_run_test
             self.downloader.installed_product = test_settings["installed_product"]
             self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
 
