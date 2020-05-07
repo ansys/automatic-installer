@@ -32,7 +32,9 @@ function set_default_tooltips_settings(){
         "CATIA 5 Reader\t-catia5_reader", true, "left")
 
     set_tooltip("install_path",
-        "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for EDT\nor \n\\ANSYS Inc\\vXXX for WB")
+        "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for EDT\nor \n\\ANSYS Inc\\vXXX for WB");
+
+    set_tooltip("hpc-options-table-div", "Click on a row to remove options file")
 }
 
 function set_tooltip(id, text, align_left=false, place="bottom") {

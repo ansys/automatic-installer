@@ -35,28 +35,25 @@ function add_task_rows(tasks_list) {
     if (tasks_list.length < 3) {
         for (i = 0; i < 3 - tasks_list.length; i++) {
             var row = table.insertRow(-1); // at the end
-            set_table_row(row, ["product-column", "version-column", "schedule-column"], ["", "", ""])
+            set_table_row(row, ["product-column", "version-column", "schedule-column"], ["", "", ""]);
         }
     }
 }
 
 
 function add_hpc_files_rows() {
-    var table_container = document.getElementById("hpc-options-table");
-    var table = table_container.getElementsByTagName("tbody")[0];
-    $('#hpc-options-table tbody').empty();
+    hpc_table.clear();
 
     var files_list = fs.readdirSync(hpc_options_folder);
     files_list = files_list.filter(name => name.includes(".acf"));
 
     for (var i in files_list) {
-        var row = table.insertRow(0); // after header
         var file_shorten_path = os_path.join("%APPDATA%", "build_downloader", "HPC_Options", files_list[i]);
-        set_table_row(row, ["file-column"], [file_shorten_path], main_class="tg-gzer")
 
+        var row = hpc_table.row.add([file_shorten_path]).draw(false).node();
         var createClickHandler = function(selected_row) {
                 return function() {
-                                        var file_name = selected_row.getElementsByTagName("td")[0].innerHTML;
+                                        var file_name = selected_row[0].innerText;
                                         answer = dialog.showMessageBoxSync(remote.getCurrentWindow(), {
                                                 type: "question",
                                                 buttons: ["Yes", "No"],
@@ -70,15 +67,13 @@ function add_hpc_files_rows() {
                                         }
                                  };
         };
-        row.onclick = createClickHandler(row);
+        $(row).on("click", createClickHandler($(row)));
     }
 
     if (files_list.length < 4) {
         for (i = 0; i < 4 - files_list.length; i++) {
-            var row = table.insertRow(-1); // at the end
-            set_table_row(row, ["file-column"], [""], main_class="tg-gzer")
+            var row = hpc_table.row.add([""]).draw(false).node();
         }
-
     }
 }
 
