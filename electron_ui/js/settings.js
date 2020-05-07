@@ -42,6 +42,16 @@ window.onload = function() {
     add_hpc_files_rows();
 }
 
+$(document).ready(function() {
+    $('#hpc-options-table').DataTable( {
+        "scrollY": "132px",
+        "scrollCollapse": true,
+        "paging": false,
+        "filter": false,
+        "info": false
+    } );
+} );
+
 function add_hpc_files_rows() {
     var table_container = document.getElementById("hpc-options-table");
     var table = table_container.getElementsByTagName("tbody")[0];
@@ -59,7 +69,7 @@ function add_hpc_files_rows() {
 
         var row = table.insertRow(0); // after header
         var cell_product = row.insertCell(0);
-        cell_product.innerHTML = os_path.join(hpc_options_folder, files_list[i]);
+        cell_product.innerHTML = os_path.join("%APPDATA%", "build_downloader", "HPC_Options", files_list[i]);
         cell_product.classList.add("tg-gzer");
         cell_product.classList.add("file-column");
 

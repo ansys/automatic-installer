@@ -22,7 +22,7 @@ pyshell.on('message', function (message) {
           var nodeConsole = require('console');
           var myConsole = new nodeConsole.Console(process.stdout, process.stderr);
           myConsole.log('\x1b[36m%s\x1b[0m', 'PIPED FROM PYTHON PROGRAM: ' + message.toString());
-        });
+});
 
 function add_task_rows(tasks_list) {
     var table_container = document.getElementById("schedule-table");
@@ -95,14 +95,6 @@ function launchPython(evt) {
       pyshell.send('install_once');
   }else if(evt.srcElement.id == "schedule-button"){
     pyshell.send('schedule_update');
-  }else{
-    pyshell.send('exit');
-    pyshell.end(function (err,code,signal) {
-      if (err) throw err;
-      console.log('The exit code was: ' + code);
-      console.log('The exit signal was: ' + signal);
-      console.log('finished');
-});
   }
 }
 

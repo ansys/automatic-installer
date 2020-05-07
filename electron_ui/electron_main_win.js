@@ -3,10 +3,10 @@ const {dialog} = require('electron');
 const ipc = require('electron').ipcMain;
 
 
-const version = "0.1";
-const build_date = "28 April 2020";
+const version = "0.2";
+const build_date = "07 May 2020";
 
-app.allowRendererProcessReuse = true;  // change default deprecated method
+app.allowRendererProcessReuse = false;  // use only false! otherwise pyshell table render may fail
 app.on('window-all-closed', () => {
   app.quit()
 })
