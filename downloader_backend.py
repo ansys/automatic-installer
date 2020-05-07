@@ -264,6 +264,8 @@ class Downloader:
             subprocess.call(command)
 
             self.check_result_code(install_log_file)
+
+            self.update_edt_registry()
         else:
             logging.info("Versions are identical, skip installation")
 
@@ -400,6 +402,26 @@ class Downloader:
 
         if os.path.isdir(self.target_unpack_dir):
             shutil.rmtree(self.target_unpack_dir)
+
+    def update_edt_registry(self):
+        """
+        Update EDT registry based on the files in the HPC_Options folder that are added from UI
+        :return: None
+        """
+        hpc_folder = os.path.join(os.environ["APPDATA"], "build_downloader", "HPC_Options")
+
+        env_var = "ANSYSEM_ROOT" + self.product_version
+        update_registry_exe = os.path.join(os.environ[env_var], "UpdateRegistry.exe")
+        with open(os.path.join(os.environ[env_var], "config", "ProductList.txt")) as file:
+            product_version = next(file).rstrip()  # get first line
+
+        if os.path.isdir(hpc_folder):
+            for file in os.listdir(hpc_folder):
+                if ".acf" in file:
+                    options_file = os.path.join(hpc_folder, file)
+                    command = f'{update_registry_exe} -ProductName {product_version} -FromFile "{options_file}"'
+                    logging.info(f"Update registry from: {options_file}")
+                    subprocess.call(command)
 
     @staticmethod
     def parse_args():
