@@ -3,6 +3,7 @@
 <head>
     <title>Advanced Settings</title>
     <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="css/jquery.dataTables.min.css" rel="stylesheet" type="text/css">
     <link href="css/style.css" rel="stylesheet" type="text/css">
 </head>
 
@@ -40,17 +41,33 @@
                     <input type="text" class="w-input" maxlength="256" id="download_path" onfocus="this.blur()">
                 </form>
             </div>
+
+            <label for="hpc-options-table-div" class="field-label">Electronics Desktop HPC options</label>
+            <div id="hpc-options-table-div" class="w-container">
+
+                <table id="hpc-options-table" class="tg">
+                  <thead>
+                    <tr>
+                        <th class="tg-8w2g file-column">HPC Options File Path</th>
+                    </tr>
+                  </thead>
+                <tbody></tbody>
+                </table>
+            </div>
+            <div class="w-col w-col-6">
+                <a id="add-file-button" href="#" class="button-hpc-file w-button">Add Option Files</a>
+            </div>
         </div>
         <div class="w-col w-col-6">
             <div>
-                <div class="w-form">
+                <div class="w-form checkbox-zip">
                     <form>
                         <label id="force_install_label" class="w-checkbox checkbox-field">
                             <input type="checkbox" id="force_install" class="w-checkbox-input">
                             <span class="checkbox-label w-form-label">force install of the same build date</span>
                         </label>
 
-                        <label class="w-checkbox checkbox-field-2">
+                        <label class="w-checkbox checkbox-zip">
                             <input type="checkbox" id="delete_zip" checked="checked" class="w-checkbox-input">
                             <span id="delete_zip_label" class="checkbox-label w-form-label">
                                 Delete zip after installation
@@ -67,11 +84,15 @@
             </div>
         </div>
     </div>
+
     <script src="js/jquery-3.js" type="text/javascript"></script>
     <script src="js/jquery-3.5.0.min.js" type="text/javascript"></script>
     <script src="js/bootstrap.min.js" type="text/javascript"></script>
 
+    <script src="js/jquery.dataTables.min.js" type="text/javascript"></script>
+
     <script src="js/tooltips.js" type="text/javascript"></script>
+    <script src="js/tables_setter.js" type="text/javascript"></script>
     <script src="js/settings.js" type="text/javascript"></script>
 </body>
 </html>

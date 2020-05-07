@@ -65,24 +65,20 @@ def delete_task(task_name):
 
 
 def start():
-    print('I STARTED and asked to install FROM WITHIN NODE.JS', flush=True)
-    with open(r"D:\1.txt", "w") as file:
-        file.write("Start install once\n")
+    print('Python started from NODE.JS', flush=True)
 
 
 def respond():
     print('schedule update man', flush=True)
-    with open(r"D:\1.txt", "a") as file:
-        file.write('I GOT hello FROM NODE.JS -> HI THERE EXAMPLE ANALYZER\n')
 
 
 def stop_run():
-    print('I GOT exit FROM NODE.JS -> I STOPPED FROM WITHIN NODE.JS', flush=True)
+    print('Python stopped from NODE.JS', flush=True)
     exit()
 
 
-# CODE
-
+start()
+# command list
 while True:
     line = sys.stdin.readline()
     if "get_active_tasks" in line:
@@ -90,7 +86,6 @@ while True:
     elif "delete_task" in line:
         task = line.split()[1]
         delete_task(task)
-
     elif "exit" in line:
         stop_run()
     elif "schedule_update" in line:
