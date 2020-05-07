@@ -1,0 +1,120 @@
+$begin 'Configs'
+	$begin 'Configs'
+		$begin 'DSOConfig'
+			ConfigName='Local'
+			DesignType='HFSS'
+			$begin 'DSOMachineList'
+				$begin 'DSOMachineInfo'
+					MachineName='localhost'
+					NumEngines=1
+					NumCores=4
+					IsEnabled=true
+					RAMPercent=90
+					NumJobCores=0
+				$end 'DSOMachineInfo'
+			$end 'DSOMachineList'
+			UseAutoSettings=true
+			NumVariationsToDistribute=1
+			$begin 'DSOJobDistributionInfo'
+				AllowedDistributionTypes[4: 'Variations', 'Frequencies', 'Transient Excitations', 'Domain Solver']
+				Enable2LevelDistribution=false
+				NumL1Engines=0
+				UseDefaultsForDistributionTypes=false
+				Context()
+			$end 'DSOJobDistributionInfo'
+			$begin 'DSOMachineOptionsInfo'
+				MenuValues()
+				IntValues()
+				BoolValues()
+				DoubleValues()
+			$end 'DSOMachineOptionsInfo'
+		$end 'DSOConfig'
+		$begin 'DSOConfig'
+			ConfigName='Lyohpc3_16cores'
+			DesignType='HFSS'
+			$begin 'DSOMachineList'
+				$begin 'DSOMachineInfo'
+					MachineName='\\\\Lyohpc3'
+					NumEngines=1
+					NumCores=16
+					IsEnabled=true
+					RAMPercent=90
+					NumJobCores=0
+				$end 'DSOMachineInfo'
+			$end 'DSOMachineList'
+			UseAutoSettings=true
+			NumVariationsToDistribute=1
+			$begin 'DSOJobDistributionInfo'
+				AllowedDistributionTypes[0:]
+				Enable2LevelDistribution=false
+				NumL1Engines=0
+				UseDefaultsForDistributionTypes=false
+				Context()
+			$end 'DSOJobDistributionInfo'
+			$begin 'DSOMachineOptionsInfo'
+				MenuValues()
+				IntValues()
+				BoolValues(AllowOffCore=true)
+				DoubleValues()
+			$end 'DSOMachineOptionsInfo'
+		$end 'DSOConfig'
+		$begin 'DSOConfig'
+			ConfigName='Lyohpc3_32cores'
+			DesignType='HFSS'
+			$begin 'DSOMachineList'
+				$begin 'DSOMachineInfo'
+					MachineName='localhost'
+					NumEngines=1
+					NumCores=32
+					IsEnabled=true
+					RAMPercent=90
+					NumJobCores=0
+				$end 'DSOMachineInfo'
+			$end 'DSOMachineList'
+			UseAutoSettings=true
+			NumVariationsToDistribute=1
+			$begin 'DSOJobDistributionInfo'
+				AllowedDistributionTypes[0:]
+				Enable2LevelDistribution=false
+				NumL1Engines=0
+				UseDefaultsForDistributionTypes=false
+				Context()
+			$end 'DSOJobDistributionInfo'
+			$begin 'DSOMachineOptionsInfo'
+				MenuValues()
+				IntValues()
+				BoolValues(AllowOffCore=true)
+				DoubleValues()
+			$end 'DSOMachineOptionsInfo'
+		$end 'DSOConfig'
+		$begin 'DSOConfig'
+			ConfigName='Lyohpc3_8cores'
+			DesignType='HFSS'
+			$begin 'DSOMachineList'
+				$begin 'DSOMachineInfo'
+					MachineName='\\\\Lyohpc3'
+					NumEngines=1
+					NumCores=8
+					IsEnabled=true
+					RAMPercent=90
+					NumJobCores=0
+				$end 'DSOMachineInfo'
+			$end 'DSOMachineList'
+			UseAutoSettings=true
+			NumVariationsToDistribute=1
+			$begin 'DSOJobDistributionInfo'
+				AllowedDistributionTypes[0:]
+				Enable2LevelDistribution=false
+				NumL1Engines=0
+				UseDefaultsForDistributionTypes=false
+				Context()
+			$end 'DSOJobDistributionInfo'
+			$begin 'DSOMachineOptionsInfo'
+				MenuValues()
+				IntValues()
+				BoolValues(AllowOffCore=true)
+				DoubleValues()
+			$end 'DSOMachineOptionsInfo'
+		$end 'DSOConfig'
+	$end 'Configs'
+$end 'Configs'
