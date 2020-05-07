@@ -68,6 +68,7 @@ function add_hpc_files_rows() {
                                  };
         };
         $(row).on("click", createClickHandler($(row)));
+        $("td", row).eq(0).css("padding-left", '5px');
     }
 
     if (files_list.length < 4) {
