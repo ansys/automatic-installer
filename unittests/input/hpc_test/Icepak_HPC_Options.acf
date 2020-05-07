@@ -1,0 +1,120 @@
+$begin 'Configs'
+	$begin 'Configs'
+		$begin 'DSOConfig'
+			ConfigName='Local'
+			DesignType='Icepak'
+			$begin 'DSOMachineList'
+				$begin 'DSOMachineInfo'
+					MachineName='localhost'
+					NumEngines=1
+					NumCores=4
+					IsEnabled=true
+					RAMPercent=-1
+					NumJobCores=0
+				$end 'DSOMachineInfo'
+			$end 'DSOMachineList'
+			UseAutoSettings=false
+			NumVariationsToDistribute=1
+			$begin 'DSOJobDistributionInfo'
+				AllowedDistributionTypes[2: 'Variations', 'Solver']
+				Enable2LevelDistribution=false
+				NumL1Engines=0
+				UseDefaultsForDistributionTypes=false
+				Context()
+			$end 'DSOJobDistributionInfo'
+			$begin 'DSOMachineOptionsInfo'
+				MenuValues()
+				IntValues()
+				BoolValues()
+				DoubleValues()
+			$end 'DSOMachineOptionsInfo'
+		$end 'DSOConfig'
+		$begin 'DSOConfig'
+			ConfigName='Lyohpc3_16cores'
+			DesignType='Icepak'
+			$begin 'DSOMachineList'
+				$begin 'DSOMachineInfo'
+					MachineName='\\\\Lyohpc3'
+					NumEngines=1
+					NumCores=16
+					IsEnabled=true
+					RAMPercent=-1
+					NumJobCores=0
+				$end 'DSOMachineInfo'
+			$end 'DSOMachineList'
+			UseAutoSettings=false
+			NumVariationsToDistribute=1
+			$begin 'DSOJobDistributionInfo'
+				AllowedDistributionTypes[1: 'Variations']
+				Enable2LevelDistribution=false
+				NumL1Engines=2
+				UseDefaultsForDistributionTypes=false
+				Context()
+			$end 'DSOJobDistributionInfo'
+			$begin 'DSOMachineOptionsInfo'
+				MenuValues()
+				IntValues()
+				BoolValues()
+				DoubleValues()
+			$end 'DSOMachineOptionsInfo'
+		$end 'DSOConfig'
+		$begin 'DSOConfig'
+			ConfigName='Lyohpc3_32cores'
+			DesignType='Icepak'
+			$begin 'DSOMachineList'
+				$begin 'DSOMachineInfo'
+					MachineName='Lyohp3'
+					NumEngines=1
+					NumCores=32
+					IsEnabled=true
+					RAMPercent=-1
+					NumJobCores=0
+				$end 'DSOMachineInfo'
+			$end 'DSOMachineList'
+			UseAutoSettings=false
+			NumVariationsToDistribute=1
+			$begin 'DSOJobDistributionInfo'
+				AllowedDistributionTypes[1: 'Variations']
+				Enable2LevelDistribution=false
+				NumL1Engines=2
+				UseDefaultsForDistributionTypes=false
+				Context()
+			$end 'DSOJobDistributionInfo'
+			$begin 'DSOMachineOptionsInfo'
+				MenuValues()
+				IntValues()
+				BoolValues()
+				DoubleValues()
+			$end 'DSOMachineOptionsInfo'
+		$end 'DSOConfig'
+		$begin 'DSOConfig'
+			ConfigName='Lyohpc3_8cores'
+			DesignType='Icepak'
+			$begin 'DSOMachineList'
+				$begin 'DSOMachineInfo'
+					MachineName='\\\\Lyohpc3'
+					NumEngines=1
+					NumCores=8
+					IsEnabled=true
+					RAMPercent=-1
+					NumJobCores=0
+				$end 'DSOMachineInfo'
+			$end 'DSOMachineList'
+			UseAutoSettings=false
+			NumVariationsToDistribute=1
+			$begin 'DSOJobDistributionInfo'
+				AllowedDistributionTypes[1: 'Variations']
+				Enable2LevelDistribution=false
+				NumL1Engines=2
+				UseDefaultsForDistributionTypes=false
+				Context()
+			$end 'DSOJobDistributionInfo'
+			$begin 'DSOMachineOptionsInfo'
+				MenuValues()
+				IntValues()
+				BoolValues()
+				DoubleValues()
+			$end 'DSOMachineOptionsInfo'
+		$end 'DSOConfig'
+	$end 'Configs'
+$end 'Configs'

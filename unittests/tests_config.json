@@ -1,5 +1,6 @@
 {
   "settings_file": "D:\\GIT\\BETA_Downloader\\unittests\\input\\default_settings.json",
   "installed_product": "C:\\Program Files\\AnsysEM\\AnsysEM20.2\\Win64\\product.info",
-  "target_unpack_dir": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\temp_build_v202_EDT"
+  "target_unpack_dir": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\temp_build_v202_EDT",
+  "product_version": "202"
 }

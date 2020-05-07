@@ -399,9 +399,11 @@ class Downloader:
         """
         if os.path.isfile(self.zip_file):
             os.remove(self.zip_file)
+            logging.info("ZIP deleted")
 
         if os.path.isdir(self.target_unpack_dir):
             shutil.rmtree(self.target_unpack_dir)
+            logging.info("Unpacked directory removed")
 
     def update_edt_registry(self):
         """
