@@ -14,6 +14,10 @@ table.dataTable tbody td{
     padding: 0px;
 }
 
+#hpc-options-table_wrapper div.dataTables_scrollHeadInner table.tg.dataTable.no-footer {
+    width: 516px !important;
+}
+
 .tg .tg-8w2g {
     background-color: #ffb71b;
     color: #002b36;
