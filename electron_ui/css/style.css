@@ -102,12 +102,12 @@ table.dataTable tbody td{
 
 /* schedule table */
 #schedule-table-div {
-    max-height: 162.857px;
+    max-height: 128px;
     overflow-y: auto;
 }
 
 .table-label {
-    margin-top: 20px;
+    margin-top: 22px;
 }
 
 .tg {
