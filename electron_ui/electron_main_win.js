@@ -27,7 +27,7 @@ app.on('ready', () => {
         webPreferences: {
             nodeIntegration: true
         },
-		height: 600,
+		height: 2*600,
 		width: 2*1000,
 		resizable: false
 	});
