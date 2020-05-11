@@ -28,6 +28,14 @@ settings_path = os_path.join(app_folder, "default_settings.json");
 all_days = ["mo", "tu", "we", "th", "fr", "sa", "su"]
 
 window.onload = function() {
+    /**
+     * Function is fired on the load the window. Verifies that settings file exists in APPDATA.
+     * If exists => read settings and populate UI data from the file
+     * If not => create default file with settings and dump it to settings file. Then use these settings for UI.
+     * 
+     * Since python is started from communicator then send to pyshell request to get active schtasks.
+     * Runs function to set tooltips text
+     */
 
     if (!fs.existsSync(settings_path)) {
         settings = {
@@ -55,7 +63,7 @@ window.onload = function() {
     }
 
     $("#username").val(settings.username);
-    change_pass()  // set password
+    change_password();
 
 
     for (var i in all_days) {
@@ -74,6 +82,9 @@ window.onload = function() {
 
 
 window.onbeforeunload = function(){
+    /**
+     * Before we quit the page we need to shutdown Python process. Otherwise we will spawn it every page load
+    */
     pyshell.send('exit');
     pyshell.end(function (err,code,signal) {
         if (err) throw err;
@@ -83,7 +94,12 @@ window.onbeforeunload = function(){
     });
 }
 
+
 function get_previous_edt_path() {
+    /**
+     * parse environment variables and search for EM installation. If some build was installed 
+     * propose the same direcotry
+    */ 
     all_vars = Object.keys(process.env);
     var env_var = ""
     for (var i in all_vars){
@@ -97,7 +113,13 @@ function get_previous_edt_path() {
     }
 }
 
+
 function set_selector(id, obj_list, default_item="") {
+    /**
+     * @param  {string} id: id of the drop down menu
+     * @param  {Array} obj_list: list of objects to fill in the menu
+     * @param  {string} default_item="": default selection
+     */
     var selector = document.getElementById(id);
     $("#" + id).empty();
 
@@ -114,6 +136,9 @@ function set_selector(id, obj_list, default_item="") {
 }
 
 var save_settings = function () {
+    /**
+     * Dump settings to the JSON file in APPDATA. Fired on any change in the UI
+    */
     const all_checkboxes = ["mo-checkbox", "tu-checkbox", "we-checkbox", "th-checkbox", "fr-checkbox",
       "sa-checkbox", "su-checkbox"];
 
@@ -136,7 +161,12 @@ var save_settings = function () {
       fs.writeFileSync(settings_path, data);
 }
 
+
 var request_builds = function (){
+    /**
+     * Send request to the server using axios. Try to retrive info about 
+     * available builds on artifactory
+    */
     if (!settings.username) {
         error_tooltip.call($('#username'), "Provide your Ansys User ID");
         $("#version").empty();
@@ -177,7 +207,9 @@ var request_builds = function (){
 
 
 function get_builds(artifacts_list){
-
+    /**
+     * Parses information from the server. If see EBU or WB build extract version and add to the list
+     */
     let version_list = [];
     for (var i  in artifacts_list) {
         repo = artifacts_list[i]["key"];
@@ -204,16 +236,22 @@ function get_builds(artifacts_list){
 }
 
 
-var change_pass = function (){
+var change_password = function (){
+    /**
+     * Password is stored in settings in another dictionary (Object), extract it for selected artifactory
+     */
     password = (settings.password.hasOwnProperty(settings.artifactory)) ? settings.password[settings.artifactory] : "";
     $("#password").val(password);
 }
 
 $('.clockpicker').clockpicker({
+    /**
+     * enable JQuery clockpicker for time selection for scheduling
+     */
     autoclose: true,
     placement: 'left'
 });
 
 $("#artifactory, #username, #password, #time, .days-checkbox").bind("change", save_settings);
-$("#artifactory").bind("change", change_pass);
+$("#artifactory").bind("change", change_password);
 $("#artifactory, #username, #password").bind("change", request_builds);

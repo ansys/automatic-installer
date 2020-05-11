@@ -7,6 +7,10 @@ settings_path = os_path.join(process.env.APPDATA, "build_downloader", "default_s
 hpc_options_folder = os_path.join(process.env.APPDATA, "build_downloader", "HPC_Options")
 
 $("#install_path, #download_path").click(
+    /**
+     * when click in the input box for download and installation path => open Electron dialog to select directory.
+     * In HTML cursor is blurred to disable direct change in input field: see settings.html
+     */
     function(){
         dialog.showOpenDialog(remote.getCurrentWindow(), {
                 defaultPath: this.value,
@@ -25,6 +29,11 @@ $("#install_path, #download_path").click(
 
 
 window.onload = function() {
+    /**
+     * On load of the page set settings from JSON file.
+     * Enable tooltips
+     * If not directory with HPC options => create one
+     */
     if (fs.existsSync(settings_path)) {
         var settings_data = fs.readFileSync(settings_path);
         settings = JSON.parse(settings_data);
@@ -42,6 +51,10 @@ window.onload = function() {
 }
 
 $(document).ready(function() {
+    /**
+     * Create JQuery DataTables for EDT HPC options file.
+     * Update table rows, see tables_setter.js
+     */
     hpc_table = $('#hpc-options-table').DataTable( {
         "scrollY": "132px",
         "scrollCollapse": true,
@@ -56,18 +69,27 @@ $(document).ready(function() {
 $("#install_path, #download_path, #password, #force_install, #delete_zip, #wb_flags").bind("change", save_settings);
 
 var save_settings = function(){
-  if (this.id == "force_install" || this.id == "delete_zip"){
-    settings[this.id] = this.checked;
-  } else {
-    settings[this.id] = this.value;
-  }
+    /** 
+     * Save settings to the file on every UI change
+    */
+    if (this.id == "force_install" || this.id == "delete_zip"){
+        settings[this.id] = this.checked;
+    } else {
+        settings[this.id] = this.value;
+    }
 
-  let data = JSON.stringify(settings, null, 4);
-  fs.writeFileSync(settings_path, data);
-
+    let data = JSON.stringify(settings, null, 4);
+    fs.writeFileSync(settings_path, data);
 };
 
 $("#add-file-button").click(
+    /**
+     * When click on the button to append options => 
+     * 1. open Electron dialog with filter for .acf files
+     * 2. read user input, might be multiple selection
+     * 3. synchronously copy files to settings folder/HPC_options
+     * 4. update table rows, see tables_setter.js
+     */
     function(){
         dialog.showOpenDialog(remote.getCurrentWindow(), {
                 properties: ['openFile', 'multiSelections'],
@@ -84,9 +106,7 @@ $("#add-file-button").click(
                           if (err) throw err;
                         });
                     }
-//                    setTimeout(() => {
-                        add_hpc_files_rows();
-//                    }, 1000);
+                    add_hpc_files_rows();
                 }
             }).catch(err => {
                   console.log(err)

@@ -13,7 +13,9 @@ let {PythonShell} = require('python-shell');
 
 pyshell = new PythonShell('electron_backend.py');
 pyshell.on('message', function (message) {
-          // received a message sent from the Python script (a simple "print" statement)
+          /** received a message sent from the Python script (a simple "print" statement)
+           * Depending on the content of the message fire different functions
+          */
           if (message.includes("active_tasks")){
                 tasks_list = JSON.parse((message.split(/ (.*)/)[1]).replace(/'/g, '"'));
                 add_task_rows(tasks_list);
