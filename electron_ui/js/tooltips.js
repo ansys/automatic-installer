@@ -1,4 +1,7 @@
 function set_default_tooltips_main(){
+    /**
+     * Set tooltips on the main page
+     */
     set_tooltip("password",  "Retrieval of Artifactory Encrypted Password Instructions:\n" +
     "1. Log into Artifactory\n" +
     "2. Click on your username (top right)\n" +
@@ -14,6 +17,9 @@ function set_default_tooltips_main(){
 }
 
 function set_default_tooltips_settings(){
+    /**
+     * Set tooltips on the settings page
+     */
     set_tooltip("force_install_label",
         "Not recommended to check. If checked will force install build of the same  date.\n" +
         "For example you have installed build of 20th of May and try to download" +
@@ -37,7 +43,15 @@ function set_default_tooltips_settings(){
     set_tooltip("hpc-options-table-div", "Click on a row to remove options file")
 }
 
+
 function set_tooltip(id, text, align_left=false, place="bottom") {
+    /**
+     * Set tooltip for the HTML object
+     * @param  {} id: id of the object
+     * @param  {} text: tooltip text
+     * @param  {} align_left=false: need to align text on the left?
+     * @param  {} place="bottom": position of the tooltip
+     */
     $("#" + id).tooltip({
                             title: text,
                             placement: place
@@ -46,7 +60,7 @@ function set_tooltip(id, text, align_left=false, place="bottom") {
                         .data('bs.tooltip')
                         .tip()
                         .addClass('default-tooltip')
-                        //$("#" + id).tooltip("show");
+                        //$("#" + id).tooltip("show");  // for debug
 
     if (align_left) {
         $("#" + id).data('bs.tooltip')
@@ -55,7 +69,13 @@ function set_tooltip(id, text, align_left=false, place="bottom") {
     }
 }
 
+
 var error_tooltip = function(prop_title) {
+    /**
+     * Set error tooltip (in red color). 
+     * Show tooltip in specific title for 3.5s. After destroy and revert back default tooltips
+     * @param  {} prop_title: tooltip message
+     */
     this.tooltip('destroy');
     setTimeout(() => {this.tooltip({
                                 title: prop_title,
