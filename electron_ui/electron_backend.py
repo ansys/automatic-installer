@@ -5,6 +5,9 @@ import sys
 import re
 import xml.etree.ElementTree as ET
 
+backend_exe = os.path.join(os.getcwd(), "electron_ui", "python_build", "downloader_backend.exe")  # develop
+#  backend_exe = os.path.join(os.getcwd(), "downloader_backend.exe")  # production
+
 
 def get_task_details(task_name):
     """
@@ -80,19 +83,19 @@ def schedule_task(settings_file):
     with open(settings_file) as file:
         settings = json.load(file)
 
-    backend_exe = os.path.join(os.getcwd(), "electron_ui", "python_build", "downloader_backend.exe")
-    command = (fr'schtasks /CREATE /TN "AnsysDownloader\{settings["version"]}" /TR "{backend_exe}" ' +
-               fr'/d {",".join(unpack_days[day] for day in settings["days"])} /sc WEEKLY /st {settings["time"]} /f')
+    command = (fr'schtasks /CREATE /TN "AnsysDownloader\{settings["version"]}" /TR "{backend_exe} -p {settings_file}"' +
+               fr' /d {",".join(unpack_days[day] for day in settings["days"])} /sc WEEKLY /st {settings["time"]} /f')
 
+    subprocess.check_output(command, shell=True)
+
+
+def install_once(settings_file):
+    command = f'{backend_exe} -p "{settings_file}"'
     subprocess.check_output(command, shell=True)
 
 
 def start():
     print('Python started from NODE.JS', flush=True)
-
-
-def respond():
-    print('schedule update man', flush=True)
 
 
 def stop_run():
@@ -115,6 +118,7 @@ while True:
         file_name = line.split()[1]
         schedule_task(file_name)
     elif "install_once" in line:
-        start()
+        file_name = line.split()[1]
+        install_once(file_name)
     elif line:
         print('unrecognized command', flush=True)

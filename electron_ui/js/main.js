@@ -262,6 +262,18 @@ $("#artifactory").bind("change", change_password);
 $("#artifactory, #username, #password").bind("change", request_builds);
 
 $("#schedule-button").click(function (){
+    /**
+     * Execute when click on schedule button. Verify that at least one day is selected
+     * If version is empty or not equal to drop menu => server is not grabbed yet => return
+     * 
+     * Make copy of settings file to another file for scheduling
+     * If all checks are fine then send command to python to set a task and retrieve a new tasks list
+     */
+    if(settings.days.length == 0){
+        alert("At least one day should be selected!");
+        return;
+    }
+
     if(settings.version == $("#version")[0].value && settings.version){
         var scheduled_settings = os_path.join(app_folder, "settings_" + settings.version + ".json");
         fs.copyFileSync(settings_path, scheduled_settings, (err) => {
@@ -274,10 +286,26 @@ $("#schedule-button").click(function (){
         }, 1000);
         
     } else {
-        console.log("Version does not exist on artifactory")
+        alert("Version does not exist on artifactory");
     }
 })
 
 $("#install-once-button").click(function (){
-    pyshell.send('install_once');
+    /**
+     * Execute when click on install once button.
+     * If version is empty or not equal to drop menu => server is not grabbed yet => return
+     * 
+     * Make copy of settings file to another file for installing once
+     * If all checks are fine then send command to python to install edt
+     */
+    if(settings.version == $("#version")[0].value && settings.version){
+        var install_once_settings = os_path.join(app_folder, "install_once_settings_" + settings.version + ".json");
+        fs.copyFileSync(settings_path, install_once_settings, (err) => {
+            if (err) throw err;
+        });
+        pyshell.send('install_once ' + install_once_settings);        
+    } else {
+        alert("Version does not exist on artifactory");
+    }
+    alert("Installation started! You may close UI and verify log later")
 })
