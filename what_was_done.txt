@@ -26,5 +26,5 @@ electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --ou
 8. to send requests from JS
 npm install axios
 
-9. compile downloader_backend
-pyinstaller .\downloader_backend.py  --distpath electron_ui\python_build --workpath %TEMP% --exclude-module tkinter --onefile
+9. compile downloader_backend from within pycharm
+pyinstaller ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile

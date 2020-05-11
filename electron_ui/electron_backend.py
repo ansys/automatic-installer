@@ -5,7 +5,7 @@ import sys
 import re
 import xml.etree.ElementTree as ET
 
-backend_exe = os.path.join(os.getcwd(), "electron_ui", "python_build", "downloader_backend.exe")  # develop
+backend_exe = os.path.join(os.getcwd(), "python_build", "downloader_backend.exe")  # develop
 #  backend_exe = os.path.join(os.getcwd(), "downloader_backend.exe")  # production
 
 
@@ -115,10 +115,10 @@ while True:
     elif "exit" in line:
         stop_run()
     elif "schedule_task" in line:
-        file_name = line.split()[1]
+        file_name = " ".join(line.split()[1:])
         schedule_task(file_name)
     elif "install_once" in line:
-        file_name = line.split()[1]
+        file_name = " ".join(line.split()[1:])
         install_once(file_name)
     elif line:
         print('unrecognized command', flush=True)

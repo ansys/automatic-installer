@@ -219,6 +219,8 @@ class Downloader:
         if self.settings.delete_zip:
             self.clean_temp()
 
+        print("Installation finished!")
+
     def install_edt(self):
         """
         Install Electronics Desktop. Make verification that the same version is not yet installed and makes
