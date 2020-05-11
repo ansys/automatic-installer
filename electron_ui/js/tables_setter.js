@@ -29,7 +29,7 @@ function add_task_rows(tasks_list) {
                                         )
 
                                         if (answer == 0) {
-                                            pyshell.send('delete_task ' + product  + "_" + version);
+                                            pyshell.send('delete_task ' + version + "_" + product);
                                             pyshell.send('get_active_tasks');
                                         }
 

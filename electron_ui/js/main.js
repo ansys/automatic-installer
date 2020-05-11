@@ -140,9 +140,9 @@ var save_settings = function () {
      * Dump settings to the JSON file in APPDATA. Fired on any change in the UI
     */
     const all_checkboxes = ["mo-checkbox", "tu-checkbox", "we-checkbox", "th-checkbox", "fr-checkbox",
-      "sa-checkbox", "su-checkbox"];
+            "sa-checkbox", "su-checkbox"];
 
-      if (all_checkboxes.includes(this.id)) {
+    if (all_checkboxes.includes(this.id)) {
         var new_days = [];
         for (var i in all_checkboxes) {
             checkbox = $("#" + all_checkboxes[i])[0];
@@ -151,14 +151,14 @@ var save_settings = function () {
             }
         }
         settings.days = new_days;
-      } else if (this.id === "password"){
+    } else if (this.id === "password"){
         settings.password[settings.artifactory] = this.value;
-      } else {
+    } else {
         settings[this.id] = this.value;
-      }
+    }
 
-      let data = JSON.stringify(settings, null, 4);
-      fs.writeFileSync(settings_path, data);
+    let data = JSON.stringify(settings, null, 4);
+    fs.writeFileSync(settings_path, data);
 }
 
 
@@ -167,15 +167,14 @@ var request_builds = function (){
      * Send request to the server using axios. Try to retrive info about 
      * available builds on artifactory
     */
+    $("#version").empty();
     if (!settings.username) {
         error_tooltip.call($('#username'), "Provide your Ansys User ID");
-        $("#version").empty();
         return;
     }
 
     if (!settings.password[settings.artifactory]) {
         error_tooltip.call($('#password'), "Provide Artifactory unique password");
-        $("#version").empty();
         return;
     }
 
@@ -184,7 +183,7 @@ var request_builds = function (){
         username: settings.username,
         password: settings.password[settings.artifactory]
       },
-      timeout: 20000
+      timeout: 30000
     })
       .then((response) => {
          if (response.status == 200) {
@@ -192,7 +191,6 @@ var request_builds = function (){
          }
       })
       .catch((err) => {
-        $("#version").empty();
         if (!err.response && !err.code) {
             error_tooltip.call($('#artifactory'), "Check that you are on VPN and retry in 10s (F5)");
         } else if (err.code === 'ECONNABORTED'){
@@ -232,7 +230,14 @@ function get_builds(artifacts_list){
         else if (b.slice(1, 6) > a.slice(1, 6)) {return 1;}
         return 0;
     });
-    set_selector("version", version_list);
+
+    if(version_list.includes(settings.version)){
+        set_selector("version", version_list, settings.version);
+    } else {
+        version = document.getElementById("version");
+        set_selector("version", version_list);
+        save_settings.call($("#version")[0]);
+    }
 }
 
 
@@ -252,6 +257,27 @@ $('.clockpicker').clockpicker({
     placement: 'left'
 });
 
-$("#artifactory, #username, #password, #time, .days-checkbox").bind("change", save_settings);
+$("#artifactory, #username, #password, #time, #version, .days-checkbox").bind("change", save_settings);
 $("#artifactory").bind("change", change_password);
 $("#artifactory, #username, #password").bind("change", request_builds);
+
+$("#schedule-button").click(function (){
+    if(settings.version == $("#version")[0].value && settings.version){
+        var scheduled_settings = os_path.join(app_folder, "settings_" + settings.version + ".json");
+        fs.copyFileSync(settings_path, scheduled_settings, (err) => {
+            if (err) throw err;
+        });
+        pyshell.send('schedule_task ' + scheduled_settings);
+
+        setTimeout(() => {
+            pyshell.send('get_active_tasks');
+        }, 1000);
+        
+    } else {
+        console.log("Version does not exist on artifactory")
+    }
+})
+
+$("#install-once-button").click(function (){
+    pyshell.send('install_once');
+})

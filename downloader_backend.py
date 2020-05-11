@@ -12,7 +12,6 @@ from collections import namedtuple, OrderedDict
 import requests
 
 import iss_templates
-import set_log
 
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
@@ -66,7 +65,7 @@ class Downloader:
         self.product_version = None
         self.setup_exe = None
 
-        set_log.set_logger()
+        set_logger()
 
         settings_path = self.parse_args()
         with open(settings_path, "r") as file:
@@ -447,6 +446,24 @@ class Downloader:
         else:
             logging.error("Please provide --path argument")
             sys.exit(1)
+
+
+def set_logger():
+    """
+    Function to setup logging output to stream and log file. Will be used by UI and backend
+    :return: None
+    """
+
+    settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
+    logging_file = os.path.join(settings_folder, "downloader.log")
+
+    if not os.path.isdir(settings_folder):
+        os.mkdir(settings_folder)
+
+    # add logging to console and log file
+    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.DEBUG,
+                        datefmt='%d.%m.%Y %H:%M:%S')
+    logging.getLogger().addHandler(logging.StreamHandler())
 
 
 if __name__ == "__main__":
