@@ -1,7 +1,12 @@
+import json
+import os
 import subprocess
 import sys
 import re
 import xml.etree.ElementTree as ET
+
+backend_exe = os.path.join(os.getcwd(), "python_build", "downloader_backend.exe")  # develop
+#  backend_exe = os.path.join(os.getcwd(), "downloader_backend.exe")  # production
 
 
 def get_task_details(task_name):
@@ -28,14 +33,14 @@ def get_task_details(task_name):
     start_boundary = calendar_trig.find("win:StartBoundary", ns).text
     days = calendar_trig.find("win:ScheduleByWeek/win:DaysOfWeek", ns)
     for day in days:
-        day_name = day.tag.split("}")[1][:3]
+        day_name = day.tag.split("}")[1][:2]
         task_data_dict["days"].append(day_name)
 
     task_data_dict["time"] = start_boundary.split("T")[1][:-3]
 
     uri = schtasks.find("win:RegistrationInfo/win:URI", ns)
     name = uri.text.split("\\")[2]
-    task_data_dict["product"], task_data_dict["version"] = name.split("_")
+    task_data_dict["version"], task_data_dict["product"] = name.split("_")
     return task_data_dict
 
 
@@ -61,15 +66,36 @@ def get_active_schtasks():
 
 def delete_task(task_name):
     command = fr'schtasks /DELETE /TN "AnsysDownloader\{task_name}" /f'  # /f - silent
-    subprocess.check_output(command, shell=True).decode("ascii", errors="ignore")
+    subprocess.check_output(command, shell=True)
+
+
+def schedule_task(settings_file):
+    unpack_days = {
+        "mo": "MON",
+        "tu": "TUE",
+        "we": "WED",
+        "th": "THU",
+        "fr": "FRI",
+        "sa": "SAT",
+        "su": "SUN"
+    }
+
+    with open(settings_file) as file:
+        settings = json.load(file)
+
+    command = (fr'schtasks /CREATE /TN "AnsysDownloader\{settings["version"]}" /TR "{backend_exe} -p {settings_file}"' +
+               fr' /d {",".join(unpack_days[day] for day in settings["days"])} /sc WEEKLY /st {settings["time"]} /f')
+
+    subprocess.check_output(command, shell=True)
+
+
+def install_once(settings_file):
+    command = f'{backend_exe} -p "{settings_file}"'
+    subprocess.check_output(command, shell=True)
 
 
 def start():
     print('Python started from NODE.JS', flush=True)
-
-
-def respond():
-    print('schedule update man', flush=True)
 
 
 def stop_run():
@@ -88,9 +114,11 @@ while True:
         delete_task(task)
     elif "exit" in line:
         stop_run()
-    elif "schedule_update" in line:
-        respond()
+    elif "schedule_task" in line:
+        file_name = " ".join(line.split()[1:])
+        schedule_task(file_name)
     elif "install_once" in line:
-        start()
+        file_name = " ".join(line.split()[1:])
+        install_once(file_name)
     elif line:
         print('unrecognized command', flush=True)
