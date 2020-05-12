@@ -191,8 +191,19 @@ class Downloader:
 
             self.zip_file = os.path.join(self.settings.download_path, f"temp_build_{self.settings.version}.zip")
             logging.info(f"Start download file from {url} to {self.zip_file}")
-            with open(self.zip_file, 'wb') as f:
-                shutil.copyfileobj(url_request.raw, f)
+
+            try:
+                file_size = int(url_request.headers['Content-Length'])
+            except TypeError:
+                file_size = 7e+9
+
+            percent = 0
+            with open(self.zip_file, 'wb') as zip_file:
+                for chunk in url_request.iter_content(chunk_size=int(file_size/100)):
+                    if chunk:
+                        logging.info(f"Download progress: {min(100, percent)}%")
+                        percent += 1
+                        zip_file.write(chunk)
 
             logging.info(f"File is downloaded to: {self.zip_file}")
 
@@ -279,7 +290,7 @@ class Downloader:
             logging.error("setup.exe does not exist")
             sys.exit(1)
 
-        if os.path.isfile(self.installed_product):
+        if self.installed_product and os.path.isfile(self.installed_product):
             uninstall_iss_file = os.path.join(self.target_unpack_dir, "uninstall.iss")
             uninstall_log_file = os.path.join(self.target_unpack_dir, "uninstall.log")
             with open(uninstall_iss_file, "w") as file:
