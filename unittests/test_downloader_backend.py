@@ -18,16 +18,46 @@ class InstallUninstallTest(unittest.TestCase):
             # following setup is overwritten in full_run_test
             self.downloader.installed_product = test_settings["installed_product"]
             self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
+            self.downloader.zip_file = test_settings["zip_file"]
             self.downloader.product_version = test_settings["product_version"]
 
-    def uninstall_test(self):
+    def uninstall_wb_test(self):
+        """
+            Test uninstallation of WB
+            Uses following mock up from settings file:
+                downloader.settings.install_path
+                downloader.settings.version
+        """
+        self.downloader.uninstall_wb()
+
+    def uninstall_edt_test(self):
+        """
+            Test uninstallation of EDT
+            Uses following mock up:
+                arguments mock up of settings_file
+                downloader.target_unpack_dir
+                downloader.installed_product
+        """
         self.downloader.parse_iss()
         self.downloader.uninstall_edt()
 
-    def install_test(self):
+    def install_edt_test(self):
+        """
+            Test installation of EDT
+            Uses following mock up:
+                arguments mock up of settings_file
+                downloader.target_unpack_dir
+        """
         self.downloader.install_edt()
 
     def clean_temp_test(self):
+        """
+            Test cleaning of temp directory from ZIP and unpacked folder
+            Uses following mock up:
+                arguments mock up of settings_file
+                downloader.target_unpack_dir
+                downloader.zip_file
+        """
         self.downloader.clean_temp()
 
     def update_registry_test(self):
@@ -48,10 +78,11 @@ class InstallUninstallTest(unittest.TestCase):
 if __name__ == '__main__':
     # unittest.main()
     suite = unittest.TestSuite()
-    # suite.addTest(InstallUninstallTest("install_test"))
-    # suite.addTest(InstallUninstallTest("uninstall_test"))
+    # suite.addTest(InstallUninstallTest("install_edt_test"))
+    # suite.addTest(InstallUninstallTest("uninstall_edt_test"))
     # suite.addTest(InstallUninstallTest("update_registry_test"))
     # suite.addTest(InstallUninstallTest("clean_temp_test"))
+    # suite.addTest(InstallUninstallTest("uninstall_wb_test"))
     suite.addTest(InstallUninstallTest("full_run_test"))
     runner = unittest.TextTestRunner()
     runner.run(suite)

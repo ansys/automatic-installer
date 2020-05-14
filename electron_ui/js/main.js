@@ -105,7 +105,7 @@ function get_previous_edt_path() {
     all_vars = Object.keys(process.env);
     var env_var = ""
     for (var i in all_vars){
-        if (all_vars[i].toLowerCase().includes("ansysem")) env_var = process.env[all_vars[i]];
+        if (all_vars[i].toLowerCase().includes("ansysem_root")) env_var = process.env[all_vars[i]];
     }
 
     if (!env_var){

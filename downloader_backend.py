@@ -403,6 +403,19 @@ class Downloader:
     def install_wb(self):
         pass
 
+    def uninstall_wb(self):
+        """Uninstall WB if such exists in the target installation directory"""
+
+        uninstall_exe = os.path.join(self.settings.install_path, "ANSYS Inc",
+                                     self.settings.version[:4], "Uninstall.exe")
+        if os.path.isfile(uninstall_exe):
+            command = f'{uninstall_exe} -silent'
+            logging.info(f"Execute uninstallation: {command}")
+            subprocess.call(command)
+            logging.info("Previous build was uninstalled")
+        else:
+            logging.info("No WB Uninstall.exe file detected")
+
     def clean_temp(self):
         """
         Cleans downloaded zip and unpacked folder with content
