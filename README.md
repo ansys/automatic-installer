@@ -51,6 +51,11 @@ D:\build_env\Scripts\pip.exe install pyinstaller
 D:\build_env\Scripts\pyinstaller.exe electron_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefiles
 ~~~
 
+For downloader backend:
+~~~
+pyinstaller ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile
+~~~
+
 # Project tricks
 1. Make backend running even if we compile it to exe
 

@@ -227,8 +227,7 @@ class Downloader:
         else:
             self.install_wb()
 
-        if self.settings.delete_zip:
-            self.clean_temp()
+        self.clean_temp()
 
         print("Installation finished!")
 
@@ -409,7 +408,7 @@ class Downloader:
         Cleans downloaded zip and unpacked folder with content
         :return: None
         """
-        if os.path.isfile(self.zip_file):
+        if os.path.isfile(self.zip_file) and self.settings.delete_zip:
             os.remove(self.zip_file)
             logging.info("ZIP deleted")
 
