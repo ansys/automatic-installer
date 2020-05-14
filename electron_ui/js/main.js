@@ -98,19 +98,27 @@ window.onbeforeunload = function(){
 function get_previous_edt_path() {
     /**
      * parse environment variables and search for EM installation. If some build was installed 
-     * propose the same direcotry
+     * propose the same directory
+     * Otherwise search for previous WB installation and propose it
+     * If nothing is found propose C:/program files
     */ 
     all_vars = Object.keys(process.env);
     var env_var = ""
     for (var i in all_vars){
-        if (all_vars[i].includes("ANSYSEM")) env_var = process.env[all_vars[i]];
+        if (all_vars[i].toLowerCase().includes("ansysem")) env_var = process.env[all_vars[i]];
     }
 
     if (!env_var){
-        return "C:\\Program Files";
-    } else {
-        return path.dirname(path.dirname(path.dirname(env_var)));
+        // search for WB env var match eg "ANSYS202_DIR"
+        const regex_str = /ansys[0-9]{3,}_dir/;
+        for (var i in all_vars){
+            if (all_vars[i].toLowerCase().match(regex_str)) env_var = process.env[all_vars[i]];
+        }
     }
+    if (!env_var){
+        return "C:\\Program Files";
+    }
+    return path.dirname(path.dirname(path.dirname(env_var)));
 }
 
 
