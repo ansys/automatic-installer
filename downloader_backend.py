@@ -196,14 +196,19 @@ class Downloader:
                 file_size = int(url_request.headers['Content-Length'])
             except TypeError:
                 file_size = 7e+9
+            except KeyError:
+                # WB has not content-length
+                file_size = 11e+9
 
             percent = 0
             with open(self.zip_file, 'wb') as zip_file:
-                for chunk in url_request.iter_content(chunk_size=int(file_size/100)):
-                    if chunk:
-                        logging.info(f"Download progress: {min(100, percent)}%")
-                        percent += 1
-                        zip_file.write(chunk)
+                while True:
+                    chunk = url_request.raw.read(int(file_size/100))
+                    if not chunk:
+                        break
+                    logging.info(f"Download progress: {min(100, percent)}%")
+                    percent += 1
+                    zip_file.write(chunk)
 
             logging.info(f"File is downloaded to: {self.zip_file}")
 
@@ -401,7 +406,21 @@ class Downloader:
             sys.exit(1)
 
     def install_wb(self):
-        pass
+        """Install WB to the target installation directory"""
+        self.setup_exe = os.path.join(self.target_unpack_dir, "setup.exe")
+
+        if os.path.isfile(self.setup_exe):
+            self.uninstall_wb()
+
+            install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
+            command = f'{self.setup_exe} -silent -install_dir "{install_path}" '
+            command += self.settings.wb_flags
+
+            logging.info(f"Execute installation: {command}")
+            subprocess.call(command)
+            logging.info("New build was installed")
+        else:
+            logging.info("No WB setup.exe file detected")
 
     def uninstall_wb(self):
         """Uninstall WB if such exists in the target installation directory"""

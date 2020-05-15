@@ -66,8 +66,6 @@ $(document).ready(function() {
     add_hpc_files_rows();
 } );
 
-$("#install_path, #download_path, #password, #force_install, #delete_zip, #wb_flags").bind("change", save_settings);
-
 var save_settings = function(){
     /** 
      * Save settings to the file on every UI change
@@ -113,3 +111,5 @@ $("#add-file-button").click(
                 })
     }
 );
+
+$("#install_path, #download_path, #password, #force_install, #delete_zip, #wb_flags").bind("change", save_settings);

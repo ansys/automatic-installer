@@ -26,16 +26,7 @@ function set_default_tooltips_settings(){
         "and install next day, application will identify that new build was not added" +
         "to artifactory and will skip the installation", true);
 
-    set_tooltip("wb_flags", "Product\tProduct Flag\nMechanical APDL\t-mechapdl\n" +
-        "ANSYS Customization Files\t-ansyscust\nANSYS Autodyn\t-autodyn\nANSYS LS-DYNA\t-lsdyna\n" +
-        "ANSYS CFD-Post\t-cfdpost\nANSYS CFX\t-cfx\nANSYS EnSight\t-ensight\nANSYS TurboGrid\t-turbogrid\n" +
-        "ANSYS Fluent\t-fluent\nANSYS Polyflow\t-polyflow\nANSYS ICEM CFD\t-icemcfd\nANSYS Forte\t-forte\n" +
-        "ANSYS Chemkin\t-chemkinpro\nANSYS Energico\t-energico\nANSYS FENSAP-ICE\t-fensapice\n" +
-        "ANSYS Reaction Workbench\t-reactionwb\nANSYS Model Fuel Library (Encrypted)\t-mfl\n" +
-        "# Note Installing any of the above products will install ANSYS Workbench\n" +
-        "ANSYS Remote Solve Manager Standalone Services\t-rsm\nParasolid Geometry Interface\t-parasolid\n" +
-        "ACIS Geometry Interface\t-acis\nNX Geometry Interface Plugin\t-ug_plugin\nANSYS Icepak\t-icepak\n" +
-        "CATIA 5 Reader\t-catia5_reader", true, "left")
+    set_tooltip("wb_flags", "Product\tProduct Flag\nANSYS Additive\t-additive\nANSYS Aqwa\t-aqwa\nANSYS Autodyn\t-autodyn\nANSYS CFD-Post\t-cfdpost\nANSYS CFX\t-cfx\nANSYS Chemkin\t-chemkinpro\nANSYS Customization Files\t-ansyscust\nANSYS Discovery AIM\t-aim\nANSYS Discovery\t-live\nANSYS Discovery SpaceClaim\t-spaceclaim\nANSYS Energico\t-energico\nANSYS EnSight\t-ensight\nANSYS FENSAP-ICE\t-fensapice\nANSYS Fluent\t-fluent\nANSYS Forte\t-forte\nANSYS ICEM CFD\t-icemcfd\nANSYS LS-DYNA\t-lsdyna\nANSYS Mechanical APDL\t-mechapdl\nANSYS Model Fuel Library (Encrypted)\t-mfl\nANSYS optiSLang\t-optislang\nANSYS Polyflow\t-polyflow\nANSYS Reaction Workbench\t-reactionwb\nANSYS Sherlock\t-sherlock\nANSYS SPEOS\t-speos\nANSYS TurboGrid\t-turbogrid\nNote: Installing any of the above products will install ANSYS Workbench.\n\t \nACIS\t-acis\nANSYS Icepak\t-icepak\nANSYS SpaceClaim Configuration*\t-sc_config\nANSYS Viewer\t-aview\nAutoCAD Plugin\t-acad_plugin\nAutoCAD Reader\t-acad_reader\nAutodesk Inventor Plugin\t-adinventor_plugin\nAutodesk Inventor Reader\t-adinventor_reader\nCATIA V4\t-catia4\nCATIA 5 Plugin\t-catia5_plugin\nCATIA 5 Reader\t-catia5_reader\nCATIA V6\t-catia6\nCreo Elements/Direct Modeling\t-cocreate\nCreo Parametric Plugin\t-proe_plugin\nCreo Parametric Reader\t-proe_reader\nJTOpen\t-jtopen\nDistributed Compute Services\t-dcs\nNX Plugin\t-ug_plugin\nNX Reader\t-ug_reader\nParasolid\t-parasolid\nRemote Solve Manager Standalone Services\t-rsm\nSolid Edge Plugin\t-solidedge_plugin\nSolid Edge Reader\t-solidedge_reader\nSOLIDWORKS Plugin\t-solidworks_plugin\nSOLIDWORKS Reader\t-solidworks_reader\nSpaceClaim Direct Modeler Configuration*\t-scdm_config", true, "left")
 
     set_tooltip("install_path",
         "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for EDT\nor \n\\ANSYS Inc\\vXXX for WB");
