@@ -1,6 +1,6 @@
 {
     "username": "mbeliaev",
-    "install_path": "C:\\Program Files",
+    "install_path": "D:\\C_replacement\\Program Files",
     "artifactory": "Otterfing",
     "password": {
         "Otterfing": "",
@@ -8,7 +8,7 @@
     },
     "delete_zip": true,
     "download_path": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp",
-    "version": "v202_EDT",
+    "version": "v202_WB",
     "wb_flags": "",
     "days": [
         "sa"

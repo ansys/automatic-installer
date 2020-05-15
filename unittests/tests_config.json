@@ -1,7 +1,7 @@
 {
-  "settings_file": "D:\\GIT\\BETA_Downloader\\unittests\\input\\default_settings.json",
+  "settings_file": "D:\\GIT\\BETA_Downloader\\unittests\\input\\settings_wb.json",
   "installed_product": "C:\\Program Files\\AnsysEM\\AnsysEM20.2\\Win64\\product.info",
-  "target_unpack_dir": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\temp_build_v202_EDT",
+  "target_unpack_dir": "C:\\Users\\mbeliaev\\Documents\\temp_build_v202_WB",
   "product_version": "202",
   "zip_file": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\wbxtra_05132020_162915.zip"
 }

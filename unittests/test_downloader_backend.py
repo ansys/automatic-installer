@@ -30,6 +30,15 @@ class InstallUninstallTest(unittest.TestCase):
         """
         self.downloader.uninstall_wb()
 
+    def install_wb_test(self):
+        """
+            Test installation of WB
+            Uses following mock up:
+                arguments mock up of settings_file
+                downloader.target_unpack_dir
+        """
+        self.downloader.install_wb()
+
     def uninstall_edt_test(self):
         """
             Test uninstallation of EDT
@@ -83,6 +92,7 @@ if __name__ == '__main__':
     # suite.addTest(InstallUninstallTest("update_registry_test"))
     # suite.addTest(InstallUninstallTest("clean_temp_test"))
     # suite.addTest(InstallUninstallTest("uninstall_wb_test"))
-    suite.addTest(InstallUninstallTest("full_run_test"))
+    suite.addTest(InstallUninstallTest("install_wb_test"))
+    # suite.addTest(InstallUninstallTest("full_run_test"))
     runner = unittest.TextTestRunner()
     runner.run(suite)
