@@ -52,7 +52,7 @@ function add_task_rows(tasks_list) {
 function add_hpc_files_rows() {
     /**
      * Append table of HPC options files. Parse hpc_options_folder (settings.js) for file names.
-     * It is JQuery table, so use appropriete methods to append.
+     * It is JQuery table, so use appropriate methods to append.
      * While create rows with tasks assign a function for each row: ask if user wants to delete an options file
      * if yes (wants) => remove file from APPDATA and then refresh the table
      */

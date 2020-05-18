@@ -18,7 +18,16 @@ $("#install_path, #download_path").click(
             }).then(
             result => {
                 if (result.canceled == false) {
-                    this.value = result.filePaths;
+                    let selected_path = result.filePaths[0];
+                    if (this.id == "install_path"){
+                        if (selected_path.toLowerCase().endsWith("ansysem")){
+                            selected_path = truncate_path("AnsysEM", selected_path);
+                        } else if (selected_path.toLowerCase().endsWith("ansys inc")){
+                            selected_path = truncate_path("Ansys Inc", selected_path);
+                        }
+                    }
+
+                    this.value = selected_path;
                     save_settings.call(this);
                 }
             }).catch(err => {
@@ -26,6 +35,26 @@ $("#install_path, #download_path").click(
                 })
     }
 );
+
+function truncate_path(name, selected_path){
+    /**
+     * truncates end of the path.
+     * name (str): what should be removed
+     * selected_path (str): path that user selected. Would be truncated
+     */
+    let truncated_path = selected_path.slice(0, selected_path.length - name.length - 1);
+    answer = dialog.showMessageBoxSync(remote.getCurrentWindow(), {
+            type: "question",
+            buttons: ["Yes", "No"],
+            message: "Path contains '" + name + "', Do you want to use '" + truncated_path + "' instead?"
+        }
+    )
+
+    if (answer == 0) {
+        return truncated_path;
+    }
+    return selected_path;
+}
 
 
 window.onload = function() {
