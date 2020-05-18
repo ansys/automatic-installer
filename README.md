@@ -13,9 +13,8 @@ Python is used as backend
 In order to work with project you need to 
 1. Install [npm (node package manager)](https://nodejs.org/en/download/)
 2. Open PowerShell/CMD in project folder and run: 
-    - Installation of Electron
+    - Installation of Electron globally
     ~~~ 
-        npm install electron --save-dev
         npm install -g electron 
     ~~~ 
     - Pyshell for communication with Python backend

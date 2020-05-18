@@ -1,7 +1,8 @@
 var os_path = require('path');
 var fs = require('fs');
-const {remote} = require('electron');
+const { remote } = require('electron');
 const { dialog } = require('electron').remote;
+const { BrowserWindow } = remote;
 
 settings_path = os_path.join(process.env.APPDATA, "build_downloader", "default_settings.json");
 hpc_options_folder = os_path.join(process.env.APPDATA, "build_downloader", "HPC_Options")
@@ -56,8 +57,7 @@ function truncate_path(name, selected_path){
     return selected_path;
 }
 
-
-window.onload = function() {
+$(document).ready(function() {
     /**
      * On load of the page set settings from JSON file.
      * Enable tooltips
@@ -71,13 +71,19 @@ window.onload = function() {
         $("#download_path").val(settings.download_path);
         $("#delete_zip").prop("checked", settings.delete_zip);
         $("#force_install").prop("checked", settings.force_install);
-        $("#wb_flags").val(settings.wb_flags);
+        
+        let flag_list = settings.wb_flags.split(" ");
+        flags_table.$('input[type="checkbox"]').each(function(){
+            if(flag_list.includes(this.value)){
+               this.checked = true;
+            }     
+      });
     }
 
     set_default_tooltips_settings();
 
     if (!fs.existsSync(hpc_options_folder)) fs.mkdirSync(hpc_options_folder);
-}
+});
 
 $(document).ready(function() {
     /**
@@ -101,6 +107,8 @@ var save_settings = function(){
     */
     if (this.id == "force_install" || this.id == "delete_zip"){
         settings[this.id] = this.checked;
+    } else if (this.id == "save-button") {
+        // settings are already modified on click
     } else {
         settings[this.id] = this.value;
     }
@@ -141,4 +149,25 @@ $("#add-file-button").click(
     }
 );
 
-$("#install_path, #download_path, #password, #force_install, #delete_zip, #wb_flags").bind("change", save_settings);
+$('#select-all-checkbox').on('click', function(){
+    // Check/uncheck all checkboxes in the table
+    var rows = flags_table.rows({ 'search': 'applied' }).nodes();
+    $('input[type="checkbox"]', rows).prop('checked', this.checked);
+});
+
+$('#save-button').on('click', function(){
+    /**
+     * when click on save button go through all rows and those that are selected add to the list and update settings
+     */
+    let active_flags = [];
+
+    flags_table.$('input[type="checkbox"]').each(function(){
+        if(this.checked){
+            active_flags.push(this.value);
+        }     
+    });
+    settings.wb_flags = active_flags.join(' ');
+    save_settings.call(this);
+});
+
+$("#install_path, #download_path, #password, #force_install, #delete_zip").bind("change", save_settings);

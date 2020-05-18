@@ -1,5 +1,5 @@
 {
-  "name": "Ansys-Build-Downloader",
+  "name": "ansys-build-downloader",
   "version": "0.1.0",
   "main": "electron_main_win.js",
   "scripts": {
@@ -10,8 +10,9 @@
     "python-shell": "^1.0.8"
   },
   "build": {
-    "files":
-      "!electron_backend.py"
-    
+    "files": "!electron_backend.py"
+  },
+  "devDependencies": {
+    "electron": "^8.3.0"
   }
 }
