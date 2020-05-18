@@ -10,6 +10,7 @@ import zipfile
 from collections import namedtuple, OrderedDict
 
 import requests
+import urllib3
 
 import iss_templates
 
@@ -183,7 +184,7 @@ class Downloader:
         password = getattr(self.settings.password, self.settings.artifactory)
         url = self.build_url.replace("-cache", "") if recursion else self.build_url
 
-        with requests.get(url, auth=(self.settings.username, password), timeout=30, stream=True) as url_request:
+        with requests.get(url, auth=(self.settings.username, password), timeout=50, stream=True) as url_request:
             if url_request.status_code == 404 and not recursion:
                 # in HQ cached build does not exist and will return 404. Recursively start download with new url
                 self.download_file(recursion=True)
@@ -201,20 +202,24 @@ class Downloader:
                 file_size = 11e+9
 
             percent = 0
-            with open(self.zip_file, 'wb') as zip_file:
-                while True:
-                    chunk = url_request.raw.read(int(file_size/100))
-                    if not chunk:
-                        break
-                    logging.info(f"Download progress: {min(100, percent)}%")
-                    percent += 1
-                    zip_file.write(chunk)
-
-            logging.info(f"File is downloaded to: {self.zip_file}")
-
-            if not self.zip_file:
-                logging.error("ZIP download failed")
+            try:
+                with open(self.zip_file, 'wb') as zip_file:
+                    while True:
+                        chunk = url_request.raw.read(int(file_size/100))
+                        if not chunk:
+                            break
+                        logging.info(f"Download progress: {min(100, percent)}%")
+                        percent += 1
+                        zip_file.write(chunk)
+            except urllib3.exceptions.ProtocolError:
+                logging.error("VPN was turned off or connection was broken. Download failed")
                 sys.exit(1)
+
+        if not self.zip_file:
+            logging.error("ZIP download failed")
+            sys.exit(1)
+
+        logging.info(f"File is downloaded to: {self.zip_file}")
 
     def install(self):
         """
