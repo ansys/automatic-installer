@@ -78,8 +78,13 @@ class Downloader:
         :return: None
         """
         self.get_build_link()
-        self.download_file()
-        self.install()
+        if (self.settings.force_install or
+                "EDT" in self.settings.version or  # todo adjust for EDT from logs
+                not self.versions_identical_wb()):
+            self.download_file()
+            self.install()
+        else:
+            logging.info("Versions are up to date. If issue occurred please use force install flag")
 
     def check_directories(self):
         """
@@ -250,8 +255,11 @@ class Downloader:
         """
         self.parse_iss()
 
-        if not os.path.isfile(self.product_info_file_new) or not self.edt_versions_identical():
-            # product.info does not exist for some reason, need to install any case or versions different
+        if (self.settings.force_install or
+                not os.path.isfile(self.product_info_file_new) or
+                # product.info does not exist for some reason, need to install any case or versions different
+                not self.versions_identical_edt()):
+
             self.uninstall_edt()
 
             install_iss_file = os.path.join(self.target_unpack_dir, "install.iss")
@@ -332,7 +340,7 @@ class Downloader:
                 logging.error(fail)
                 sys.exit(1)
 
-    def edt_versions_identical(self):
+    def versions_identical_edt(self):
         """
         Function to compare build dates of just downloaded daily build and already installed version of EDT
         :return: (bool) True if builds' dates are the same or False if different
@@ -439,6 +447,52 @@ class Downloader:
             logging.info("Previous build was uninstalled")
         else:
             logging.info("No WB Uninstall.exe file detected")
+
+    def versions_identical_wb(self):
+        """
+        verify if version on the server is the same as installed one
+        :return: (bool): False if versions are different or no version installed, True if identical
+        """
+        package_id_installed = os.path.join(self.settings.install_path, "ANSYS Inc",
+                                            self.settings.version[:4], "package.id")
+        if os.path.isfile(package_id_installed):
+            with open(package_id_installed) as file:
+                product_version = next(file).rstrip().split()[-1]  # get first line
+
+            logging.info(f"Installed version of WB is {product_version}")
+
+            url = self.build_url.replace(r"/api/archive/download", "").replace(r"?archiveType=zip", "") + "/package.id"
+            logging.info(f"Request info about new package: {url}")
+            new_product_version = self.get_new_package_id_wb(url)
+            logging.info(f"Version on artifactory is {new_product_version}")
+            if new_product_version == product_version:
+                return True
+        return False
+
+    def get_new_package_id_wb(self, url, recursion=False):
+        """
+        Downloads file in chunks and saves to the temp.zip file
+        Uses url to the zip archive or special JFrog API to download WB folder
+        :param (bool) recursion: Some artifactories do not have cached folders with WB  and we need recursively run
+        the same function but with new_url, however to prevent infinity loop we need this arg
+        :param (str) url: url to the package_id file
+        :return: (NoneType/str): None if some issue occurred during retrieving ID or package_id if extracted
+        """
+        password = getattr(self.settings.password, self.settings.artifactory)
+
+        with requests.get(url, auth=(self.settings.username, password), timeout=50, stream=True) as url_request:
+            if url_request.status_code == 404 and not recursion:
+                # in HQ cached build does not exist and will return 404. Recursively start download with new url
+                return self.get_new_package_id_wb(url.replace("-cache", ""), recursion=True)
+
+            if url_request.status_code == 200:
+                try:
+                    first_line = url_request.text.split("\n")[0]
+                    package_id = first_line.rstrip().split()[-1]
+                    return package_id
+                except IndexError:
+                    pass
+        return None
 
     def clean_temp(self):
         """

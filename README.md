@@ -59,7 +59,7 @@ pyinstaller ..\downloader_backend.py --distpath python_build --workpath %TEMP% -
 # Project tricks
 1. Make backend running even if we compile it to exe
 
-modified python-shell to make it run exe files, also I use a trick that I say path to python is my compile python_code.exe
+modify python-shell to make it run exe files, also I use a trick that I say path to python is my compile python_code.exe
 and my script is null, then I commented lines in python-shell where check for script length occurred
 In communicator.js for the build version use:
 ~~~
