@@ -21,6 +21,15 @@ class InstallUninstallTest(unittest.TestCase):
             self.downloader.zip_file = test_settings["zip_file"]
             self.downloader.product_version = test_settings["product_version"]
 
+    def download_file_test(self):
+        """
+            Test getting link according to settings file and download of the build from server
+            Uses following mock up is used:
+                arguments mock up of settings_file
+        """
+        self.downloader.get_build_link()
+        self.downloader.download_file()
+
     def uninstall_wb_test(self):
         """
             Test uninstallation of WB
@@ -87,12 +96,13 @@ class InstallUninstallTest(unittest.TestCase):
 if __name__ == '__main__':
     # unittest.main()
     suite = unittest.TestSuite()
+    suite.addTest(InstallUninstallTest("download_file_test"))
     # suite.addTest(InstallUninstallTest("install_edt_test"))
     # suite.addTest(InstallUninstallTest("uninstall_edt_test"))
     # suite.addTest(InstallUninstallTest("update_registry_test"))
     # suite.addTest(InstallUninstallTest("clean_temp_test"))
     # suite.addTest(InstallUninstallTest("uninstall_wb_test"))
-    suite.addTest(InstallUninstallTest("install_wb_test"))
+    # suite.addTest(InstallUninstallTest("install_wb_test"))
     # suite.addTest(InstallUninstallTest("full_run_test"))
     runner = unittest.TextTestRunner()
     runner.run(suite)

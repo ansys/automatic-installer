@@ -91,7 +91,7 @@ def schedule_task(settings_file):
 
 def install_once(settings_file):
     command = f'{backend_exe} -p "{settings_file}"'
-    subprocess.check_output(command, shell=True)
+    subprocess.call(command, shell=True)
 
 
 def start():
