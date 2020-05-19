@@ -1,8 +1,8 @@
 {
-  "settings_file": "D:\\GIT\\BETA_Downloader\\unittests\\input\\default_settings.json",
+  "settings_file": "D:\\GIT\\BETA_Downloader\\unittests\\input\\settings_edt.json",
   "installed_product": "C:\\Program Files\\AnsysEM\\AnsysEM20.2\\Win64\\product.info",
   "target_unpack_dir": "C:\\Users\\mbeliaev\\Documents\\temp_build_v202_WB",
   "product_version": "202",
-  "zip_file": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\wbxtra_05132020_162915.zip",
+  "zip_file": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\temp_build_v202_EDT.zip",
   "build_url": "http://canartifactory.ansys.com:8080/artifactory/v211_EBU_Certified/20200515/Electronics_211_winx64.zip"
 }

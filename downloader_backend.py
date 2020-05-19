@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+import traceback
 import zipfile
 from collections import namedtuple, OrderedDict
 
@@ -54,6 +55,7 @@ class Downloader:
         self.product_info_file_new (str): product.info file from downloaded build
         self.installed_product (str): path to the product.info of the installed build
         self.product_version (str): version to use in env variables eg 202
+        self.product_version_dot (str): the same as product_version but with dot eg 20.2
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
         """
         self.build_url = None
@@ -62,8 +64,9 @@ class Downloader:
         self.product_id = None
         self.installshield_version = None
         self.product_info_file_new = None
-        self.installed_product = None
+        self.installed_product_info = None
         self.product_version = None
+        self.product_version_dot = None
         self.setup_exe = None
 
         set_logger()
@@ -77,14 +80,17 @@ class Downloader:
         Function that executes the download-installation process
         :return: None
         """
-        self.get_build_link()
-        if (self.settings.force_install or
-                "EDT" in self.settings.version or  # todo adjust for EDT from logs
-                not self.versions_identical_wb()):
-            self.download_file()
-            self.install()
-        else:
-            logging.info("Versions are up to date. If issue occurred please use force install flag")
+        try:
+            self.get_build_link()
+            if (self.settings.force_install or
+                    "EDT" in self.settings.version or  # todo adjust for EDT from logs
+                    not self.versions_identical_wb()):
+                self.download_file()
+                self.install()
+            else:
+                logging.info("Versions are up to date. If issue occurred please use force install flag")
+        except Exception as e:
+            logging.error(traceback.format_exc())
 
     def check_directories(self):
         """
@@ -267,8 +273,8 @@ class Downloader:
 
             integrate_wb = 0
             if f"ANSYS{self.product_version}_DIR" in os.environ:
-                run_wb = os.path.join(os.pardir(os.environ[f"ANSYS{self.product_version}_DIR"]), "Framework", "bin",
-                                      "Win64", "RunWB2.exe")
+                wb_root = os.path.dirname(os.environ[f"ANSYS{self.product_version}_DIR"])
+                run_wb = os.path.join(wb_root, "Framework", "bin", "Win64", "RunWB2.exe")
 
                 if os.path.isfile(run_wb):
                     integrate_wb = 1
@@ -307,7 +313,7 @@ class Downloader:
             logging.error("setup.exe does not exist")
             sys.exit(1)
 
-        if self.installed_product and os.path.isfile(self.installed_product):
+        if self.installed_product_info and os.path.isfile(self.installed_product_info):
             uninstall_iss_file = os.path.join(self.target_unpack_dir, "uninstall.iss")
             uninstall_log_file = os.path.join(self.target_unpack_dir, "uninstall.log")
             with open(uninstall_iss_file, "w") as file:
@@ -345,15 +351,15 @@ class Downloader:
         Function to compare build dates of just downloaded daily build and already installed version of EDT
         :return: (bool) True if builds' dates are the same or False if different
         """
-        build_date, self.product_version = self.get_build_date(self.product_info_file_new)
+        build_date, self.product_version, self.product_version_dot = self.get_build_date(self.product_info_file_new)
 
         env_var = "ANSYSEM_ROOT" + self.product_version
         if env_var not in os.environ:
             return False
 
-        self.installed_product = os.path.join(os.environ[env_var], "product.info")
+        self.installed_product_info = os.path.join(os.environ[env_var], "product.info")
 
-        installed_build_date, _unused = self.get_build_date(self.installed_product)
+        installed_build_date, _unused, _unused = self.get_build_date(self.installed_product_info)
 
         if all([build_date, installed_build_date]) and build_date == installed_build_date:
             return True
@@ -368,15 +374,17 @@ class Downloader:
         """
         build_date = False
         product_version = False
+        product_version_dot = False
         if os.path.isfile(product_info_file):
             with open(product_info_file) as file:
                 for line in file:
                     if "AnsProductBuildDate" in line:
                         build_date = line.split("=")[1]
                     elif "AnsProductVersion" in line:
-                        product_version = (line.split("=")[1]).rstrip().replace('"', '').replace(".", "")
+                        product_version_dot = (line.split("=")[1]).rstrip().replace('"', '')
+                        product_version = product_version_dot.replace(".", "")
 
-        return build_date, product_version
+        return build_date, product_version, product_version_dot
 
     def parse_iss(self):
         """
@@ -515,8 +523,22 @@ class Downloader:
         hpc_folder = os.path.join(os.environ["APPDATA"], "build_downloader", "HPC_Options")
 
         env_var = "ANSYSEM_ROOT" + self.product_version
-        update_registry_exe = os.path.join(os.environ[env_var], "UpdateRegistry.exe")
-        with open(os.path.join(os.environ[env_var], "config", "ProductList.txt")) as file:
+        try:
+            if self.settings.install_path in os.environ[env_var]:
+                update_registry_exe = os.path.join(os.environ[env_var], "UpdateRegistry.exe")
+                productlist_file = os.path.join(os.environ[env_var], "config", "ProductList.txt")
+            else:
+                # env variable is out of date
+                raise KeyError
+        except KeyError:
+            # on new installation this key will not exist since environ is loaded when process started
+            ansys_em_dir = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
+                                        self.product_version_dot, "Win64")
+
+            update_registry_exe = os.path.join(ansys_em_dir, "UpdateRegistry.exe")
+            productlist_file = os.path.join(ansys_em_dir, "config", "ProductList.txt")
+
+        with open(productlist_file) as file:
             product_version = next(file).rstrip()  # get first line
 
         if os.path.isdir(hpc_folder):
