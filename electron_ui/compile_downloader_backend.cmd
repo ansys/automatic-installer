@@ -1,0 +1,1 @@
+pyinstaller ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile
