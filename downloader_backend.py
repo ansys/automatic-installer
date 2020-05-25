@@ -15,6 +15,8 @@ import urllib3
 
 import iss_templates
 
+settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
+
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
     ('Boulder', r'http://bouatsrv01:8080/artifactory'),
@@ -57,6 +59,7 @@ class Downloader:
         self.product_version (str): version to use in env variables eg 202
         self.product_version_dot (str): the same as product_version but with dot eg 20.2
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
+        self.latest_build (int): latest EDT build folder
         """
         self.build_url = None
         self.zip_file = None
@@ -68,6 +71,7 @@ class Downloader:
         self.product_version = None
         self.product_version_dot = None
         self.setup_exe = None
+        self.latest_build = None
 
         set_logger()
 
@@ -83,13 +87,15 @@ class Downloader:
         try:
             self.get_build_link()
             if (self.settings.force_install or
-                    "EDT" in self.settings.version or  # todo adjust for EDT from logs
-                    not self.versions_identical_wb()):
+                    ("EDT" in self.settings.version and not self.build_in_edt_history()) or
+                    ("WB" in self.settings.version and not self.versions_identical_wb())):
                 self.download_file()
                 self.install()
             else:
                 logging.info("Versions are up to date. If issue occurred please use force install flag")
-        except Exception as e:
+        except SystemExit as e:
+            logging.error(e)
+        except Exception:
             logging.error(traceback.format_exc())
 
     def check_directories(self):
@@ -173,10 +179,10 @@ class Downloader:
                 except ValueError:
                     pass
 
-            latest_build = max(builds_dates)
+            self.latest_build = max(builds_dates)
 
             version_number = self.settings.version.split('_')[0][1:]
-            self.build_url = f"{server}/{repo}/{latest_build}/Electronics_{version_number}_winx64.zip"
+            self.build_url = f"{server}/{repo}/{self.latest_build}/Electronics_{version_number}_winx64.zip"
         elif "WB" in self.settings.version:
             self.build_url = f"{server}/api/archive/download/{repo}-cache/winx64?archiveType=zip"
 
@@ -301,6 +307,7 @@ class Downloader:
             self.check_result_code(install_log_file)
 
             self.update_edt_registry()
+            self.set_edt_history()
         else:
             logging.info("Versions are identical, skip installation")
 
@@ -426,6 +433,33 @@ class Downloader:
             logging.error("Unable to extract product ID")
             sys.exit(1)
 
+    def set_edt_history(self):
+        """
+        Writes to the installation log info about installed folder, thus we can skip its download
+        :return: None
+        """
+        download_log = os.path.join(settings_folder, "edt_install.log")
+        with open(download_log, "a") as file:
+            file.write(f"{self.latest_build}\n")
+
+    def build_in_edt_history(self):
+        """
+        Verify that latest build is not yet installed
+        :return: True if such build was installed else False
+        """
+        if self.latest_build:
+            download_log = os.path.join(settings_folder, "edt_install.log")
+            if os.path.isfile(download_log):
+                date = str(self.latest_build)
+                with open(download_log, "r") as file:
+                    for line in file:
+                        if date in line:
+                            return True
+            return False
+        else:
+            logging.error("Cannot extract artifactory folder for EDT")
+            sys.exit(1)
+
     def install_wb(self):
         """Install WB to the target installation directory"""
         self.setup_exe = os.path.join(self.target_unpack_dir, "setup.exe")
@@ -520,7 +554,7 @@ class Downloader:
         Update EDT registry based on the files in the HPC_Options folder that are added from UI
         :return: None
         """
-        hpc_folder = os.path.join(os.environ["APPDATA"], "build_downloader", "HPC_Options")
+        hpc_folder = os.path.join(settings_folder, "HPC_Options")
 
         env_var = "ANSYSEM_ROOT" + self.product_version
         try:
@@ -579,7 +613,6 @@ def set_logger():
     :return: None
     """
 
-    settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
     logging_file = os.path.join(settings_folder, "downloader.log")
 
     if not os.path.isdir(settings_folder):
