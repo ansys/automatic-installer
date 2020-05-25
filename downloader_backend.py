@@ -108,8 +108,7 @@ class Downloader:
                 try:
                     os.makedirs(self.settings[path])
                 except PermissionError:
-                    logging.error(f"{path} could not be created due to insufficient permissions")
-                    sys.exit(1)
+                    raise SystemExit(f"{path} could not be created due to insufficient permissions")
 
     def get_build_link(self):
         """
@@ -120,8 +119,7 @@ class Downloader:
         password = getattr(self.settings.password, self.settings.artifactory)
 
         if not self.settings.username or not password:
-            logging.error("Please provide username and artifactory password")
-            sys.exit(1)
+            raise SystemExit("Please provide username and artifactory password")
 
         server = artifactory_dict[self.settings.artifactory]
         try:
@@ -129,21 +127,18 @@ class Downloader:
                               timeout=30) as url_request:
                 artifacts_list = json.loads(url_request.text)
         except requests.exceptions.ReadTimeout:
-            logging.error("Timeout on connection, please verify your username and password for {}".format(
+            raise SystemExit("Timeout on connection, please verify your username and password for {}".format(
                 self.settings.artifactory))
-            sys.exit(1)
         except requests.exceptions.ConnectionError:
-            logging.error("Connection error, please verify that you are on VPN")
-            sys.exit(1)
+            raise SystemExit("Connection error, please verify that you are on VPN")
 
         # catch 401 for bad credentials or similar
         if url_request.status_code != 200:
             if url_request.status_code == 401:
-                logging.error("Bad credentials, please verify your username and password for {}".format(
+                raise SystemExit("Bad credentials, please verify your username and password for {}".format(
                     self.settings.artifactory))
             else:
-                logging.error(artifacts_list["errors"][0]["message"])
-            sys.exit(1)
+                raise SystemExit(artifacts_list["errors"][0]["message"])
 
         # fill the dictionary with EBU and WB keys since builds could be different
         # still parse the list because of different names on servers
@@ -162,9 +157,8 @@ class Downloader:
         try:
             repo = artifacts_dict[self.settings.version]
         except KeyError:
-            logging.error(f"Version {self.settings.version} that you have specified " +
-                          f"does not exists on {self.settings.artifactory}")
-            sys.exit(1)
+            raise SystemExit(f"Version {self.settings.version} that you have specified " +
+                             f"does not exists on {self.settings.artifactory}")
 
         if "EDT" in self.settings.version:
             url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
@@ -187,8 +181,7 @@ class Downloader:
             self.build_url = f"{server}/api/archive/download/{repo}-cache/winx64?archiveType=zip"
 
         if not self.build_url:
-            logging.error("Cannot receive URL")
-            sys.exit(1)
+            raise SystemExit("Cannot receive URL")
 
     def download_file(self, recursion=False):
         """
@@ -229,12 +222,10 @@ class Downloader:
                         percent += 1
                         zip_file.write(chunk)
             except urllib3.exceptions.ProtocolError:
-                logging.error("VPN was turned off or connection was broken. Download failed")
-                sys.exit(1)
+                raise SystemExit("VPN was turned off or connection was broken. Download failed")
 
         if not self.zip_file:
-            logging.error("ZIP download failed")
-            sys.exit(1)
+            raise SystemExit("ZIP download failed")
 
         logging.info(f"File is downloaded to: {self.zip_file}")
 
@@ -317,8 +308,7 @@ class Downloader:
         :return: None
         """
         if not os.path.isfile(self.setup_exe):
-            logging.error("setup.exe does not exist")
-            sys.exit(1)
+            raise SystemExit("setup.exe does not exist")
 
         if self.installed_product_info and os.path.isfile(self.installed_product_info):
             uninstall_iss_file = os.path.join(self.target_unpack_dir, "uninstall.iss")
@@ -350,8 +340,7 @@ class Downloader:
                     logging.info(success)
                     break
             else:
-                logging.error(fail)
-                sys.exit(1)
+                raise SystemExit(fail)
 
     def versions_identical_edt(self):
         """
@@ -415,8 +404,7 @@ class Downloader:
                     break
 
         if not default_iss_file:
-            logging.error("SilentInstallationTemplate.iss does not exist")
-            sys.exit(1)
+            raise SystemExit("SilentInstallationTemplate.iss does not exist")
 
         with open(default_iss_file, "r") as iss_file:
             for line in iss_file:
@@ -430,8 +418,7 @@ class Downloader:
             self.product_id = product_id_match[0]
             logging.info(f"Product ID is {self.product_id}")
         else:
-            logging.error("Unable to extract product ID")
-            sys.exit(1)
+            raise SystemExit("Unable to extract product ID")
 
     def set_edt_history(self):
         """
@@ -457,8 +444,7 @@ class Downloader:
                             return True
             return False
         else:
-            logging.error("Cannot extract artifactory folder for EDT")
-            sys.exit(1)
+            raise SystemExit("Cannot extract artifactory folder for EDT")
 
     def install_wb(self):
         """Install WB to the target installation directory"""
@@ -597,14 +583,12 @@ class Downloader:
         if args.path:
             settings_path = args.path
             if not os.path.isfile(settings_path):
-                logging.error("Settings file does not exist")
-                sys.exit(1)
+                raise SystemExit("Settings file does not exist")
 
             logging.info(f"Settings path is set to {settings_path}")
             return settings_path
         else:
-            logging.error("Please provide --path argument")
-            sys.exit(1)
+            raise SystemExit("Please provide --path argument")
 
 
 def set_logger():
