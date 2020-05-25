@@ -15,6 +15,8 @@ import urllib3
 
 import iss_templates
 
+settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
+
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
     ('Boulder', r'http://bouatsrv01:8080/artifactory'),
@@ -57,6 +59,7 @@ class Downloader:
         self.product_version (str): version to use in env variables eg 202
         self.product_version_dot (str): the same as product_version but with dot eg 20.2
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
+        self.latest_build (int): latest EDT build folder
         """
         self.build_url = None
         self.zip_file = None
@@ -68,6 +71,7 @@ class Downloader:
         self.product_version = None
         self.product_version_dot = None
         self.setup_exe = None
+        self.latest_build = None
 
         set_logger()
 
@@ -83,13 +87,15 @@ class Downloader:
         try:
             self.get_build_link()
             if (self.settings.force_install or
-                    "EDT" in self.settings.version or  # todo adjust for EDT from logs
-                    not self.versions_identical_wb()):
+                    ("EDT" in self.settings.version and not self.build_in_edt_history()) or
+                    ("WB" in self.settings.version and not self.versions_identical_wb())):
                 self.download_file()
                 self.install()
             else:
                 logging.info("Versions are up to date. If issue occurred please use force install flag")
-        except Exception as e:
+        except SystemExit as e:
+            logging.error(e)
+        except Exception:
             logging.error(traceback.format_exc())
 
     def check_directories(self):
@@ -102,8 +108,7 @@ class Downloader:
                 try:
                     os.makedirs(self.settings[path])
                 except PermissionError:
-                    logging.error(f"{path} could not be created due to insufficient permissions")
-                    sys.exit(1)
+                    raise SystemExit(f"{path} could not be created due to insufficient permissions")
 
     def get_build_link(self):
         """
@@ -114,8 +119,7 @@ class Downloader:
         password = getattr(self.settings.password, self.settings.artifactory)
 
         if not self.settings.username or not password:
-            logging.error("Please provide username and artifactory password")
-            sys.exit(1)
+            raise SystemExit("Please provide username and artifactory password")
 
         server = artifactory_dict[self.settings.artifactory]
         try:
@@ -123,21 +127,18 @@ class Downloader:
                               timeout=30) as url_request:
                 artifacts_list = json.loads(url_request.text)
         except requests.exceptions.ReadTimeout:
-            logging.error("Timeout on connection, please verify your username and password for {}".format(
+            raise SystemExit("Timeout on connection, please verify your username and password for {}".format(
                 self.settings.artifactory))
-            sys.exit(1)
         except requests.exceptions.ConnectionError:
-            logging.error("Connection error, please verify that you are on VPN")
-            sys.exit(1)
+            raise SystemExit("Connection error, please verify that you are on VPN")
 
         # catch 401 for bad credentials or similar
         if url_request.status_code != 200:
             if url_request.status_code == 401:
-                logging.error("Bad credentials, please verify your username and password for {}".format(
+                raise SystemExit("Bad credentials, please verify your username and password for {}".format(
                     self.settings.artifactory))
             else:
-                logging.error(artifacts_list["errors"][0]["message"])
-            sys.exit(1)
+                raise SystemExit(artifacts_list["errors"][0]["message"])
 
         # fill the dictionary with EBU and WB keys since builds could be different
         # still parse the list because of different names on servers
@@ -156,9 +157,8 @@ class Downloader:
         try:
             repo = artifacts_dict[self.settings.version]
         except KeyError:
-            logging.error(f"Version {self.settings.version} that you have specified " +
-                          f"does not exists on {self.settings.artifactory}")
-            sys.exit(1)
+            raise SystemExit(f"Version {self.settings.version} that you have specified " +
+                             f"does not exists on {self.settings.artifactory}")
 
         if "EDT" in self.settings.version:
             url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
@@ -173,16 +173,15 @@ class Downloader:
                 except ValueError:
                     pass
 
-            latest_build = max(builds_dates)
+            self.latest_build = max(builds_dates)
 
             version_number = self.settings.version.split('_')[0][1:]
-            self.build_url = f"{server}/{repo}/{latest_build}/Electronics_{version_number}_winx64.zip"
+            self.build_url = f"{server}/{repo}/{self.latest_build}/Electronics_{version_number}_winx64.zip"
         elif "WB" in self.settings.version:
             self.build_url = f"{server}/api/archive/download/{repo}-cache/winx64?archiveType=zip"
 
         if not self.build_url:
-            logging.error("Cannot receive URL")
-            sys.exit(1)
+            raise SystemExit("Cannot receive URL")
 
     def download_file(self, recursion=False):
         """
@@ -223,12 +222,10 @@ class Downloader:
                         percent += 1
                         zip_file.write(chunk)
             except urllib3.exceptions.ProtocolError:
-                logging.error("VPN was turned off or connection was broken. Download failed")
-                sys.exit(1)
+                raise SystemExit("VPN was turned off or connection was broken. Download failed")
 
         if not self.zip_file:
-            logging.error("ZIP download failed")
-            sys.exit(1)
+            raise SystemExit("ZIP download failed")
 
         logging.info(f"File is downloaded to: {self.zip_file}")
 
@@ -301,6 +298,7 @@ class Downloader:
             self.check_result_code(install_log_file)
 
             self.update_edt_registry()
+            self.set_edt_history()
         else:
             logging.info("Versions are identical, skip installation")
 
@@ -310,8 +308,7 @@ class Downloader:
         :return: None
         """
         if not os.path.isfile(self.setup_exe):
-            logging.error("setup.exe does not exist")
-            sys.exit(1)
+            raise SystemExit("setup.exe does not exist")
 
         if self.installed_product_info and os.path.isfile(self.installed_product_info):
             uninstall_iss_file = os.path.join(self.target_unpack_dir, "uninstall.iss")
@@ -343,8 +340,7 @@ class Downloader:
                     logging.info(success)
                     break
             else:
-                logging.error(fail)
-                sys.exit(1)
+                raise SystemExit(fail)
 
     def versions_identical_edt(self):
         """
@@ -408,8 +404,7 @@ class Downloader:
                     break
 
         if not default_iss_file:
-            logging.error("SilentInstallationTemplate.iss does not exist")
-            sys.exit(1)
+            raise SystemExit("SilentInstallationTemplate.iss does not exist")
 
         with open(default_iss_file, "r") as iss_file:
             for line in iss_file:
@@ -423,8 +418,33 @@ class Downloader:
             self.product_id = product_id_match[0]
             logging.info(f"Product ID is {self.product_id}")
         else:
-            logging.error("Unable to extract product ID")
-            sys.exit(1)
+            raise SystemExit("Unable to extract product ID")
+
+    def set_edt_history(self):
+        """
+        Writes to the installation log info about installed folder, thus we can skip its download
+        :return: None
+        """
+        download_log = os.path.join(settings_folder, "edt_install.log")
+        with open(download_log, "a") as file:
+            file.write(f"{self.latest_build}\n")
+
+    def build_in_edt_history(self):
+        """
+        Verify that latest build is not yet installed
+        :return: True if such build was installed else False
+        """
+        if self.latest_build:
+            download_log = os.path.join(settings_folder, "edt_install.log")
+            if os.path.isfile(download_log):
+                date = str(self.latest_build)
+                with open(download_log, "r") as file:
+                    for line in file:
+                        if date in line:
+                            return True
+            return False
+        else:
+            raise SystemExit("Cannot extract artifactory folder for EDT")
 
     def install_wb(self):
         """Install WB to the target installation directory"""
@@ -520,7 +540,7 @@ class Downloader:
         Update EDT registry based on the files in the HPC_Options folder that are added from UI
         :return: None
         """
-        hpc_folder = os.path.join(os.environ["APPDATA"], "build_downloader", "HPC_Options")
+        hpc_folder = os.path.join(settings_folder, "HPC_Options")
 
         env_var = "ANSYSEM_ROOT" + self.product_version
         try:
@@ -563,14 +583,12 @@ class Downloader:
         if args.path:
             settings_path = args.path
             if not os.path.isfile(settings_path):
-                logging.error("Settings file does not exist")
-                sys.exit(1)
+                raise SystemExit("Settings file does not exist")
 
             logging.info(f"Settings path is set to {settings_path}")
             return settings_path
         else:
-            logging.error("Please provide --path argument")
-            sys.exit(1)
+            raise SystemExit("Please provide --path argument")
 
 
 def set_logger():
@@ -579,7 +597,6 @@ def set_logger():
     :return: None
     """
 
-    settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
     logging_file = os.path.join(settings_folder, "downloader.log")
 
     if not os.path.isdir(settings_folder):
