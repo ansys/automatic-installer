@@ -12,7 +12,7 @@ $(document).ready(function() {
      * Update table rows, see tables_setter.js
      */
     history_table = $('#history-table').DataTable( {
-        "scrollY": "132px",
+        "scrollY": "328px",
         "scrollCollapse": true,
         "paging": false,
         "filter": false,
@@ -24,7 +24,7 @@ $(document).ready(function() {
             { "width": "55px", "targets": [0, 1] },
             { "width": "15%", "targets": [2] },
             { "width": "320px", "targets": [3] },
-            { "className": "text-center", "targets": [0, 1, 2, 4] },
+            { "className": "text-center", "targets": [0, 1, 2, 4] }
           ]
     } );
 } );
@@ -55,6 +55,15 @@ function get_history(){
         return history_data;
     }
 }
+
+window.setInterval(function(){
+    history_table.clear();
+    let new_data = get_history();
+    if (new_data) {
+        history_table.rows.add(new_data);
+        history_table.draw();
+    }
+}, 7500);
 
 $("#clear-button").click(function(){
     /**

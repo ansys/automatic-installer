@@ -102,6 +102,7 @@ class Downloader:
                     ("WB" in self.settings.version and not self.versions_identical_wb())):
                 self.download_file()
                 self.install()
+                return
             else:
                 raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
         except SystemExit as e:
@@ -110,6 +111,7 @@ class Downloader:
         except Exception:
             logging.error(traceback.format_exc())
             self.update_installation_history(status="Failed", details="Unexpected error, see logs")
+        self.clean_temp()
 
     def check_directories(self):
         """
@@ -129,6 +131,7 @@ class Downloader:
         password
         :modify: (str) self.build_url: URL link to the latest build that will be used to download .zip archive
         """
+        self.update_installation_history(status="In-Progress", details=f"Search latest build URL")
         password = getattr(self.settings.password, self.settings.artifactory)
 
         if not self.settings.username or not password:
