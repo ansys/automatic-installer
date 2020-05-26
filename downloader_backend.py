@@ -1,7 +1,9 @@
 import argparse
+import datetime
 import json
 import logging
 import os
+import random
 import re
 import shutil
 import subprocess
@@ -15,7 +17,6 @@ import urllib3
 
 import iss_templates
 
-settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
 
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
@@ -60,6 +61,7 @@ class Downloader:
         self.product_version_dot (str): the same as product_version but with dot eg 20.2
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
         self.latest_build (int): latest EDT build folder
+        self.run_hash (str): hash code used for this run of the program
         """
         self.build_url = None
         self.zip_file = None
@@ -73,10 +75,19 @@ class Downloader:
         self.setup_exe = None
         self.latest_build = None
 
-        set_logger()
+        self.hash = generate_hash_str()
+        self.settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
+        self.download_log = os.path.join(self.settings_folder, "edt_install.log")
 
-        settings_path = self.parse_args()
-        with open(settings_path, "r") as file:
+        self.history = OrderedDict()
+        self.history_file = os.path.join(self.settings_folder, "installation_history.json")
+        self.get_installation_history()
+
+        logging_file = os.path.join(self.settings_folder, "downloader.log")
+        set_logger(logging_file)
+
+        self.settings_path = self.parse_args()
+        with open(self.settings_path, "r") as file:
             self.settings = json.load(file, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
 
     def run(self):
@@ -91,12 +102,16 @@ class Downloader:
                     ("WB" in self.settings.version and not self.versions_identical_wb())):
                 self.download_file()
                 self.install()
+                return
             else:
-                logging.info("Versions are up to date. If issue occurred please use force install flag")
+                raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
         except SystemExit as e:
             logging.error(e)
+            self.update_installation_history(status="Failed", details=e)
         except Exception:
             logging.error(traceback.format_exc())
+            self.update_installation_history(status="Failed", details="Unexpected error, see logs")
+        self.clean_temp()
 
     def check_directories(self):
         """
@@ -116,6 +131,7 @@ class Downloader:
         password
         :modify: (str) self.build_url: URL link to the latest build that will be used to download .zip archive
         """
+        self.update_installation_history(status="In-Progress", details=f"Search latest build URL")
         password = getattr(self.settings.password, self.settings.artifactory)
 
         if not self.settings.username or not password:
@@ -218,7 +234,9 @@ class Downloader:
                         chunk = url_request.raw.read(int(file_size/100))
                         if not chunk:
                             break
-                        logging.info(f"Download progress: {min(100, percent)}%")
+                        val = min(100, percent)
+                        logging.info(f"Download progress: {val}%")
+                        self.update_installation_history(status="In-Progress", details=f"Download progress: {val}%")
                         percent += 1
                         zip_file.write(chunk)
             except urllib3.exceptions.ProtocolError:
@@ -234,6 +252,7 @@ class Downloader:
         Unpack downloaded zip and proceed to installation. Different executions for EDT and WB
         :return:
         """
+        self.update_installation_history(status="In-Progress", details=f"Start unpacking")
         self.target_unpack_dir = self.zip_file.replace(".zip", "")
         with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
             zip_ref.extractall(self.target_unpack_dir)
@@ -245,9 +264,10 @@ class Downloader:
         else:
             self.install_wb()
 
+        self.update_installation_history(status="In-Progress", details=f"Clean temp directory")
         self.clean_temp()
 
-        print("Installation finished!")
+        self.update_installation_history(status="Success", details="Normal completion")
 
     def install_edt(self):
         """
@@ -292,6 +312,7 @@ class Downloader:
                                               os.environ["TEMP"], integrate_wb, self.installshield_version))
 
             command = f'{self.setup_exe} -s -f1"{install_iss_file}" -f2"{install_log_file}"'
+            self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation: {command}")
             subprocess.call(command)
 
@@ -318,6 +339,7 @@ class Downloader:
 
             command = f'{self.setup_exe} -uninst -s -f1"{uninstall_iss_file}" -f2"{uninstall_log_file}"'
             logging.info(f"Execute uninstallation: {command}")
+            self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             subprocess.call(command)
 
             self.check_result_code(uninstall_log_file, False)
@@ -425,8 +447,7 @@ class Downloader:
         Writes to the installation log info about installed folder, thus we can skip its download
         :return: None
         """
-        download_log = os.path.join(settings_folder, "edt_install.log")
-        with open(download_log, "a") as file:
+        with open(self.download_log, "a") as file:
             file.write(f"{self.latest_build}\n")
 
     def build_in_edt_history(self):
@@ -435,10 +456,9 @@ class Downloader:
         :return: True if such build was installed else False
         """
         if self.latest_build:
-            download_log = os.path.join(settings_folder, "edt_install.log")
-            if os.path.isfile(download_log):
+            if os.path.isfile(self.download_log):
                 date = str(self.latest_build)
-                with open(download_log, "r") as file:
+                with open(self.download_log, "r") as file:
                     for line in file:
                         if date in line:
                             return True
@@ -457,6 +477,7 @@ class Downloader:
             command = f'{self.setup_exe} -silent -install_dir "{install_path}" '
             command += self.settings.wb_flags
 
+            self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation: {command}")
             subprocess.call(command)
             logging.info("New build was installed")
@@ -470,6 +491,7 @@ class Downloader:
                                      self.settings.version[:4], "Uninstall.exe")
         if os.path.isfile(uninstall_exe):
             command = f'{uninstall_exe} -silent'
+            self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             logging.info(f"Execute uninstallation: {command}")
             subprocess.call(command)
             logging.info("Previous build was uninstalled")
@@ -540,7 +562,7 @@ class Downloader:
         Update EDT registry based on the files in the HPC_Options folder that are added from UI
         :return: None
         """
-        hpc_folder = os.path.join(settings_folder, "HPC_Options")
+        hpc_folder = os.path.join(self.settings_folder, "HPC_Options")
 
         env_var = "ANSYSEM_ROOT" + self.product_version
         try:
@@ -569,6 +591,37 @@ class Downloader:
                     logging.info(f"Update registry from: {options_file}")
                     subprocess.call(command)
 
+    def update_installation_history(self, status, details):
+        """
+        Update ordered dictionary with new data and write it to the file
+        :param status: Failed | Success | In-Progress (important, used in JS)
+        :param details: Message for details field
+        :return:
+        """
+        self.get_installation_history()  # in case if file was deleted during run of installation
+        time_now = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+        shorten_path = self.settings_path.replace(os.environ["APPDATA"], "%APPDATA%")
+        self.history[self.hash] = [
+            status, self.settings.version, time_now, shorten_path, details
+        ]
+        with open(self.history_file, "w") as file:
+            json.dump(self.history, file, indent=4)
+
+    def get_installation_history(self):
+        """
+        Read a file with installation history
+        create a file if does not exist
+        :return: OrderedDict with history or empty in case if file was deleted during run of installation
+        """
+        if os.path.isfile(self.history_file):
+            try:
+                with open(self.history_file) as file:
+                    self.history = json.load(file, object_pairs_hook=OrderedDict)
+            except json.decoder.JSONDecodeError:
+                return
+        else:
+            self.history = OrderedDict()
+
     @staticmethod
     def parse_args():
         """
@@ -591,16 +644,24 @@ class Downloader:
             raise SystemExit("Please provide --path argument")
 
 
-def set_logger():
+def generate_hash_str():
+    """
+    generate random hash
+    :return: hash code (str)
+    """
+    return f"{random.getrandbits(32):x}".strip()
+
+
+def set_logger(logging_file):
     """
     Function to setup logging output to stream and log file. Will be used by UI and backend
+    :param: logging_file (str): path to the log file
     :return: None
     """
 
-    logging_file = os.path.join(settings_folder, "downloader.log")
-
-    if not os.path.isdir(settings_folder):
-        os.mkdir(settings_folder)
+    work_dir = os.path.dirname(logging_file)
+    if not os.path.isdir(work_dir):
+        os.makedirs(work_dir)
 
     # add logging to console and log file
     logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.DEBUG,
