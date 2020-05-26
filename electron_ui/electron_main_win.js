@@ -3,7 +3,7 @@ const {dialog} = require('electron');
 const ipc = require('electron').ipcMain;
 
 
-const version = "0.2";
+const version = app.getVersion();
 const build_date = "07 May 2020";
 
 app.allowRendererProcessReuse = false;  // use only false! otherwise pyshell table render may fail
