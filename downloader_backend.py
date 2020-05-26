@@ -591,7 +591,7 @@ class Downloader:
     def update_installation_history(self, status, details):
         """
         Update ordered dictionary with new data and write it to the file
-        :param status: Failed | Success | In-Progress
+        :param status: Failed | Success | In-Progress (important, used in JS)
         :param details: Message for details field
         :return:
         """

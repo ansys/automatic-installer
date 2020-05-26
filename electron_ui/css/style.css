@@ -8,6 +8,13 @@
   border-radius: 5px;
 }
 
+.img-in-table {
+  width: 25px;
+  text-align: center;
+  display:block;
+  margin:auto;
+}
+
 .history-table-label {
   width: 180px;
   padding-right: 0;

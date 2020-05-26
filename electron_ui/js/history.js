@@ -3,29 +3,8 @@ var fs = require('fs');
 const { remote } = require('electron');
 const { dialog } = require('electron').remote;
 
-settings_path = os_path.join(process.env.APPDATA, "build_downloader", "default_settings.json");
-hpc_options_folder = os_path.join(process.env.APPDATA, "build_downloader", "HPC_Options");
 history_file = os_path.join(process.env.APPDATA, "build_downloader", "installation_history.json");
 
-function truncate_path(name, selected_path){
-    /**
-     * truncates end of the path.
-     * name (str): what should be removed
-     * selected_path (str): path that user selected. Would be truncated
-     */
-    let truncated_path = selected_path.slice(0, selected_path.length - name.length - 1);
-    answer = dialog.showMessageBoxSync(remote.getCurrentWindow(), {
-            type: "question",
-            buttons: ["Yes", "No"],
-            message: "Path contains '" + name + "', Do you want to use '" + truncated_path + "' instead?"
-        }
-    )
-
-    if (answer == 0) {
-        return truncated_path;
-    }
-    return selected_path;
-}
 
 $(document).ready(function() {
     /**
@@ -41,14 +20,25 @@ $(document).ready(function() {
         "ordering": false,
         "data": get_history(),
         "columnDefs": [
+            { "render": getImg, "targets": [0] },
             { "width": "55px", "targets": [0, 1] },
             { "width": "15%", "targets": [2] },
-            { "width": "320px", "targets": [3] }
+            { "width": "320px", "targets": [3] },
+            { "className": "text-center", "targets": [0, 1, 2, 4] },
           ]
     } );
-    //add_hpc_files_rows();
 } );
 
+function getImg(data, type, full, meta) {
+
+    if (data === 'Failed') {
+        return '<img class="img-in-table" src="images/failed.png" title="Failed" />';
+    } else if (data === 'Success') {
+        return '<img class="img-in-table" src="images/success.png" title="Success" />';
+    } else {
+        return '<img class="img-in-table" src="images/pending.png" title="In-Progress" />';
+    }
+}
 
 function get_history(){
     /**
