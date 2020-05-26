@@ -591,10 +591,11 @@ class Downloader:
     def update_installation_history(self, status, details):
         """
         Update ordered dictionary with new data and write it to the file
-        :param status:
-        :param details:
+        :param status: Failed | Success | In-Progress
+        :param details: Message for details field
         :return:
         """
+        self.get_installation_history()  # in case if file was deleted during run of installation
         time_now = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
         shorten_path = self.settings_path.replace(os.environ["APPDATA"], "%APPDATA%")
         self.history[self.hash] = [
@@ -607,7 +608,7 @@ class Downloader:
         """
         Read a file with installation history
         create a file if does not exist
-        :return: OrderedDict with history
+        :return: OrderedDict with history or empty in case if file was deleted during run of installation
         """
         if os.path.isfile(self.history_file):
             try:
@@ -615,6 +616,8 @@ class Downloader:
                     self.history = json.load(file, object_pairs_hook=OrderedDict)
             except json.decoder.JSONDecodeError:
                 return
+        else:
+            self.history = OrderedDict()
 
     @staticmethod
     def parse_args():
