@@ -99,6 +99,14 @@ class InstallUninstallTest(unittest.TestCase):
 
         self.downloader.update_edt_registry()
 
+    def write_history_test(self):
+        """
+            Test if the history of installation was written correct
+            Uses following mock up:
+                arguments mock up of settings_file
+        """
+        self.downloader.update_installation_history("Failed", "VPN turned off")
+
     def full_run_test(self):
         self.downloader.run()
 
@@ -113,7 +121,8 @@ if __name__ == '__main__':
     # suite.addTest(InstallUninstallTest("clean_temp_test"))
     # suite.addTest(InstallUninstallTest("uninstall_wb_test"))
     # suite.addTest(InstallUninstallTest("install_wb_test"))
-    suite.addTest(InstallUninstallTest("install_all_test"))
+    # suite.addTest(InstallUninstallTest("install_all_test"))
+    suite.addTest(InstallUninstallTest("write_history_test"))
     # suite.addTest(InstallUninstallTest("full_run_test"))
     runner = unittest.TextTestRunner()
     runner.run(suite)

@@ -2,7 +2,6 @@ var os_path = require('path');
 var fs = require('fs');
 const { remote } = require('electron');
 const { dialog } = require('electron').remote;
-const { BrowserWindow } = remote;
 
 settings_path = os_path.join(process.env.APPDATA, "build_downloader", "default_settings.json");
 hpc_options_folder = os_path.join(process.env.APPDATA, "build_downloader", "HPC_Options")
