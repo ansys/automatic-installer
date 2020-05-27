@@ -11,8 +11,7 @@
   },
   "dependencies": {
     "axios": "^0.19.2",
-    "fast-xml-parser": "^3.17.3",
-    "python-shell": "^1.0.8"
+    "fast-xml-parser": "^3.17.3"
   },
   "build": {
     "files": "!electron_backend.py"
