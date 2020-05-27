@@ -75,7 +75,7 @@ window.onload = function() {
 
     set_selector("artifactory", Object.keys(artifactory_dict), settings.artifactory);
 
-    pyshell.send('get_active_tasks');
+    //pyshell.send('get_active_tasks');
     request_builds();
     set_default_tooltips_main();
 }
