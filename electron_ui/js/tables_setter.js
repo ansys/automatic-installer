@@ -76,7 +76,7 @@ function add_hpc_files_rows() {
                                         )
 
                                         if (answer == 0) {
-                                            fs.unlinkSync(file_name.replace('%APPDATA%', process.env.APPDATA));
+                                            fs.unlinkSync(file_name.replace('%APPDATA%', app.getPath("appData")));
                                             add_hpc_files_rows();
                                         }
                                  };

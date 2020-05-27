@@ -5,6 +5,10 @@
   "scripts": {
     "start": "electron ."
   },
+  "author": { 
+    "name" : "Maksim Beliaev", 
+    "email" : "maksim.beliaev@ansys.com"
+  },
   "dependencies": {
     "axios": "^0.19.2",
     "python-shell": "^1.0.8"

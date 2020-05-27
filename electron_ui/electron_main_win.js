@@ -1,5 +1,4 @@
-const {app, BrowserWindow, Menu} = require('electron');
-const {dialog} = require('electron');
+const {app, BrowserWindow, Menu, dialog} = require('electron');
 const ipc = require('electron').ipcMain;
 
 
@@ -17,7 +16,9 @@ const about_options = {
     defaultId: 2,
     title: 'About',
     message: 'Ansys Beta Build Downloader v' + version,
-    detail: 'Build date: ' + build_date + "\nCreated by: Maksim Beliaev\nEmail: maksim.beliaev@ansys.com",
+    detail: 'Build date: ' + build_date + 
+            "\nCreated by: Maksim Beliaev" + 
+            "\nEmail: maksim.beliaev@ansys.com"
   };
 
 

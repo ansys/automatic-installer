@@ -23,7 +23,7 @@ artifactory_dict = {
     'Waterloo': 'http://watatsrv01.ansys.com:8080/artifactory'
 };
 
-app_folder = os_path.join(process.env.APPDATA, "build_downloader")
+app_folder = os_path.join(app.getPath("appData"), "build_downloader")
 settings_path = os_path.join(app_folder, "default_settings.json");
 all_days = ["mo", "tu", "we", "th", "fr", "sa", "su"]
 
@@ -44,7 +44,7 @@ window.onload = function() {
             "artifactory": "Otterfing",
             "password": {"Otterfing": ""},
             "delete_zip": true,
-            "download_path": process.env.TEMP,
+            "download_path": app.getPath("temp"),
             "version": "",
             "wb_flags": "",
             "days": [

@@ -1,7 +1,7 @@
 var path = require('path');
-const {remote} = require('electron');
-const {dialog} = require('electron').remote;
+const {app, dialog} = require('electron').remote;
 let {PythonShell} = require('python-shell');
+console.log(app);
 
 //options to run when compiled to exe
 //let options = {

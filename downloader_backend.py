@@ -583,6 +583,7 @@ class Downloader:
         with open(productlist_file) as file:
             product_version = next(file).rstrip()  # get first line
 
+        self.update_installation_history(status="In-Progress", details=f"Update registry")
         if os.path.isdir(hpc_folder):
             for file in os.listdir(hpc_folder):
                 if ".acf" in file:
