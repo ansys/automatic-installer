@@ -1,9 +1,8 @@
-const {app, BrowserWindow, Menu} = require('electron');
-const {dialog} = require('electron');
+const {app, BrowserWindow, Menu, dialog} = require('electron');
 const ipc = require('electron').ipcMain;
 
 
-const version = "0.2";
+const version = app.getVersion();
 const build_date = "07 May 2020";
 
 app.allowRendererProcessReuse = false;  // use only false! otherwise pyshell table render may fail
@@ -17,7 +16,9 @@ const about_options = {
     defaultId: 2,
     title: 'About',
     message: 'Ansys Beta Build Downloader v' + version,
-    detail: 'Build date: ' + build_date + "\nCreated by: Maksim Beliaev\nEmail: maksim.beliaev@ansys.com",
+    detail: 'Build date: ' + build_date + 
+            "\nCreated by: Maksim Beliaev" + 
+            "\nEmail: maksim.beliaev@ansys.com"
   };
 
 

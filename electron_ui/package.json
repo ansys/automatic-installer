@@ -1,13 +1,17 @@
 {
   "name": "ansys-build-downloader",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "main": "electron_main_win.js",
   "scripts": {
     "start": "electron ."
   },
+  "author": {
+    "name": "Maksim Beliaev",
+    "email": "maksim.beliaev@ansys.com"
+  },
   "dependencies": {
     "axios": "^0.19.2",
-    "python-shell": "^1.0.8"
+    "fast-xml-parser": "^3.17.3"
   },
   "build": {
     "files": "!electron_backend.py"

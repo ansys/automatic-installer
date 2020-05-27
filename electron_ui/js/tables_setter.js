@@ -4,7 +4,6 @@ function add_task_rows(tasks_list) {
      * Append rows in the table for scheduled tasks. Parse tasks_list for the info. 
      * If less than MAX_ROWS fill with empty lines for visual experience. 
      * While create rows with tasks assign a function for each row: ask if user wants to delete a scheduled task
-     * if yes (wants) => send to pyshell command to remove task and then refresh the table
      * @param tasks_list: Array (list) of Objects (dictionaries) with active scheduled tasks
      */
     var table_container = document.getElementById("schedule-table");
@@ -29,8 +28,8 @@ function add_task_rows(tasks_list) {
                                         )
 
                                         if (answer == 0) {
-                                            pyshell.send('delete_task ' + version + "_" + product);
-                                            pyshell.send('get_active_tasks');
+                                            delete_task(version + "_" + product);
+                                            get_active_tasks();
                                         }
 
                                  };
@@ -76,7 +75,7 @@ function add_hpc_files_rows() {
                                         )
 
                                         if (answer == 0) {
-                                            fs.unlinkSync(file_name.replace('%APPDATA%', process.env.APPDATA));
+                                            fs.unlinkSync(file_name.replace('%APPDATA%', app.getPath("appData")));
                                             add_hpc_files_rows();
                                         }
                                  };

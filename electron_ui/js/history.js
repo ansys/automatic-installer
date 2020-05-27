@@ -1,9 +1,9 @@
 var os_path = require('path');
 var fs = require('fs');
 const { remote } = require('electron');
-const { dialog } = require('electron').remote;
+const { app, dialog } = remote;
 
-history_file = os_path.join(process.env.APPDATA, "build_downloader", "installation_history.json");
+history_file = os_path.join(app.getPath("appData"), "build_downloader", "installation_history.json");
 
 
 $(document).ready(function() {

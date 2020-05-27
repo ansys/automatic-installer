@@ -23,7 +23,7 @@ artifactory_dict = {
     'Waterloo': 'http://watatsrv01.ansys.com:8080/artifactory'
 };
 
-app_folder = os_path.join(process.env.APPDATA, "build_downloader")
+app_folder = os_path.join(app.getPath("appData"), "build_downloader")
 settings_path = os_path.join(app_folder, "default_settings.json");
 all_days = ["mo", "tu", "we", "th", "fr", "sa", "su"]
 
@@ -33,7 +33,7 @@ window.onload = function() {
      * If exists => read settings and populate UI data from the file
      * If not => create default file with settings and dump it to settings file. Then use these settings for UI.
      * 
-     * Since python is started from communicator then send to pyshell request to get active schtasks.
+     * Gets active schtasks.
      * Runs function to set tooltips text
      */
 
@@ -44,7 +44,7 @@ window.onload = function() {
             "artifactory": "Otterfing",
             "password": {"Otterfing": ""},
             "delete_zip": true,
-            "download_path": process.env.TEMP,
+            "download_path": app.getPath("temp"),
             "version": "",
             "wb_flags": "",
             "days": [
@@ -75,24 +75,11 @@ window.onload = function() {
 
     set_selector("artifactory", Object.keys(artifactory_dict), settings.artifactory);
 
-    pyshell.send('get_active_tasks');
+    get_active_tasks();
     request_builds();
     set_default_tooltips_main();
 }
 
-
-window.onbeforeunload = function(){
-    /**
-     * Before we quit the page we need to shutdown Python process. Otherwise we will spawn it every page load
-    */
-    pyshell.send('exit');
-    pyshell.end(function (err,code,signal) {
-        if (err) throw err;
-        console.log('The exit code was: ' + code);
-        console.log('The exit signal was: ' + signal);
-        console.log('finished');
-    });
-}
 
 
 function get_previous_edt_path() {
@@ -275,7 +262,7 @@ $("#schedule-button").click(function (){
      * If version is empty or not equal to drop menu => server is not grabbed yet => return
      * 
      * Make copy of settings file to another file for scheduling
-     * If all checks are fine then send command to python to set a task and retrieve a new tasks list
+     * If all checks are fine then set a task and retrieve a new tasks list
      */
     if(settings.days.length == 0){
         alert("At least one day should be selected!");
@@ -287,10 +274,10 @@ $("#schedule-button").click(function (){
         fs.copyFileSync(settings_path, scheduled_settings, (err) => {
             if (err) throw err;
         });
-        pyshell.send('schedule_task ' + scheduled_settings);
+        schedule_task(scheduled_settings);
 
         setTimeout(() => {
-            pyshell.send('get_active_tasks');
+            get_active_tasks();
         }, 1000);
         
     } else {
@@ -304,16 +291,15 @@ $("#install-once-button").click(function (){
      * If version is empty or not equal to drop menu => server is not grabbed yet => return
      * 
      * Make copy of settings file to another file for installing once
-     * If all checks are fine then send command to python to install edt
      */
     if(settings.version == $("#version")[0].value && settings.version){
         var install_once_settings = os_path.join(app_folder, "install_once_settings_" + settings.version + ".json");
         fs.copyFileSync(settings_path, install_once_settings, (err) => {
             if (err) throw err;
         });
-        pyshell.send('install_once ' + install_once_settings);        
+        install_once(install_once_settings); 
+        alert("Installation started! You can check the progress on Installation History page")     
     } else {
         alert("Version does not exist on artifactory");
     }
-    alert("Installation started! You may close UI and verify log later")
 })

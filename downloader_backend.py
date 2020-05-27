@@ -107,7 +107,7 @@ class Downloader:
                 raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
         except SystemExit as e:
             logging.error(e)
-            self.update_installation_history(status="Failed", details=e)
+            self.update_installation_history(status="Failed", details=str(e))
         except Exception:
             logging.error(traceback.format_exc())
             self.update_installation_history(status="Failed", details="Unexpected error, see logs")
@@ -583,6 +583,7 @@ class Downloader:
         with open(productlist_file) as file:
             product_version = next(file).rstrip()  # get first line
 
+        self.update_installation_history(status="In-Progress", details=f"Update registry")
         if os.path.isdir(hpc_folder):
             for file in os.listdir(hpc_folder):
                 if ".acf" in file:
