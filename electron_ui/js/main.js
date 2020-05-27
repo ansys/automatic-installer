@@ -311,9 +311,9 @@ $("#install-once-button").click(function (){
         fs.copyFileSync(settings_path, install_once_settings, (err) => {
             if (err) throw err;
         });
-        pyshell.send('install_once ' + install_once_settings);        
+        pyshell.send('install_once ' + install_once_settings);   
+        alert("Installation started! You can check the progress on Installation History page")     
     } else {
         alert("Version does not exist on artifactory");
     }
-    alert("Installation started! You may close UI and verify log later")
 })

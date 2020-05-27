@@ -107,7 +107,7 @@ class Downloader:
                 raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
         except SystemExit as e:
             logging.error(e)
-            self.update_installation_history(status="Failed", details=e)
+            self.update_installation_history(status="Failed", details=str(e))
         except Exception:
             logging.error(traceback.format_exc())
             self.update_installation_history(status="Failed", details="Unexpected error, see logs")
