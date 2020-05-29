@@ -1,5 +1,14 @@
 const {app, BrowserWindow, Menu, dialog} = require('electron');
-const ipc = require('electron').ipcMain;
+const { autoUpdater } = require('electron-updater');
+
+const updateServer = 'http://ottbld01:1337';
+let arch = 'win64';
+//const feed = `${updateServer}/update/${arch}/${app.getVersion()}/RELEASES`;
+const feed = `${updateServer}/update/${arch}`;
+autoUpdater.setFeedURL(feed);
+setInterval(() => {
+  autoUpdater.checkForUpdatesAndNotify()
+}, 60000)
 
 if (handleSquirrelEvent()) {
     // squirrel event handled and app will exit in 1000ms, so don't do anything else
@@ -57,6 +66,11 @@ let submenu_list = [
 
 if (app.isPackaged) {
         var app_width = 1000;    // production
+        submenu_list.push({
+            label:'Developer Tools',
+            accelerator:process.platform == 'darwin' ? 'Command+R' : 'Ctrl+Shift+I',
+            role: "toggleDevTools"
+        })
 } else {
         var app_width = 2*1000;;    // develop
         submenu_list.push({
@@ -76,7 +90,7 @@ app.on('ready', () => {
         width: app_width,
         resizable: false
 	  });
-	
+
     MainWindow.once('ready-to-show', () => {
         MainWindow.show()
     })
@@ -84,16 +98,25 @@ app.on('ready', () => {
     // load main page only after we show starting logo
 	  setTimeout(function(){
         MainWindow.loadURL('file://' + __dirname + '/main.html');
+        autoUpdater.checkForUpdatesAndNotify();
     }, 3700);
 
     MainWindow.loadURL('file://' + __dirname + '/starter.html');
 
 
-	  MainWindow.on('closed', () => {
-    		app.quit()
-	  })
+    MainWindow.on('closed', () => {
+        app.quit()
+    })
 
-	  const mainMenuTemplate =    [
+
+    autoUpdater.on('update-available', () => {
+        MainWindow.webContents.send('update_available');
+    });
+    autoUpdater.on('update-downloaded', () => {
+        MainWindow.webContents.send('update_downloaded');
+    });
+
+    const mainMenuTemplate =    [
         {
             label: 'Menu',
             submenu: submenu_list

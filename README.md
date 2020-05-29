@@ -34,7 +34,7 @@ In order to work with project you need to
 # Build and Test
 To package an electron use electron packager:
 ~~~
-electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite --ignore="^.*\.py" --ignore="\/node_modules" --ignore="__pycache__"
+electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite --ignore="^.*\.py" --ignore="__pycache__"
 ~~~
 
 To create an executable from python use Pyinstaller.  
