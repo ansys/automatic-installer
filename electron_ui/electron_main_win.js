@@ -1,11 +1,14 @@
 const {app, BrowserWindow, Menu, dialog} = require('electron');
 const { autoUpdater } = require('electron-updater');
+const ipc = require('electron').ipcMain;
 
 const updateServer = 'http://ottbld01:1337';
 let arch = 'win64';
 //const feed = `${updateServer}/update/${arch}/${app.getVersion()}/RELEASES`;
 const feed = `${updateServer}/update/${arch}`;
 autoUpdater.setFeedURL(feed);
+autoUpdater.autoDownload = false;
+
 setInterval(() => {
   autoUpdater.checkForUpdatesAndNotify()
 }, 60000)
@@ -66,11 +69,6 @@ let submenu_list = [
 
 if (app.isPackaged) {
         var app_width = 1000;    // production
-        submenu_list.push({
-            label:'Developer Tools',
-            accelerator:process.platform == 'darwin' ? 'Command+R' : 'Ctrl+Shift+I',
-            role: "toggleDevTools"
-        })
 } else {
         var app_width = 2*1000;;    // develop
         submenu_list.push({
@@ -81,7 +79,7 @@ if (app.isPackaged) {
 }
 
 app.on('ready', () => {
-    var MainWindow = new BrowserWindow({
+    MainWindow = new BrowserWindow({
               show: false,    // disable show from the beginning to avoid white screen, see ready-to-show
                     webPreferences: {
                             nodeIntegration: true
@@ -115,6 +113,15 @@ app.on('ready', () => {
     autoUpdater.on('update-downloaded', () => {
         MainWindow.webContents.send('update_downloaded');
     });
+
+    ipc.on('restart_app', () => {
+          autoUpdater.quitAndInstall();
+    });
+
+    ipc.on('download_update', () => {
+          autoUpdater.downloadUpdate()
+    });
+
 
     const mainMenuTemplate =    [
         {

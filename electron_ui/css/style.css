@@ -9,11 +9,18 @@
   width: 200px;
   padding: 20px;
   border-radius: 5px;
-  background-color: white;
+  background-color: #000;
+  border-color: #fff;
+  border: 2px solid;
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
 }
 .hidden {
   display: none;
+}
+
+#close-button, #restart-button{
+  border-radius: 5px;
+  color: black;
 }
 
 /* History table*/
