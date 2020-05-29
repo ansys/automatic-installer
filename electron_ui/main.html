@@ -124,6 +124,16 @@
         </div>
     </div>
 
+    <div id="notification" class="hidden">
+      <p id="message"></p>
+      <button id="close-button" onClick="closeNotification()">
+        Close
+      </button>
+      <button id="restart-button" onClick="restartApp()" class="hidden">
+        Restart
+      </button>
+    </div>
+
     <script src="js/jquery-3.js" type="text/javascript"></script>
     <script src="js/jquery-3.5.0.min.js" type="text/javascript"></script>
     <script src="js/bootstrap.min.js" type="text/javascript"></script>
@@ -131,6 +141,7 @@
     <script src="js/bootstrap-clockpicker.min.js" type="text/javascript"></script>
     <script src="js/jquery-clockpicker.min.js" type="text/javascript"></script>
 
+    <script src="js/autoupdate.js" type="text/javascript"></script>
     <script src="js/tasks_handler.js" type="text/javascript"></script>
     <script src="js/tooltips.js" type="text/javascript"></script>
     <script src="js/tables_setter.js" type="text/javascript"></script>
