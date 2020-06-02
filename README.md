@@ -59,7 +59,7 @@ D:\build_env\Scripts\pip.exe install pyinstaller
 D:\build_env\Scripts\pyinstaller.exe ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile
 ~~~
 
-To package an electron use electron packager:
+To package an electron use electron packager (can be used for quick debug before building):
 ~~~
 electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite --ignore="^.*\.py" --ignore="__pycache__"
 ~~~
