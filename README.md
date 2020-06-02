@@ -15,17 +15,13 @@ In order to work with project you need to
 2. Open PowerShell/CMD in project folder and run: 
     - Installation of Electron globally
     ~~~ 
-        npm install -g electron 
+        npm install electron -g
     ~~~ 
-    - Axios for sending requests to the server from JS
+    - Rest packages could be installed automatically from package.json
     ~~~
-        npm install axios
+        npm install
     ~~~
-    - Packager to create electron build
-    ~~~
-        npm install electron-packager --save-dev
-        npm install -g electron electron-packager
-    ~~~
+
 3. Finally to launch Electron app (see package.json for command)
     ~~~
         electron .
@@ -34,18 +30,6 @@ In order to work with project you need to
 # Build and Test
 ### Auto build via Azure Pipeline
 Generally builds would be created during branch merge via Azure Pipeline (see configuration in azure-pipelines.yml)  
-To run autobuild I would recommend to install on server (remote machine) following packages globally:  
-~~~
-npm install electron -g
-npm install electron-builder -g
-npm install electron-packager -g
-npm install electron-release-server -g
-npm install electron-squirrel-startup -g
-npm install pm2 -g
-npm install sails -g
-npm install bower -g
-npm install postinstall -g
-~~~
 
 ### Test on your local machine 
 All commands below you run from electron_ui folder (app folder)  
@@ -59,12 +43,12 @@ D:\build_env\Scripts\pip.exe install pyinstaller
 D:\build_env\Scripts\pyinstaller.exe ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile
 ~~~
 
-To package an electron use electron packager (can be used for quick debug before building):
+To package an electron use electron packager (can be used for quick debug before building, otherwise can be skipped):
 ~~~
 electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite --ignore="^.*\.py" --ignore="__pycache__"
 ~~~
 
-Once package is created generate build (see scripts section in package.json):
+To generate build (executable) (see scripts section in package.json):
 ~~~
 npm run dist
 ~~~
