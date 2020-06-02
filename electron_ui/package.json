@@ -1,11 +1,11 @@
 {
   "name": "ansys_build_downloader",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "main": "electron_main_win.js",
   "description": "Application to download or schedule autoupdate of Ansys internal beta builds",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder build --win --x64"
   },
   "author": {
     "name": "Maksim Beliaev",

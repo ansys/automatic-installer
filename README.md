@@ -32,18 +32,41 @@ In order to work with project you need to
     ~~~ 
 
 # Build and Test
+### Auto build via Azure Pipeline
+Generally builds would be created during branch merge via Azure Pipeline (see configuration in azure-pipelines.yml)  
+To run autobuild I would recommend to install on server (remote machine) following packages globally:  
+~~~
+npm install electron -g
+npm install electron-builder -g
+npm install electron-packager -g
+npm install electron-release-server -g
+npm install electron-squirrel-startup -g
+npm install pm2 -g
+npm install sails -g
+npm install bower -g
+npm install postinstall -g
+~~~
+
+### Test on your local machine 
+All commands below you run from electron_ui folder (app folder)  
+
+First create an executable from python using Pyinstaller.  
+You may need a fresh environment for the build (in order to exclude unused modules from Python)
+~~~
+python -m pip install --user pipenv
+python -m venv D:\build_env
+D:\build_env\Scripts\pip.exe install pyinstaller
+D:\build_env\Scripts\pyinstaller.exe ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile
+~~~
+
 To package an electron use electron packager:
 ~~~
 electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite --ignore="^.*\.py" --ignore="__pycache__"
 ~~~
 
-To create an executable from python use Pyinstaller.  
-You may need a fresh environment for the build (in order to exclude unused modules from Python)
+Once package is created generate build (see scripts section in package.json):
 ~~~
-pip install --user pipenv
-python -m venv D:\build_env
-D:\build_env\Scripts\pip.exe install pyinstaller
-D:\build_env\Scripts\pyinstaller.exe ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile
+npm run dist
 ~~~
 
 # Contribute
