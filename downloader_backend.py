@@ -477,6 +477,15 @@ class Downloader:
             command = f'{self.setup_exe} -silent -install_dir "{install_path}" '
             command += self.settings.wb_flags
 
+            # the "shared files" is created at the same level as the "ANSYS Inc" so if installing to unique folders,
+            # the Shared Files folder will be unique as well. Thus we can check install folder for license
+            if (os.path.isfile(os.path.join(install_path, "Shared Files", "Licensing", "ansyslmd.ini")) or
+                    "ANSYSLMD_LICENSE_FILE" in os.environ):
+                logging.info("Install using existing license configuration")
+            else:
+                command += ' -licserverinfo 2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1'
+                logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
+
             self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation: {command}")
             subprocess.call(command)
