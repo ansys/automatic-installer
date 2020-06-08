@@ -7,7 +7,7 @@ import random
 import re
 import shutil
 import subprocess
-import sys
+from artifactory_du import artifactory_du
 import traceback
 import zipfile
 from collections import namedtuple, OrderedDict
@@ -225,7 +225,22 @@ class Downloader:
                 file_size = 7e+9
             except KeyError:
                 # WB has not content-length
-                file_size = 11e+9
+                regex = re.match("(.*)/api/archive/download/(.*)/winx64", url)
+                try:
+                    aql_query_dict, max_depth_print = artifactory_du.prepare_aql(file="/winx64", max_depth=0,
+                                                                                 repository=regex[2],
+                                                                                 without_downloads="", older_than="")
+
+                    artifacts = artifactory_du.artifactory_aql(artifactory_url=regex[1], aql_query_dict=aql_query_dict,
+                                                               username=self.settings.username, password=password)
+
+                    file_size = artifactory_du.out_as_du(artifacts, max_depth_print, human_readable=False)
+                    file_size = int(file_size.strip("/"))
+                    logging.info(f"WB real file size is {file_size}")
+                except TypeError:
+                    file_size = 11e+9
+                except ValueError:
+                    file_size = 11e+9
 
             percent = 0
             try:

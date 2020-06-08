@@ -53,6 +53,24 @@ To generate build (executable) (see scripts section in package.json):
 npm run dist
 ~~~
 
+To run the server install PM2 package
+~~~
+npm install pm2 -g
+~~~
+Then to run the server in production mode use following CMD snippet on server startup:
+~~~
+set PORT=1337
+cd  C:\GIT\electron_server
+pm2 start app.js  -x -- -prod
+timeout /T 5
+pm2 stop 0
+timeout /T 5
+pm2 delete app
+timeout /T 5
+pm2 start app.js  -x -- -prod
+CMD /Q /K
+~~~
+
 # Contribute
 Please go ahead and contribute in any way you can:
 1. Submit your code changes
