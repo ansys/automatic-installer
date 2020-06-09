@@ -35,6 +35,10 @@ function set_default_tooltips_settings(){
     set_tooltip("hpc-options-table-div", "Click on a row to remove options file")
 }
 
+function set_default_tooltips_history(){
+    set_tooltip("history-table-div", "Click on the 'In-Progress' row to cancel the installation")
+}
+
 
 function set_tooltip(id, text, align_left=false, place="bottom") {
     /**

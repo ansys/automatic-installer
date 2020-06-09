@@ -4,7 +4,7 @@ const ipc = require('electron').ipcMain;
 
 const updateServer = 'http://ottbld01:1337';
 let arch = 'win64';
-//const feed = `${updateServer}/update/${arch}/${app.getVersion()}/RELEASES`;
+
 const feed = `${updateServer}/update/${arch}`;
 autoUpdater.setFeedURL(feed);
 autoUpdater.autoDownload = false;
