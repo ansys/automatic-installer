@@ -30,7 +30,7 @@ $(document).ready(function() {
         ]
     } );
 
-    window.setInterval(update_history(), 7500);
+    window.setInterval(update_history, 7500);
     set_default_tooltips_history();
 } );
 
@@ -70,6 +70,27 @@ function update_history(){
     }
 }
 
+function get_date_time(){
+    function checkTime(i) {
+        if (i < 10) {
+            i = "0" + i;
+        }
+        return i;
+    }
+
+    var today = new Date();
+    var hours = checkTime(today.getHours());
+    var minutes = checkTime(today.getMinutes());
+
+    var day = checkTime(today.getDate());
+    var month = checkTime(today.getMonth()+1);
+
+    var date = day + '-' + month + '-' + today.getFullYear();
+    var time = hours + ":" + minutes;
+    var date_time = date + ' ' + time;
+    return date_time;
+}
+
 $("#clear-button").click(function(){
     /**
      * If clean is requested delete the history file and refresh the page
@@ -106,11 +127,7 @@ $('#history-table').on('click', 'tbody tr', function () {
                 }
             });
 
-            var today = new Date();
-            var date = today.getDate() + '-' + (today.getMonth()+1) + '-' + today.getFullYear();
-            var time = today.getHours() + ":" + today.getMinutes();
-            var date_time = date + ' ' + time;
-            history_json[row[6]] = ["Failed", row[1], date_time, row[3], "User Aborted", row[5]];
+            history_json[row[6]] = ["Failed", row[1], get_date_time(), row[3], "User Aborted", row[5]];
 
             let data = JSON.stringify(history_json, null, 4);
             fs.writeFileSync(history_file, data);
