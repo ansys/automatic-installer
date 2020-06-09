@@ -19,7 +19,6 @@ if (handleSquirrelEvent()) {
 }
 
 const version = app.getVersion();
-const build_date = "27 May 2020";
 
 app.allowRendererProcessReuse = false;    // use only false! otherwise tasks table render may fail
 app.on('window-all-closed', () => {
@@ -32,9 +31,8 @@ const about_options = {
         defaultId: 2,
         title: 'About',
         message: 'Ansys Beta Build Downloader v' + version,
-        detail: 'Build date: ' + build_date + 
-                        "\nCreated by: Maksim Beliaev" + 
-                        "\nEmail: maksim.beliaev@ansys.com"
+        detail: "Created by: Maksim Beliaev" +
+                "\nEmail: maksim.beliaev@ansys.com"
     };
 
 // Each object (dictionary) in a list is a dropdown item
@@ -50,12 +48,6 @@ let submenu_list = [
         label:'About',
         click(){
             dialog.showMessageBox(null, about_options);
-        }
-    },
-    {
-        label:'Help',
-        click(){
-            MainWindow.webContents.send('item:clear');
         }
     },
     {
