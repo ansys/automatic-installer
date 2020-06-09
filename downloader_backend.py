@@ -61,7 +61,8 @@ class Downloader:
         self.product_version_dot (str): the same as product_version but with dot eg 20.2
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
         self.latest_build (int): latest EDT build folder
-        self.run_hash (str): hash code used for this run of the program
+        self.hash (str): hash code used for this run of the program
+        self.pid: pid (process ID of the current Python run, required to allow kill in UI)
         """
         self.build_url = None
         self.zip_file = None
@@ -74,6 +75,8 @@ class Downloader:
         self.product_version_dot = None
         self.setup_exe = None
         self.latest_build = None
+
+        self.pid = str(os.getpid())
 
         self.hash = generate_hash_str()
         self.settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
@@ -627,7 +630,7 @@ class Downloader:
         time_now = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
         shorten_path = self.settings_path.replace(os.environ["APPDATA"], "%APPDATA%")
         self.history[self.hash] = [
-            status, self.settings.version, time_now, shorten_path, details
+            status, self.settings.version, time_now, shorten_path, details, self.pid
         ]
         with open(self.history_file, "w") as file:
             json.dump(self.history, file, indent=4)
