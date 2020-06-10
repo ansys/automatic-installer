@@ -3,17 +3,23 @@ function set_default_tooltips_main(){
      * Set tooltips on the main page
      */
     set_tooltip("password",  "Retrieval of Artifactory Encrypted Password Instructions:\n" +
-    "1. Log into Artifactory (double click on artifactory drop down)\n" +
-    "2. Click on your username (top right)\n" +
-    "3. Enter your password to Unlock Artifactory Encrypted Password\n" +
-    "4. Copy Artifactory Encrypted Password\n" +
-    "[Note] Artifactory password is not valid for other artifactories.\n" +
-     "Encrypted password will change anytime your SSO password changes.", true);
+        "1. Double click on artifactory drop down menu\n" +
+        "2. Log into Artifactory using SSO credentials\n" +
+        "\t2.1 Click on your userID (top right)\n" +
+        "\t2.2 Enter your password to Unlock Artifactory Encrypted Password\n" +
+        "\t2.3 Copy over Artifactory Encrypted Password\n" +
+        "[Note] Artifactory Encrypted Password is not valid for other artifactories.\n" +
+        "Encrypted password will change anytime your SSO password changes.", true);
 
-     set_tooltip("username",  "Ansys UserID");
-     set_tooltip("artifactory",  "Select an artifactory and double click to open in Browser");
+    set_tooltip("username",  "Ansys UserID");
+    set_tooltip("artifactory",  "Select an artifactory and double click to open in Browser");
 
-     set_tooltip("schedule-table-div",  "Click on a row to unschedule specific task");
+    set_tooltip("version",  "Latest available certified build would be downloaded");
+
+    set_tooltip("days",  "Please try to use not more than 3 days to decrease load on server");
+    set_tooltip("time",  "Local computer time at which update will start.\n" + 
+                    "Please try to use night time to decrease load on server");
+    set_tooltip("schedule-table-div",  "Click on a row to unschedule specific task");
 
 }
 
@@ -22,15 +28,15 @@ function set_default_tooltips_settings(){
      * Set tooltips on the settings page
      */
     set_tooltip("force_install_label",
-        "Not recommended to check. If checked will force install build of the same  date.\n" +
-        "For example you have installed build of 20th of May and try to download" +
-        "and install next day, application will identify that new build was not added" +
-        "to artifactory and will skip the installation", true);
+        "Not recommended to check! By default if latest available build on artifactory is identical to one, " + 
+        "already installed on this machine then installation will not proceed. This flag will skip the validation", 
+        true);
 
     set_tooltip("wb-flags-table-div", "Select product flags. Note: Will install all if none selected");
 
     set_tooltip("install_path",
-        "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for EDT\nor \n\\ANSYS Inc\\vXXX for WB");
+        "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for Electronics Desktop\n" +
+        "or \n\\ANSYS Inc\\vXXX for Workbench");
 
     set_tooltip("hpc-options-table-div", "Click on a row to remove options file")
 }
@@ -69,9 +75,13 @@ function set_tooltip(id, text, align_left=false, place="bottom") {
 var error_tooltip = function(prop_title) {
     /**
      * Set error tooltip (in red color). 
-     * Show tooltip in specific title for 3.5s. After destroy and revert back default tooltips
+     * Show tooltip in specific title for 3.5s. After destroy and revert back default tooltips.
+     * Since it is an error we cannot populate DropDown. We clear it and write this error message.
      * @param  {} prop_title: tooltip message
      */
+    $("#version").empty();
+    $("#version").append($('<option>', {value:1, text:prop_title}));
+
     this.tooltip('destroy');
     setTimeout(() => {this.tooltip({
                                 title: prop_title,

@@ -150,7 +150,7 @@ table.dataTable tbody td{
 
 /* schedule table */
 #schedule-table-div {
-    max-height: 128px;
+    max-height: 132px;
     overflow-y: auto;
 }
 
@@ -169,8 +169,12 @@ table.dataTable tbody td{
     width: 45%;
 }
 
-.product-column, .version-column {
-    width: 25%;
+.product-column {
+  width: 30%;
+}
+
+.version-column {
+  width: 20%;
 }
 
 /* all tables rows */

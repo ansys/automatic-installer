@@ -49,7 +49,7 @@ window.onload = function() {
             "version": "",
             "wb_flags": "",
             "days": [
-                "sa"
+                "tu", "th", "sa"
             ],
             "time": "01:30",
             "force_install": false
@@ -82,12 +82,11 @@ window.onload = function() {
 }
 
 
-
 function get_previous_edt_path() {
     /**
      * parse environment variables and search for EM installation. If some build was installed 
      * propose the same directory
-     * Otherwise search for previous WB installation and propose it
+     * Otherwise search for previous Workbench installation and propose it
      * If nothing is found propose C:/program files
     */ 
     all_vars = Object.keys(process.env);
@@ -97,7 +96,7 @@ function get_previous_edt_path() {
     }
 
     if (!env_var){
-        // search for WB env var match eg "ANSYS202_DIR"
+        // search for Workbench env var match eg "ANSYS202_DIR"
         const regex_str = /ansys[0-9]{3,}_dir/;
         for (var i in all_vars){
             if (all_vars[i].toLowerCase().match(regex_str)) env_var = process.env[all_vars[i]];
@@ -131,6 +130,7 @@ function set_selector(id, obj_list, default_item="") {
     }
 }
 
+
 var save_settings = function () {
     /**
      * Dump settings to the JSON file in APPDATA. Fired on any change in the UI
@@ -163,7 +163,9 @@ var request_builds = function (){
      * Send request to the server using axios. Try to retrive info about 
      * available builds on artifactory
     */
-    $("#version").empty();
+   $("#version").empty();
+   $("#version").append($('<option>', {value:1, text:"Loading data..."}))
+
     if (!settings.username) {
         error_tooltip.call($('#username'), "Provide your Ansys User ID");
         return;
@@ -191,7 +193,7 @@ var request_builds = function (){
             error_tooltip.call($('#artifactory'), "Check that you are on VPN and retry in 10s (F5)");
         } else if (err.code === 'ECONNABORTED'){
             error_tooltip.call($('#username'), "Timeout on connection, check Ansys User ID");
-            error_tooltip.call($('#password'), "Timeout on connection, check Artifactory unique password");
+            error_tooltip.call($('#password'), "Timeout on connection, check Password or/and retry (F5)");
         } else if (err.response.status == 401){
             error_tooltip.call($('#username'), "Bad credentials, check Ansys User ID");
             error_tooltip.call($('#password'), "Bad credentials, check Artifactory unique password");
@@ -202,20 +204,20 @@ var request_builds = function (){
 
 function get_builds(artifacts_list){
     /**
-     * Parses information from the server. If see EBU or WB build extract version and add to the list
+     * Parses information from the server. If see EBU or Workbench build extract version and add to the list
      */
     let version_list = [];
     for (var i  in artifacts_list) {
         repo = artifacts_list[i]["key"];
         if (repo.includes("EBU_Certified")){
-            var version = repo.split("_")[0] + "_EDT"
+            var version = repo.split("_")[0] + "_ElectronicsDesktop"
             if (!version_list.includes(version)) {
                 version_list.push(version);
             }
         } else if (repo.includes("Certified") &&
                    !repo.includes("Licensing") &&
                    !repo.includes("TEST")){
-            var version = repo.split("_")[0] + "_WB";
+            var version = repo.split("_")[0] + "_Workbench";
             if (!version_list.includes(version)) {
                 version_list.push(version);
             }
@@ -277,7 +279,7 @@ $("#schedule-button").click(function (){
     }
 
     if(settings.version == $("#version")[0].value && settings.version){
-        var scheduled_settings = os_path.join(app_folder, "settings_" + settings.version + ".json");
+        var scheduled_settings = os_path.join(app_folder, settings.version + ".json");
         fs.copyFileSync(settings_path, scheduled_settings, (err) => {
             if (err) throw err;
         });
@@ -300,7 +302,7 @@ $("#install-once-button").click(function (){
      * Make copy of settings file to another file for installing once
      */
     if(settings.version == $("#version")[0].value && settings.version){
-        var install_once_settings = os_path.join(app_folder, "install_once_settings_" + settings.version + ".json");
+        var install_once_settings = os_path.join(app_folder, "once_" + settings.version + ".json");
         fs.copyFileSync(settings_path, install_once_settings, (err) => {
             if (err) throw err;
         });

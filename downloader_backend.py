@@ -58,7 +58,7 @@ class Downloader:
         self.product_id (str): product GUID extracted from iss template
         self.installshield_version (str): version of the InstallShield
         self.installed_product_info (str): path to the product.info of the installed build
-        self.ansys_em_dir (str): root path of Ansys EDT installation
+        self.ansys_em_dir (str): root path of Ansys Electronics Desktop installation
         self.product_version (str): version to use in env variables eg 202
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
         self.hash (str): hash code used for this run of the program
@@ -91,7 +91,7 @@ class Downloader:
         with open(self.settings_path, "r") as file:
             self.settings = json.load(file, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
 
-        if "EDT" in self.settings.version:
+        if "ElectronicsDesktop" in self.settings.version:
             self.product_version = self.settings.version[1:4]
             self.ansys_em_dir = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
                                              self.product_version[:2] + "." + self.product_version[2:], "Win64")
@@ -136,14 +136,14 @@ class Downloader:
         verify if version on the server is the same as installed one
         :return: (bool): False if versions are different or no version installed, True if identical
         """
-        if "WB" in self.settings.version:
+        if "Workbench" in self.settings.version:
             product_installed = os.path.join(self.settings.install_path, "ANSYS Inc",
                                              self.settings.version[:4], "package.id")
         else:
             product_installed = self.installed_product_info
 
         if os.path.isfile(product_installed):
-            if "WB" in self.settings.version:
+            if "Workbench" in self.settings.version:
                 with open(product_installed) as file:
                     product_version = next(file).rstrip().split()[-1]  # get first line
                     try:
@@ -167,8 +167,8 @@ class Downloader:
 
     def get_build_link(self):
         """
-        Function that sends HTTP request to JFrog and get the list of folders with builds for EDT and checks user
-        password
+        Function that sends HTTP request to JFrog and get the list of folders with builds for Electronics Desktop and
+        checks user password
         :modify: (str) self.build_url: URL link to the latest build that will be used to download .zip archive
         """
         self.update_installation_history(status="In-Progress", details=f"Search latest build URL")
@@ -196,17 +196,17 @@ class Downloader:
             else:
                 raise SystemExit(artifacts_list["errors"][0]["message"])
 
-        # fill the dictionary with EBU and WB keys since builds could be different
+        # fill the dictionary with Electronics Desktop and Workbench keys since builds could be different
         # still parse the list because of different names on servers
         artifacts_dict = {}
         for artifact in artifacts_list:
             repo = artifact["key"]
             if "EBU_Certified" in repo:
-                version = repo.split("_")[0] + "_EDT"
+                version = repo.split("_")[0] + "_ElectronicsDesktop"
                 if version not in artifacts_dict:
                     artifacts_dict[version] = repo
             elif "Certified" in repo and "Licensing" not in repo:
-                version = repo.split("_")[0] + "_WB"
+                version = repo.split("_")[0] + "_Workbench"
                 if version not in artifacts_dict:
                     artifacts_dict[version] = repo
 
@@ -214,9 +214,9 @@ class Downloader:
             repo = artifacts_dict[self.settings.version]
         except KeyError:
             raise SystemExit(f"Version {self.settings.version} that you have specified " +
-                             f"does not exists on {self.settings.artifactory}")
+                             f"does not exist on {self.settings.artifactory}")
 
-        if "EDT" in self.settings.version:
+        if "ElectronicsDesktop" in self.settings.version:
             url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
             with requests.get(url, auth=(self.settings.username, password), timeout=30) as url_request:
                 folder_dict_list = json.loads(url_request.text)['files']
@@ -235,7 +235,7 @@ class Downloader:
 
             version_number = self.settings.version.split('_')[0][1:]
             self.build_url = f"{server}/{repo}/{latest_build}/Electronics_{version_number}_winx64.zip"
-        elif "WB" in self.settings.version:
+        elif "Workbench" in self.settings.version:
             self.build_url = f"{server}/api/archive/download/{repo}-cache/winx64?archiveType=zip"
 
         if not self.build_url:
@@ -243,11 +243,11 @@ class Downloader:
 
     def verify_remote_build_existence(self, server, repo, password, builds_list):
         """
-        Check that folder with EDT is not just empty (the case if artifact is not yet uploaded)
+        Check that folder with Electronics Desktop is not just empty (the case if artifact is not yet uploaded)
         :param server: server URL
         :param repo: repo name
         :param password: user password
-        :param builds_list: list of folders with EDT builds
+        :param builds_list: list of folders with Electronics Desktop builds
         :return: latest availble folder where .zip is present
         """
         while builds_list:
@@ -262,9 +262,9 @@ class Downloader:
     def download_file(self, recursion=False):
         """
         Downloads file in chunks and saves to the temp.zip file
-        Uses url to the zip archive or special JFrog API to download WB folder
-        :param (bool) recursion: Some artifactories do not have cached folders with WB  and we need recursively run
-        the same function but with new_url, however to prevent infinity loop we need this arg
+        Uses url to the zip archive or special JFrog API to download Workbench folder
+        :param (bool) recursion: Some artifactories do not have cached folders with Workbench  and we need recursively
+        run the same function but with new_url, however to prevent infinity loop we need this arg
         :modify: (str) zip_file: link to the zip file
         """
         password = getattr(self.settings.password, self.settings.artifactory)
@@ -284,7 +284,7 @@ class Downloader:
             except TypeError:
                 file_size = 7e+9
             except KeyError:
-                # WB has not content-length
+                # Workbench has not content-length
                 regex = re.match("(.*)/api/archive/download/(.*)/winx64", url)
                 try:
                     aql_query_dict, max_depth_print = artifactory_du.prepare_aql(file="/winx64", max_depth=0,
@@ -296,7 +296,7 @@ class Downloader:
 
                     file_size = artifactory_du.out_as_du(artifacts, max_depth_print, human_readable=False)
                     file_size = int(file_size.strip("/"))
-                    logging.info(f"WB real file size is {file_size}")
+                    logging.info(f"Workbench real file size is {file_size}")
                 except TypeError:
                     file_size = 11e+9
                 except ValueError:
@@ -324,7 +324,7 @@ class Downloader:
 
     def install(self):
         """
-        Unpack downloaded zip and proceed to installation. Different executions for EDT and WB
+        Unpack downloaded zip and proceed to installation. Different executions for Electronics Desktop and Workbench
         :return:
         """
         self.update_installation_history(status="In-Progress", details=f"Start unpacking")
@@ -334,7 +334,7 @@ class Downloader:
 
         logging.info(f"File is unpacked to {self.target_unpack_dir}")
 
-        if "EDT" in self.settings.version:
+        if "ElectronicsDesktop" in self.settings.version:
             self.install_edt()
         else:
             self.install_wb()
@@ -363,7 +363,7 @@ class Downloader:
             run_wb = os.path.join(os.environ[awp_env_var], "Framework", "bin", "Win64", "RunWB2.exe")
             if os.path.isfile(run_wb):
                 integrate_wb = 1
-                logging.info("Integration with WB turned ON")
+                logging.info("Integration with Workbench turned ON")
 
         # the "shared files" is created at the same level as the "AnsysEMxx.x" so if installing to unique folders,
         # the Shared Files folder will be unique as well. Thus we can check install folder for license
@@ -431,7 +431,7 @@ class Downloader:
     @staticmethod
     def get_edt_build_date(product_info_file):
         """
-        extract information about EDT build date and version
+        extract information about Electronics Desktop build date and version
         :param product_info_file: path to the product.info
         :return: build_date, product_version
         """
@@ -451,8 +451,8 @@ class Downloader:
 
     def parse_iss(self):
         """
-        Open directory with unpacked build of EDT and search for SilentInstallationTemplate.iss to extract
-        product ID which is GUID hash
+        Open directory with unpacked build of Electronics Desktop and search for SilentInstallationTemplate.iss to
+        extract product ID which is GUID hash
         :modify: self.product_id: GUID of downloaded version
         :modify: self.iss_template_content: append lines from template file
         :modify: self.setup_exe: set path to setup.exe if exists
@@ -486,7 +486,7 @@ class Downloader:
             raise SystemExit("Unable to extract product ID")
 
     def install_wb(self):
-        """Install WB to the target installation directory"""
+        """Install Workbench to the target installation directory"""
         self.setup_exe = os.path.join(self.target_unpack_dir, "setup.exe")
 
         if os.path.isfile(self.setup_exe):
@@ -510,10 +510,10 @@ class Downloader:
             subprocess.call(command)
             logging.info("New build was installed")
         else:
-            logging.info("No WB setup.exe file detected")
+            logging.info("No Workbench setup.exe file detected")
 
     def uninstall_wb(self):
-        """Uninstall WB if such exists in the target installation directory"""
+        """Uninstall Workbench if such exists in the target installation directory"""
 
         uninstall_exe = os.path.join(self.settings.install_path, "ANSYS Inc",
                                      self.settings.version[:4], "Uninstall.exe")
@@ -524,14 +524,14 @@ class Downloader:
             subprocess.call(command)
             logging.info("Previous build was uninstalled")
         else:
-            logging.info("No WB Uninstall.exe file detected")
+            logging.info("No Workbench Uninstall.exe file detected")
 
     def get_build_info_file_from_artifactory(self, url, recursion=False):
         """
         Downloads file in chunks and saves to the temp.zip file
-        Uses url to the zip archive or special JFrog API to download WB folder
-        :param (bool) recursion: Some artifactories do not have cached folders with WB  and we need recursively run
-        the same function but with new_url, however to prevent infinity loop we need this arg
+        Uses url to the zip archive or special JFrog API to download Workbench folder
+        :param (bool) recursion: Some artifactories do not have cached folders with Workbench  and we need recursively
+        run the same function but with new_url, however to prevent infinity loop we need this arg
         :param (str) url: url to the package_id file
         :return: (NoneType/str): None if some issue occurred during retrieving ID or package_id if extracted
         """
@@ -544,7 +544,7 @@ class Downloader:
 
             if url_request.status_code == 200:
                 try:
-                    if "WB" in self.settings.version:
+                    if "Workbench" in self.settings.version:
                         first_line = url_request.text.split("\n")[0]
                         product_info = first_line.rstrip().split()[-1]
                         try:
@@ -576,7 +576,7 @@ class Downloader:
 
     def update_edt_registry(self):
         """
-        Update EDT registry based on the files in the HPC_Options folder that are added from UI
+        Update Electronics Desktop registry based on the files in the HPC_Options folder that are added from UI
         :return: None
         """
         hpc_folder = os.path.join(self.settings_folder, "HPC_Options")

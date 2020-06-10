@@ -9,8 +9,7 @@ history_json = {};
 
 $(document).ready(function() {
     /**
-     * Create JQuery DataTables for EDT HPC options file.
-     * Update table rows, see tables_setter.js
+     * Create JQuery DataTables for installation history
      */
     history_table = $('#history-table').DataTable( {
         "scrollY": "328px",
@@ -22,8 +21,9 @@ $(document).ready(function() {
         "data": get_history(),
         "columnDefs": [
             { "render": getImg, "targets": [0] },
-            { "width": "55px", "targets": [0, 1] },
-            { "width": "15%", "targets": [2] },
+            { "width": "45px", "targets": [0] },
+            { "width": "150px", "targets": [1] },
+            { "width": "100px", "targets": [2] },
             { "width": "320px", "targets": [3] },
             { "className": "text-center", "targets": [0, 1, 2, 4] },
             { "visible": false, "targets": [5, 6]} // columns with PID and hash
@@ -35,6 +35,9 @@ $(document).ready(function() {
 } );
 
 function getImg(data, type, full, meta) {
+    /**
+     * Sets Image to the first column of the table depending on the data
+     */
 
     if (data === 'Failed') {
         return '<img class="img-in-table" src="images/failed.png" title="Failed" />';
@@ -62,6 +65,9 @@ function get_history(){
 }
 
 function update_history(){
+    /**
+     * Update history table
+     */
     history_table.clear();
     let new_data = get_history();
     if (new_data) {
@@ -71,6 +77,9 @@ function update_history(){
 }
 
 function get_date_time(){
+    /**
+     * get current time and create a string in the format like in Python (DD-MM-YYYY HH:MM)
+     */
     function checkTime(i) {
         if (i < 10) {
             i = "0" + i;
@@ -109,6 +118,10 @@ $("#clear-button").click(function(){
 });
 
 $('#history-table').on('click', 'tbody tr', function () {
+    /**
+     * On the click on the specific row get the PID from hidden column and kill the job
+     * Update history saying that User has aborted
+     */
     var row = history_table.row($(this)).data();
     if (row[0] == "In-Progress"){
         answer = dialog.showMessageBoxSync(remote.getCurrentWindow(), {
