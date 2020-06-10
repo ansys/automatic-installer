@@ -169,8 +169,12 @@ table.dataTable tbody td{
     width: 45%;
 }
 
-.product-column, .version-column {
-    width: 25%;
+.product-column {
+  width: 30%;
+}
+
+.version-column {
+  width: 20%;
 }
 
 /* all tables rows */

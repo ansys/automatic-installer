@@ -21,8 +21,9 @@ $(document).ready(function() {
         "data": get_history(),
         "columnDefs": [
             { "render": getImg, "targets": [0] },
-            { "width": "55px", "targets": [0, 1] },
-            { "width": "15%", "targets": [2] },
+            { "width": "45px", "targets": [0] },
+            { "width": "150px", "targets": [1] },
+            { "width": "100px", "targets": [2] },
             { "width": "320px", "targets": [3] },
             { "className": "text-center", "targets": [0, 1, 2, 4] },
             { "visible": false, "targets": [5, 6]} // columns with PID and hash

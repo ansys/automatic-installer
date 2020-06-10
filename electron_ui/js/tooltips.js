@@ -35,7 +35,8 @@ function set_default_tooltips_settings(){
     set_tooltip("wb-flags-table-div", "Select product flags. Note: Will install all if none selected");
 
     set_tooltip("install_path",
-        "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for EDT\nor \n\\ANSYS Inc\\vXXX for WB");
+        "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for Electronics Desktop\n" +
+        "or \n\\ANSYS Inc\\vXXX for Workbench");
 
     set_tooltip("hpc-options-table-div", "Click on a row to remove options file")
 }
