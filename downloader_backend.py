@@ -382,7 +382,7 @@ class Downloader:
         command = f'{self.setup_exe} -s -f1"{install_iss_file}" -f2"{install_log_file}"'
         self.update_installation_history(status="In-Progress", details=f"Start installation")
         logging.info(f"Execute installation: {command}")
-        subprocess.call(command)
+        self.subprocess_call(command)
 
         self.check_result_code(install_log_file)
         self.update_edt_registry()
@@ -404,7 +404,7 @@ class Downloader:
             command = f'{self.setup_exe} -uninst -s -f1"{uninstall_iss_file}" -f2"{uninstall_log_file}"'
             logging.info(f"Execute uninstallation: {command}")
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
-            subprocess.call(command)
+            self.subprocess_call(command)
 
             self.check_result_code(uninstall_log_file, False)
         else:
@@ -507,7 +507,7 @@ class Downloader:
 
             self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation: {command}")
-            subprocess.call(command)
+            self.subprocess_call(command)
             logging.info("New build was installed")
         else:
             logging.info("No Workbench setup.exe file detected")
@@ -521,7 +521,7 @@ class Downloader:
             command = f'{uninstall_exe} -silent'
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             logging.info(f"Execute uninstallation: {command}")
-            subprocess.call(command)
+            self.subprocess_call(command)
             logging.info("Previous build was uninstalled")
         else:
             logging.info("No Workbench Uninstall.exe file detected")
@@ -594,7 +594,7 @@ class Downloader:
                     options_file = os.path.join(hpc_folder, file)
                     command = f'{update_registry_exe} -ProductName {product_version} -FromFile "{options_file}"'
                     logging.info(f"Update registry from: {options_file}")
-                    subprocess.call(command)
+                    self.subprocess_call(command)
 
     def update_installation_history(self, status, details):
         """
@@ -627,6 +627,18 @@ class Downloader:
         else:
             self.history = OrderedDict()
 
+    @staticmethod
+    def subprocess_call(command):
+        """
+        Wrapper for subprocess call to handle non admin run or UAC issue
+        :param command: (str) command to run
+        :return:
+        """
+        try:
+            subprocess.call(command, shell=True)
+        except OSError:
+            raise SystemExit("Please run as administrator and disable Windows UAC")
+    
     @staticmethod
     def parse_args():
         """
