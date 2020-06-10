@@ -5,8 +5,7 @@ const { exec, execSync} = require('child_process');
 var parser = require('fast-xml-parser');
 
 if (app.isPackaged) {
-      // production
-      backend_exe = path.join(app.getAppPath(), "resources", "app.asar.unpacked", "downloader_backend.exe")
+      backend_exe = path.join(app.getAppPath() + ".unpacked", "python_build", "downloader_backend.exe"); // production
 } else {
       backend_exe = path.join(app.getAppPath(), "python_build", "downloader_backend.exe");  // develop
 }
