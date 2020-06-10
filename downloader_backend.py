@@ -7,16 +7,18 @@ import random
 import re
 import shutil
 import subprocess
-from artifactory_du import artifactory_du
 import traceback
 import zipfile
 from collections import namedtuple, OrderedDict
 
 import requests
 import urllib3
+from artifactory_du import artifactory_du
 
 import iss_templates
 
+__author__ = "Maksim Beliaev"
+__email__ = "maksim.beliaev@ansys.com"
 
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
@@ -55,26 +57,22 @@ class Downloader:
         self.target_unpack_dir (str): path where to unpack .zip
         self.product_id (str): product GUID extracted from iss template
         self.installshield_version (str): version of the InstallShield
-        self.product_info_file_new (str): product.info file from downloaded build
-        self.installed_product (str): path to the product.info of the installed build
+        self.installed_product_info (str): path to the product.info of the installed build
+        self.ansys_em_dir (str): root path of Ansys EDT installation
         self.product_version (str): version to use in env variables eg 202
-        self.product_version_dot (str): the same as product_version but with dot eg 20.2
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
-        self.latest_build (int): latest EDT build folder
         self.hash (str): hash code used for this run of the program
         self.pid: pid (process ID of the current Python run, required to allow kill in UI)
         """
-        self.build_url = None
-        self.zip_file = None
-        self.target_unpack_dir = None
-        self.product_id = None
-        self.installshield_version = None
-        self.product_info_file_new = None
-        self.installed_product_info = None
-        self.product_version = None
-        self.product_version_dot = None
-        self.setup_exe = None
-        self.latest_build = None
+        self.build_url = ""
+        self.zip_file = ""
+        self.target_unpack_dir = ""
+        self.product_id = ""
+        self.installshield_version = ""
+        self.installed_product_info = ""
+        self.ansys_em_dir = ""
+        self.product_version = ""
+        self.setup_exe = ""
 
         self.pid = str(os.getpid())
 
@@ -93,6 +91,13 @@ class Downloader:
         with open(self.settings_path, "r") as file:
             self.settings = json.load(file, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
 
+        if "EDT" in self.settings.version:
+            self.product_version = self.settings.version[:3]
+            self.ansys_em_dir = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
+                                             self.product_version[:2] + "." + self.product_version[2:], "Win64")
+
+            self.installed_product_info = os.path.join(self.ansys_em_dir, "product.info")
+
     def run(self):
         """
         Function that executes the download-installation process
@@ -100,9 +105,7 @@ class Downloader:
         """
         try:
             self.get_build_link()
-            if (self.settings.force_install or
-                    ("EDT" in self.settings.version and not self.build_in_edt_history()) or
-                    ("WB" in self.settings.version and not self.versions_identical_wb())):
+            if self.settings.force_install or not self.versions_identical():
                 self.download_file()
                 self.install()
                 return
@@ -127,6 +130,36 @@ class Downloader:
                     os.makedirs(self.settings[path])
                 except PermissionError:
                     raise SystemExit(f"{path} could not be created due to insufficient permissions")
+
+    def versions_identical(self):
+        """
+        verify if version on the server is the same as installed one
+        :return: (bool): False if versions are different or no version installed, True if identical
+        """
+        if "WB" in self.settings.version:
+            product_installed = os.path.join(self.settings.install_path, "ANSYS Inc",
+                                             self.settings.version[:4], "package.id")
+        else:
+            product_installed = self.installed_product_info
+
+        if os.path.isfile(product_installed):
+            if "WB" in self.settings.version:
+                with open(product_installed) as file:
+                    product_version = next(file).rstrip().split()[-1]  # get first line
+                url = self.build_url.replace(r"/api/archive/download", "").replace(r"?archiveType=zip",
+                                                                                   "") + "/package.id"
+            else:
+                product_version = self.get_edt_build_date(product_installed)
+                url = self.build_url.split("/Electronics")[0] + "/product_windows.info"
+
+            logging.info(f"Installed version of {self.settings.version} is {product_version}")
+            logging.info(f"Request info about new package: {url}")
+            new_product_version = self.get_build_info_file_from_artifactory(url)
+            logging.info(f"Version on artifactory is {new_product_version}")
+
+            if all([new_product_version, product_version]) and new_product_version == product_version:
+                return True
+        return False
 
     def get_build_link(self):
         """
@@ -192,10 +225,10 @@ class Downloader:
                 except ValueError:
                     pass
 
-            self.latest_build = max(builds_dates)
+            latest_build = max(builds_dates)
 
             version_number = self.settings.version.split('_')[0][1:]
-            self.build_url = f"{server}/{repo}/{self.latest_build}/Electronics_{version_number}_winx64.zip"
+            self.build_url = f"{server}/{repo}/{latest_build}/Electronics_{version_number}_winx64.zip"
         elif "WB" in self.settings.version:
             self.build_url = f"{server}/api/archive/download/{repo}-cache/winx64?archiveType=zip"
 
@@ -295,51 +328,40 @@ class Downloader:
         :return: None
         """
         self.parse_iss()
+        self.uninstall_edt()
 
-        if (self.settings.force_install or
-                not os.path.isfile(self.product_info_file_new) or
-                # product.info does not exist for some reason, need to install any case or versions different
-                not self.versions_identical_edt()):
+        install_iss_file = os.path.join(self.target_unpack_dir, "install.iss")
+        install_log_file = os.path.join(self.target_unpack_dir, "install.log")
 
-            self.uninstall_edt()
+        integrate_wb = 0
+        awp_env_var = "AWP_ROOT" + self.product_version
+        if awp_env_var in os.environ:
+            run_wb = os.path.join(os.environ[awp_env_var], "Framework", "bin", "Win64", "RunWB2.exe")
+            if os.path.isfile(run_wb):
+                integrate_wb = 1
+                logging.info("Integration with WB turned ON")
 
-            install_iss_file = os.path.join(self.target_unpack_dir, "install.iss")
-            install_log_file = os.path.join(self.target_unpack_dir, "install.log")
-
-            integrate_wb = 0
-            if f"ANSYS{self.product_version}_DIR" in os.environ:
-                wb_root = os.path.dirname(os.environ[f"ANSYS{self.product_version}_DIR"])
-                run_wb = os.path.join(wb_root, "Framework", "bin", "Win64", "RunWB2.exe")
-
-                if os.path.isfile(run_wb):
-                    integrate_wb = 1
-                    logging.info("Integration with WB turned ON")
-
-            # the "shared files" is created at the same level as the "AnsysEMxx.x" so if installing to unique folders,
-            # the Shared Files folder will be unique as well. Thus we can check install folder for license
-            if os.path.isfile(os.path.join(self.settings.install_path, "AnsysEM", "Shared Files",
-                                           "Licensing", "ansyslmd.ini")):
-                install_iss = iss_templates.install_iss + iss_templates.existing_server
-                logging.info("Install using existing license configuration")
-            else:
-                install_iss = iss_templates.install_iss + iss_templates.new_server
-                logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
-
-            with open(install_iss_file, "w") as file:
-                file.write(install_iss.format(self.product_id, os.path.join(self.settings.install_path, "AnsysEM"),
-                                              os.environ["TEMP"], integrate_wb, self.installshield_version))
-
-            command = f'{self.setup_exe} -s -f1"{install_iss_file}" -f2"{install_log_file}"'
-            self.update_installation_history(status="In-Progress", details=f"Start installation")
-            logging.info(f"Execute installation: {command}")
-            subprocess.call(command)
-
-            self.check_result_code(install_log_file)
-
-            self.update_edt_registry()
-            self.set_edt_history()
+        # the "shared files" is created at the same level as the "AnsysEMxx.x" so if installing to unique folders,
+        # the Shared Files folder will be unique as well. Thus we can check install folder for license
+        if os.path.isfile(os.path.join(self.settings.install_path, "AnsysEM", "Shared Files",
+                                       "Licensing", "ansyslmd.ini")):
+            install_iss = iss_templates.install_iss + iss_templates.existing_server
+            logging.info("Install using existing license configuration")
         else:
-            logging.info("Versions are identical, skip installation")
+            install_iss = iss_templates.install_iss + iss_templates.new_server
+            logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
+
+        with open(install_iss_file, "w") as file:
+            file.write(install_iss.format(self.product_id, os.path.join(self.settings.install_path, "AnsysEM"),
+                                          os.environ["TEMP"], integrate_wb, self.installshield_version))
+
+        command = f'{self.setup_exe} -s -f1"{install_iss_file}" -f2"{install_log_file}"'
+        self.update_installation_history(status="In-Progress", details=f"Start installation")
+        logging.info(f"Execute installation: {command}")
+        subprocess.call(command)
+
+        self.check_result_code(install_log_file)
+        self.update_edt_registry()
 
     def uninstall_edt(self):
         """
@@ -349,7 +371,7 @@ class Downloader:
         if not os.path.isfile(self.setup_exe):
             raise SystemExit("setup.exe does not exist")
 
-        if self.installed_product_info and os.path.isfile(self.installed_product_info):
+        if os.path.isfile(self.installed_product_info):
             uninstall_iss_file = os.path.join(self.target_unpack_dir, "uninstall.iss")
             uninstall_log_file = os.path.join(self.target_unpack_dir, "uninstall.log")
             with open(uninstall_iss_file, "w") as file:
@@ -382,52 +404,28 @@ class Downloader:
             else:
                 raise SystemExit(fail)
 
-    def versions_identical_edt(self):
-        """
-        Function to compare build dates of just downloaded daily build and already installed version of EDT
-        :return: (bool) True if builds' dates are the same or False if different
-        """
-        build_date, self.product_version, self.product_version_dot = self.get_build_date(self.product_info_file_new)
-
-        env_var = "ANSYSEM_ROOT" + self.product_version
-        if env_var not in os.environ:
-            return False
-
-        self.installed_product_info = os.path.join(os.environ[env_var], "product.info")
-
-        installed_build_date, _unused, _unused = self.get_build_date(self.installed_product_info)
-
-        if all([build_date, installed_build_date]) and build_date == installed_build_date:
-            return True
-        return False
-
     @staticmethod
-    def get_build_date(product_info_file):
+    def get_edt_build_date(product_info_file):
         """
         extract information about EDT build date and version
         :param product_info_file: path to the product.info
         :return: build_date, product_version
         """
         build_date = False
-        product_version = False
-        product_version_dot = False
         if os.path.isfile(product_info_file):
             with open(product_info_file) as file:
                 for line in file:
                     if "AnsProductBuildDate" in line:
                         build_date = line.split("=")[1]
-                    elif "AnsProductVersion" in line:
-                        product_version_dot = (line.split("=")[1]).rstrip().replace('"', '')
-                        product_version = product_version_dot.replace(".", "")
+                        break
 
-        return build_date, product_version, product_version_dot
+        return build_date
 
     def parse_iss(self):
         """
         Open directory with unpacked build of EDT and search for SilentInstallationTemplate.iss to extract
         product ID which is GUID hash
         :modify: self.product_id: GUID of downloaded version
-        :modify: self.product_info_file_new: path to the product.info file
         :modify: self.iss_template_content: append lines from template file
         :modify: self.setup_exe: set path to setup.exe if exists
         :modify: self.installshield_version: set version from file
@@ -439,7 +437,6 @@ class Downloader:
             for filename in file_names:
                 if "AnsysEM" in dir_path and filename.endswith(".iss"):
                     default_iss_file = os.path.join(dir_path, filename)
-                    self.product_info_file_new = os.path.join(dir_path, "product.info")
                     self.setup_exe = os.path.join(dir_path, "setup.exe")
                     break
 
@@ -459,30 +456,6 @@ class Downloader:
             logging.info(f"Product ID is {self.product_id}")
         else:
             raise SystemExit("Unable to extract product ID")
-
-    def set_edt_history(self):
-        """
-        Writes to the installation log info about installed folder, thus we can skip its download
-        :return: None
-        """
-        with open(self.download_log, "a") as file:
-            file.write(f"{self.latest_build}\n")
-
-    def build_in_edt_history(self):
-        """
-        Verify that latest build is not yet installed
-        :return: True if such build was installed else False
-        """
-        if self.latest_build:
-            if os.path.isfile(self.download_log):
-                date = str(self.latest_build)
-                with open(self.download_log, "r") as file:
-                    for line in file:
-                        if date in line:
-                            return True
-            return False
-        else:
-            raise SystemExit("Cannot extract artifactory folder for EDT")
 
     def install_wb(self):
         """Install WB to the target installation directory"""
@@ -525,28 +498,7 @@ class Downloader:
         else:
             logging.info("No WB Uninstall.exe file detected")
 
-    def versions_identical_wb(self):
-        """
-        verify if version on the server is the same as installed one
-        :return: (bool): False if versions are different or no version installed, True if identical
-        """
-        package_id_installed = os.path.join(self.settings.install_path, "ANSYS Inc",
-                                            self.settings.version[:4], "package.id")
-        if os.path.isfile(package_id_installed):
-            with open(package_id_installed) as file:
-                product_version = next(file).rstrip().split()[-1]  # get first line
-
-            logging.info(f"Installed version of WB is {product_version}")
-
-            url = self.build_url.replace(r"/api/archive/download", "").replace(r"?archiveType=zip", "") + "/package.id"
-            logging.info(f"Request info about new package: {url}")
-            new_product_version = self.get_new_package_id_wb(url)
-            logging.info(f"Version on artifactory is {new_product_version}")
-            if new_product_version == product_version:
-                return True
-        return False
-
-    def get_new_package_id_wb(self, url, recursion=False):
+    def get_build_info_file_from_artifactory(self, url, recursion=False):
         """
         Downloads file in chunks and saves to the temp.zip file
         Uses url to the zip archive or special JFrog API to download WB folder
@@ -560,13 +512,19 @@ class Downloader:
         with requests.get(url, auth=(self.settings.username, password), timeout=50, stream=True) as url_request:
             if url_request.status_code == 404 and not recursion:
                 # in HQ cached build does not exist and will return 404. Recursively start download with new url
-                return self.get_new_package_id_wb(url.replace("-cache", ""), recursion=True)
+                return self.get_build_info_file_from_artifactory(url.replace("-cache", ""), recursion=True)
 
             if url_request.status_code == 200:
                 try:
-                    first_line = url_request.text.split("\n")[0]
-                    package_id = first_line.rstrip().split()[-1]
-                    return package_id
+                    if "WB" in self.settings.version:
+                        first_line = url_request.text.split("\n")[0]
+                        product_info = first_line.rstrip().split()[-1]
+                    else:
+                        prod_info_file = os.path.join(os.environ["TEMP"], "new_prod.info")
+                        with open(prod_info_file, "w") as file:
+                            file.write(url_request.text)
+                        product_info = self.get_edt_build_date(prod_info_file)
+                    return product_info
                 except IndexError:
                     pass
         return None
@@ -591,21 +549,8 @@ class Downloader:
         """
         hpc_folder = os.path.join(self.settings_folder, "HPC_Options")
 
-        env_var = "ANSYSEM_ROOT" + self.product_version
-        try:
-            if self.settings.install_path in os.environ[env_var]:
-                update_registry_exe = os.path.join(os.environ[env_var], "UpdateRegistry.exe")
-                productlist_file = os.path.join(os.environ[env_var], "config", "ProductList.txt")
-            else:
-                # env variable is out of date
-                raise KeyError
-        except KeyError:
-            # on new installation this key will not exist since environ is loaded when process started
-            ansys_em_dir = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
-                                        self.product_version_dot, "Win64")
-
-            update_registry_exe = os.path.join(ansys_em_dir, "UpdateRegistry.exe")
-            productlist_file = os.path.join(ansys_em_dir, "config", "ProductList.txt")
+        update_registry_exe = os.path.join(self.ansys_em_dir, "UpdateRegistry.exe")
+        productlist_file = os.path.join(self.ansys_em_dir, "config", "ProductList.txt")
 
         with open(productlist_file) as file:
             product_version = next(file).rstrip()  # get first line
