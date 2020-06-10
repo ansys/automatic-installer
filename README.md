@@ -94,6 +94,6 @@ At this moment you can mock up input for the downloader and test following featu
 - History test: verify that installation history is written
 - Installation test: uninstall version if exists and install new one
 - Uninstallation test: only uninstallation
-- Updating of EDT registry
+- Updating of Electronics Desktop registry
 - Cleaning temp folder after installation
 - Full test including: get recent build, download, unpack, uninstall, install, update registry, update of history

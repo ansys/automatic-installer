@@ -30,7 +30,7 @@ class InstallUninstallTest(unittest.TestCase):
 
     def uninstall_wb_test(self):
         """
-            Test uninstallation of WB
+            Test uninstallation of Workbench
             Uses following mock up from settings file:
                 downloader.settings.install_path
                 downloader.settings.version
@@ -39,7 +39,7 @@ class InstallUninstallTest(unittest.TestCase):
 
     def install_wb_test(self):
         """
-            Test installation of WB
+            Test installation of Workbench
             Uses following mock up:
                 arguments mock up of settings_file
                 downloader.target_unpack_dir
@@ -48,7 +48,7 @@ class InstallUninstallTest(unittest.TestCase):
 
     def uninstall_edt_test(self):
         """
-            Test uninstallation of EDT
+            Test uninstallation of ElectronicsDesktop
             Uses following mock up:
                 arguments mock up of settings_file
                 downloader.target_unpack_dir
@@ -59,7 +59,7 @@ class InstallUninstallTest(unittest.TestCase):
 
     def install_edt_test(self):
         """
-            Test installation of EDT
+            Test installation of ElectronicsDesktop
             Uses following mock up:
                 arguments mock up of settings_file
                 downloader.target_unpack_dir
@@ -68,7 +68,7 @@ class InstallUninstallTest(unittest.TestCase):
 
     def install_all_test(self):
         """
-            Test installation of EDT or WB depending on settings
+            Test installation of ElectronicsDesktop or Workbench depending on settings
             !! be careful not to check delete zip in settings
             Uses following mock up:
                 arguments mock up of settings_file
