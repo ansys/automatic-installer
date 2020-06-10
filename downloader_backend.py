@@ -225,7 +225,9 @@ class Downloader:
                 except ValueError:
                     pass
 
-            latest_build = max(builds_dates)
+            latest_build = self.verify_remote_build_existence(server, repo, password, sorted(builds_dates))
+            if not latest_build:
+                raise SystemExit("Artifact does not exist")
 
             version_number = self.settings.version.split('_')[0][1:]
             self.build_url = f"{server}/{repo}/{latest_build}/Electronics_{version_number}_winx64.zip"
@@ -234,6 +236,24 @@ class Downloader:
 
         if not self.build_url:
             raise SystemExit("Cannot receive URL")
+
+    def verify_remote_build_existence(self, server, repo, password, builds_list):
+        """
+        Check that folder with EDT is not just empty (the case if artifact is not yet uploaded)
+        :param server: server URL
+        :param repo: repo name
+        :param password: user password
+        :param builds_list: list of folders with EDT builds
+        :return: latest availble folder where .zip is present
+        """
+        while builds_list:
+            latest = builds_list.pop()
+            url = server + "/api/storage/" + repo + str(latest)
+            with requests.get(url, auth=(self.settings.username, password), timeout=30) as url_request:
+                all_files = json.loads(url_request.text)["children"]
+                for child in all_files:
+                    if "Electronics" in child["uri"]:
+                        return latest
 
     def download_file(self, recursion=False):
         """
