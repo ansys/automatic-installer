@@ -92,7 +92,7 @@ class Downloader:
             self.settings = json.load(file, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
 
         if "EDT" in self.settings.version:
-            self.product_version = self.settings.version[:3]
+            self.product_version = self.settings.version[1:4]
             self.ansys_em_dir = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
                                              self.product_version[:2] + "." + self.product_version[2:], "Win64")
 
@@ -146,6 +146,10 @@ class Downloader:
             if "WB" in self.settings.version:
                 with open(product_installed) as file:
                     product_version = next(file).rstrip().split()[-1]  # get first line
+                    try:
+                        product_version = int(product_version.split("P")[0])
+                    except ValueError:
+                        return False
                 url = self.build_url.replace(r"/api/archive/download", "").replace(r"?archiveType=zip",
                                                                                    "") + "/package.id"
             else:
@@ -157,7 +161,7 @@ class Downloader:
             new_product_version = self.get_build_info_file_from_artifactory(url)
             logging.info(f"Version on artifactory is {new_product_version}")
 
-            if all([new_product_version, product_version]) and new_product_version == product_version:
+            if all([new_product_version, product_version]) and new_product_version <= product_version:
                 return True
         return False
 
@@ -248,7 +252,7 @@ class Downloader:
         """
         while builds_list:
             latest = builds_list.pop()
-            url = server + "/api/storage/" + repo + str(latest)
+            url = f"{server}/api/storage/{repo}/{latest}"
             with requests.get(url, auth=(self.settings.username, password), timeout=30) as url_request:
                 all_files = json.loads(url_request.text)["children"]
                 for child in all_files:
@@ -436,9 +440,13 @@ class Downloader:
             with open(product_info_file) as file:
                 for line in file:
                     if "AnsProductBuildDate" in line:
-                        build_date = line.split("=")[1]
+                        full_build_date = line.split("=")[1].replace('"', '').replace("-", "")
+                        build_date = full_build_date.split()[0]
                         break
-
+        try:
+            build_date = int(build_date)
+        except ValueError:
+            return False
         return build_date
 
     def parse_iss(self):
@@ -539,6 +547,10 @@ class Downloader:
                     if "WB" in self.settings.version:
                         first_line = url_request.text.split("\n")[0]
                         product_info = first_line.rstrip().split()[-1]
+                        try:
+                            product_info = int(product_info.split("P")[0])
+                        except ValueError:
+                            return False
                     else:
                         prod_info_file = os.path.join(os.environ["TEMP"], "new_prod.info")
                         with open(prod_info_file, "w") as file:
@@ -639,10 +651,10 @@ class Downloader:
 
 def generate_hash_str():
     """
-    generate random hash
+    generate random hash. Letter A at the end is important to preserver Order in JS
     :return: hash code (str)
     """
-    return f"{random.getrandbits(32):x}".strip()
+    return f"{random.getrandbits(32):x}A".strip()
 
 
 def set_logger(logging_file):
