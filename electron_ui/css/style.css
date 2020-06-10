@@ -150,7 +150,7 @@ table.dataTable tbody td{
 
 /* schedule table */
 #schedule-table-div {
-    max-height: 128px;
+    max-height: 132px;
     overflow-y: auto;
 }
 
