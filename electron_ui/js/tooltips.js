@@ -3,7 +3,7 @@ function set_default_tooltips_main(){
      * Set tooltips on the main page
      */
     set_tooltip("password",  "Retrieval of Artifactory Encrypted Password Instructions:\n" +
-    "1. Log into Artifactory\n" +
+    "1. Log into Artifactory (double click on artifactory drop down)\n" +
     "2. Click on your username (top right)\n" +
     "3. Enter your password to Unlock Artifactory Encrypted Password\n" +
     "4. Copy Artifactory Encrypted Password\n" +
@@ -11,6 +11,7 @@ function set_default_tooltips_main(){
      "Encrypted password will change anytime your SSO password changes.", true);
 
      set_tooltip("username",  "Ansys UserID");
+     set_tooltip("artifactory",  "Select an artifactory and double click to open in Browser");
 
      set_tooltip("schedule-table-div",  "Click on a row to unschedule specific task");
 
@@ -32,6 +33,10 @@ function set_default_tooltips_settings(){
         "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for EDT\nor \n\\ANSYS Inc\\vXXX for WB");
 
     set_tooltip("hpc-options-table-div", "Click on a row to remove options file")
+}
+
+function set_default_tooltips_history(){
+    set_tooltip("history-table-div", "Click on the 'In-Progress' row to cancel the installation")
 }
 
 

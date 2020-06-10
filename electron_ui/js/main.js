@@ -1,6 +1,7 @@
 var os_path = require('path');
 var fs = require('fs');
 var axios = require('axios');
+const { shell } = require('electron');
 
 
 artifactory_dict = {
@@ -236,7 +237,12 @@ function get_builds(artifacts_list){
 }
 
 
-var change_password = function (){
+function open_artifactory_site(){
+    url = artifactory_dict[$("#artifactory").val()]
+    shell.openExternal(url);
+}
+
+const change_password = function (){
     /**
      * Password is stored in settings in another dictionary (Object), extract it for selected artifactory
      */
@@ -254,6 +260,7 @@ $('.clockpicker').clockpicker({
 
 $("#artifactory, #username, #password, #time, #version, .days-checkbox").bind("change", save_settings);
 $("#artifactory").bind("change", change_password);
+$("#artifactory").bind("dblclick", open_artifactory_site);
 $("#artifactory, #username, #password").bind("change", request_builds);
 
 $("#schedule-button").click(function (){

@@ -16,10 +16,8 @@ class InstallUninstallTest(unittest.TestCase):
             self.downloader = downloader_backend.Downloader()
 
             # following setup is overwritten in full_run_test
-            self.downloader.installed_product_info = test_settings["installed_product"]
             self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
             self.downloader.zip_file = test_settings["zip_file"]
-            self.downloader.product_version = test_settings["product_version"]
 
     def download_file_test(self):
         """
@@ -122,7 +120,7 @@ if __name__ == '__main__':
     # suite.addTest(InstallUninstallTest("uninstall_wb_test"))
     # suite.addTest(InstallUninstallTest("install_wb_test"))
     # suite.addTest(InstallUninstallTest("install_all_test"))
-    suite.addTest(InstallUninstallTest("write_history_test"))
-    # suite.addTest(InstallUninstallTest("full_run_test"))
+    # suite.addTest(InstallUninstallTest("write_history_test"))
+    suite.addTest(InstallUninstallTest("full_run_test"))
     runner = unittest.TextTestRunner()
     runner.run(suite)
