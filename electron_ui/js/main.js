@@ -49,7 +49,7 @@ window.onload = function() {
             "version": "",
             "wb_flags": "",
             "days": [
-                "sa"
+                "tu", "th", "sa"
             ],
             "time": "01:30",
             "force_install": false
@@ -80,7 +80,6 @@ window.onload = function() {
     request_builds();
     set_default_tooltips_main();
 }
-
 
 
 function get_previous_edt_path() {
@@ -130,6 +129,7 @@ function set_selector(id, obj_list, default_item="") {
         selector.value = default_item;
     }
 }
+
 
 var save_settings = function () {
     /**

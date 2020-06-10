@@ -16,7 +16,7 @@ function set_default_tooltips_main(){
 
     set_tooltip("version",  "Latest available certified build would be downloaded");
 
-    
+    set_tooltip("days",  "Please try to use not more than 3 days to decrease load on server");
     set_tooltip("time",  "Local computer time at which update will start.\n" + 
                     "Please try to use night time to decrease load on server");
     set_tooltip("schedule-table-div",  "Click on a row to unschedule specific task");
