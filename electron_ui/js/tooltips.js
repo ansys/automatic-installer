@@ -74,9 +74,13 @@ function set_tooltip(id, text, align_left=false, place="bottom") {
 var error_tooltip = function(prop_title) {
     /**
      * Set error tooltip (in red color). 
-     * Show tooltip in specific title for 3.5s. After destroy and revert back default tooltips
+     * Show tooltip in specific title for 3.5s. After destroy and revert back default tooltips.
+     * Since it is an error we cannot populate DropDown. We clear it and write this error message.
      * @param  {} prop_title: tooltip message
      */
+    $("#version").empty();
+    $("#version").append($('<option>', {value:1, text:prop_title}));
+
     this.tooltip('destroy');
     setTimeout(() => {this.tooltip({
                                 title: prop_title,

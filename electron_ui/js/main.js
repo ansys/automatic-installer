@@ -163,7 +163,9 @@ var request_builds = function (){
      * Send request to the server using axios. Try to retrive info about 
      * available builds on artifactory
     */
-    $("#version").empty();
+   $("#version").empty();
+   $("#version").append($('<option>', {value:1, text:"Loading data..."}))
+
     if (!settings.username) {
         error_tooltip.call($('#username'), "Provide your Ansys User ID");
         return;
@@ -191,7 +193,7 @@ var request_builds = function (){
             error_tooltip.call($('#artifactory'), "Check that you are on VPN and retry in 10s (F5)");
         } else if (err.code === 'ECONNABORTED'){
             error_tooltip.call($('#username'), "Timeout on connection, check Ansys User ID");
-            error_tooltip.call($('#password'), "Timeout on connection, check Artifactory unique password");
+            error_tooltip.call($('#password'), "Timeout on connection, check Password or/and retry (F5)");
         } else if (err.response.status == 401){
             error_tooltip.call($('#username'), "Bad credentials, check Ansys User ID");
             error_tooltip.call($('#password'), "Bad credentials, check Artifactory unique password");
