@@ -379,9 +379,9 @@ class Downloader:
             file.write(install_iss.format(self.product_id, os.path.join(self.settings.install_path, "AnsysEM"),
                                           os.environ["TEMP"], integrate_wb, self.installshield_version))
 
-        command = f'{self.setup_exe} -s -f1"{install_iss_file}" -f2"{install_log_file}"'
+        command = [self.setup_exe, '-s', fr'-f1{install_iss_file}', fr'-f2{install_log_file}']
         self.update_installation_history(status="In-Progress", details=f"Start installation")
-        logging.info(f"Execute installation: {command}")
+        logging.info(f"Execute installation")
         self.subprocess_call(command)
 
         self.check_result_code(install_log_file)
@@ -401,8 +401,8 @@ class Downloader:
             with open(uninstall_iss_file, "w") as file:
                 file.write(iss_templates.uninstall_iss.format(self.product_id, self.installshield_version))
 
-            command = f'{self.setup_exe} -uninst -s -f1"{uninstall_iss_file}" -f2"{uninstall_log_file}"'
-            logging.info(f"Execute uninstallation: {command}")
+            command = [self.setup_exe, '-uninst', '-s', fr'-f1{uninstall_iss_file}', fr'-f2{uninstall_log_file}']
+            logging.info(f"Execute uninstallation")
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             self.subprocess_call(command)
 
@@ -420,6 +420,9 @@ class Downloader:
         """
         success = "New build was successfully installed" if installation else "Previous build was uninstalled"
         fail = "Installation went wrong" if installation else "Uninstallation went wrong"
+        if not os.path.isfile(log_file):
+            raise SystemExit(f"{fail}. Check that UAC disabled or confirm UAC question manually")
+
         with open(log_file) as file:
             for line in file:
                 if "ResultCode=0" in line:
@@ -493,8 +496,8 @@ class Downloader:
             self.uninstall_wb()
 
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
-            command = f'{self.setup_exe} -silent -install_dir "{install_path}" '
-            command += self.settings.wb_flags
+            command = [self.setup_exe, '-silent', fr'-install_dir={install_path}"']
+            command += self.settings.wb_flags.split()
 
             # the "shared files" is created at the same level as the "ANSYS Inc" so if installing to unique folders,
             # the Shared Files folder will be unique as well. Thus we can check install folder for license
@@ -502,11 +505,11 @@ class Downloader:
                     "ANSYSLMD_LICENSE_FILE" in os.environ):
                 logging.info("Install using existing license configuration")
             else:
-                command += ' -licserverinfo 2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1'
+                command += ['-licserverinfo2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1']
                 logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
 
             self.update_installation_history(status="In-Progress", details=f"Start installation")
-            logging.info(f"Execute installation: {command}")
+            logging.info(f"Execute installation")
             self.subprocess_call(command)
             logging.info("New build was installed")
         else:
@@ -518,9 +521,9 @@ class Downloader:
         uninstall_exe = os.path.join(self.settings.install_path, "ANSYS Inc",
                                      self.settings.version[:4], "Uninstall.exe")
         if os.path.isfile(uninstall_exe):
-            command = f'{uninstall_exe} -silent'
+            command = [uninstall_exe, '-silent']
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
-            logging.info(f"Execute uninstallation: {command}")
+            logging.info(f"Execute uninstallation")
             self.subprocess_call(command)
             logging.info("Previous build was uninstalled")
         else:
@@ -592,8 +595,8 @@ class Downloader:
             for file in os.listdir(hpc_folder):
                 if ".acf" in file:
                     options_file = os.path.join(hpc_folder, file)
-                    command = f'{update_registry_exe} -ProductName {product_version} -FromFile "{options_file}"'
-                    logging.info(f"Update registry: {command}")
+                    command = [update_registry_exe, fr'-ProductName{product_version}', fr'-FromFile{options_file}']
+                    logging.info(f"Update registry")
                     self.subprocess_call(command)
 
     def update_installation_history(self, status, details):
@@ -635,7 +638,9 @@ class Downloader:
         :return:
         """
         try:
-            subprocess.call(command, shell=True)
+            command_str = subprocess.list2cmdline(command)
+            logging.info(command_str)
+            subprocess.call(command_str, shell=True)
         except OSError:
             raise SystemExit("Please run as administrator and disable Windows UAC")
     
