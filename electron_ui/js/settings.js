@@ -128,7 +128,8 @@ $("#add-file-button").click(
         dialog.showOpenDialog(remote.getCurrentWindow(), {
                 properties: ['openFile', 'multiSelections'],
                 filters: [
-                    { name: 'HPC Options', extensions: ['acf'] }
+                    { name: 'HPC Options', extensions: ['acf'] },
+                    { name: 'Registry Options', extensions: ['txt'] }
                 ]
             }).then(
             result => {

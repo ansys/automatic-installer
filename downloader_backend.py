@@ -593,7 +593,7 @@ class Downloader:
                 if ".acf" in file:
                     options_file = os.path.join(hpc_folder, file)
                     command = f'{update_registry_exe} -ProductName {product_version} -FromFile "{options_file}"'
-                    logging.info(f"Update registry from: {options_file}")
+                    logging.info(f"Update registry: {command}")
                     self.subprocess_call(command)
 
     def update_installation_history(self, status, details):
