@@ -176,29 +176,38 @@ var request_builds = function (){
         return;
     }
 
+    // // uncomment this snippet (and comment below) to test any status code
+    // axios.get('https://httpstat.us/500', {
+    //     timeout: 30000
+    //   })
+
     axios.get(artifactory_dict[settings.artifactory] + '/api/repositories', {
-      auth: {
-        username: settings.username,
-        password: settings.password[settings.artifactory]
-      },
-      timeout: 30000
+        auth: {
+          username: settings.username,
+          password: settings.password[settings.artifactory]
+        },
+        timeout: 30000
     })
-      .then((response) => {
-         if (response.status == 200) {
+        .then((response) => {
+            if (response.status == 200) {
             get_builds(response.data);
-         }
-      })
-      .catch((err) => {
-        if (!err.response && !err.code) {
-            error_tooltip.call($('#artifactory'), "Check that you are on VPN and retry in 10s (F5)");
-        } else if (err.code === 'ECONNABORTED'){
-            error_tooltip.call($('#username'), "Timeout on connection, check Ansys User ID");
-            error_tooltip.call($('#password'), "Timeout on connection, check Password or/and retry (F5)");
-        } else if (err.response.status == 401){
-            error_tooltip.call($('#username'), "Bad credentials, check Ansys User ID");
-            error_tooltip.call($('#password'), "Bad credentials, check Artifactory unique password");
-         }
-      });
+            }
+        })
+        .catch((err) => {
+            if (!err.response && !err.code) {
+                error_tooltip.call($('#artifactory'), "Check that you are on VPN and retry in 10s (F5)");
+            } else if (err.code === 'ECONNABORTED'){
+                error_tooltip.call($('#username'), "Timeout on connection, check Ansys User ID");
+                error_tooltip.call($('#password'), "Timeout on connection, check Password or/and retry (F5)");
+            } else if (err.response.status == 401){
+                error_tooltip.call($('#username'), "Bad credentials, check Ansys User ID");
+                error_tooltip.call($('#password'), "Bad credentials, check Artifactory unique password");
+            } else if (err.response.status == 500){
+                error_tooltip.call($('#artifactory'), "Internal Server Error, try another artifactory");
+            } else if (err.response.status != 200){
+                error_tooltip.call($('#artifactory'), err.response.statusText);
+            }
+        });
 }
 
 

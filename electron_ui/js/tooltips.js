@@ -28,8 +28,8 @@ function set_default_tooltips_settings(){
      * Set tooltips on the settings page
      */
     set_tooltip("force_install_label",
-        "Not recommended to check! By default if latest available build on artifactory is identical to one, " + 
-        "already installed on this machine then installation will not proceed. This flag will skip the validation", 
+        "Not recommended to check! By default if latest available build on artifactory is identical to one " + 
+        "already installed on this machine, then installation will not proceed. This flag will skip the validation", 
         true);
 
     set_tooltip("wb-flags-table-div", "Select product flags. Note: Will install all if none selected");
@@ -42,7 +42,8 @@ function set_default_tooltips_settings(){
 }
 
 function set_default_tooltips_history(){
-    set_tooltip("history-table-div", "Click on the 'In-Progress' row to cancel the installation")
+    set_tooltip("history-table-div", "Click on the row with status 'In-Progress' to abort the installation")
+    set_tooltip("clear-button", "Clean history (will not abort installation)", false, place="right")
 }
 
 

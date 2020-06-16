@@ -127,7 +127,7 @@ $('#history-table').on('click', 'tbody tr', function () {
         answer = dialog.showMessageBoxSync(remote.getCurrentWindow(), {
                 type: "question",
                 buttons: ["Yes", "No"],
-                message: "Do you want to cancel installation of " + row[1] +"?"
+                message: "Do you want to abort installation of " + row[1] +"?"
             }
         )
         if (answer == 0) {
