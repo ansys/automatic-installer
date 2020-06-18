@@ -496,7 +496,7 @@ class Downloader:
             self.uninstall_wb()
 
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
-            command = [self.setup_exe, '-silent', fr'-install_dir={install_path}"']
+            command = [self.setup_exe, '-silent', '-install_dir', install_path]
             command += self.settings.wb_flags.split()
 
             # the "shared files" is created at the same level as the "ANSYS Inc" so if installing to unique folders,
@@ -505,7 +505,7 @@ class Downloader:
                     "ANSYSLMD_LICENSE_FILE" in os.environ):
                 logging.info("Install using existing license configuration")
             else:
-                command += ['-licserverinfo2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1']
+                command += ['-licserverinfo', '2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1']
                 logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
 
             self.update_installation_history(status="In-Progress", details=f"Start installation")
