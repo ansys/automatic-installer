@@ -78,13 +78,7 @@ Then to run the release server in production mode use following CMD snippet on s
 set PORT=1337
 cd  C:\GIT\electron_server
 pm2 start app.js  -x -- -prod
-timeout /T 5
-pm2 stop 0
-timeout /T 5
-pm2 delete app
-timeout /T 5
-pm2 start app.js  -x -- -prod
-CMD /Q /K
+pm2 save
 ~~~
 
 # Statistics
@@ -104,6 +98,51 @@ You can use following query to create a plot:
 SELECT sum("count") FROM "autogen"."downloads" WHERE $timeFilter GROUP BY time(1d), "tool"
 ~~~
 Note: do not forget to set **Null value: null as zero** for a plot
+
+# Auto startup
+### Electron release server
+Since ERS is launched through PM2 then we need to start through PM2 startup manager:
+1. we need to prepare PM2 environment (if not done before)
+~~~
+    set PORT=1337
+    cd  C:\GIT\electron_server
+    pm2 start app.js  -x -- -prod
+    pm2 save
+~~~
+2. Install pm2-windows-service and fix the bug through:
+~~~
+npm install -g pm2-windows-service
+npm install -g npm-check-updates
+
+cd %USERPROFILE%\AppData\Roaming\npm\node_modules\pm2-windows-service
+ncu inquirer -u
+npm install
+~~~
+3. Create a folder _C:\GIT\.pm2_ and set it to PATH and PM2_HOME environment variables
+4. Run in command windows
+~~~
+pm2-service-install -n PM2
+
+
+? Perform environment setup (recommended)? Yes
+? Set PM2_HOME? Yes
+? PM2_HOME value (this path should be accessible to the service user and
+should not contain any “user-context” variables [e.g. %APPDATA%]): C:\GIT\.pm2\
+? Set PM2_SERVICE_SCRIPTS (the list of start-up scripts for pm2)? No
+? Set PM2_SERVICE_PM2_DIR (the location of the global pm2 to use with the service)? [recommended] Yes
+? Specify the directory containing the pm2 version to be used by the
+service C:\USERS\<USER>\APPDATA\ROAMING\NPM\node_modules\pm2\index.js
+~~~
+
+### InfluxDB
+To run database on startup download: [NSSM - the Non-Sucking Service Manager](https://nssm.cc/download)  
+~~~
+nssm install influxDB
+~~~
+This will open settings window:
+1. Path C:\GIT\InfluxDB\influxdb-1.8.0-1\influxd.exe
+2. Arguments: -config "C:\GIT\InfluxDB\influxdb-1.8.0-1\influxdb.conf"
+3. Click Install Service
 
 # Contribute
 Please go ahead and contribute in any way you can:
