@@ -14,11 +14,15 @@ from collections import namedtuple, OrderedDict
 import requests
 import urllib3
 from artifactory_du import artifactory_du
+from influxdb import InfluxDBClient
 
 import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
+
+STATISTICS_SERVER = "OTTBLD01"
+STATISTICS_PORT = 8086
 
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
@@ -108,6 +112,11 @@ class Downloader:
             if self.settings.force_install or not self.versions_identical():
                 self.download_file()
                 self.install()
+                try:
+                    self.send_statistics()
+                except:
+                    # do not really care about stats
+                    pass
                 return
             else:
                 raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
@@ -629,6 +638,33 @@ class Downloader:
                 return
         else:
             self.history = OrderedDict()
+
+    def send_statistics(self):
+        """
+        Send usage statistics to the database. Collect username, time, version and software installed
+        :return: None
+        """
+        client = InfluxDBClient(host=STATISTICS_SERVER, port=STATISTICS_PORT)
+        client.switch_database('downloads')
+
+        version, tool = self.settings.version.split("_")
+        time = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+        json_body = [
+            {
+                "measurement": "downloads",
+                "tags": {
+                    "username": self.settings.username,
+                    "version": version,
+                    "tool": tool
+                },
+                "time": time,
+                "fields": {
+                    "count": 1
+                }
+            }
+        ]
+
+        client.write_points(json_body)
 
     @staticmethod
     def subprocess_call(command):
