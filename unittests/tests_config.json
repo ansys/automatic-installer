@@ -1,6 +1,6 @@
 {
-  "settings_file": "C:\\Users\\mbeliaev\\AppData\\Roaming\\build_downloader\\install_once_settings_v211_EDT.json",
-  "target_unpack_dir": "C:\\Users\\mbeliaev\\Documents\\temp_build_v202_WB",
-  "zip_file": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\temp_build_v202_EDT.zip",
+  "settings_file": "C:\\Users\\mbeliaev\\AppData\\Roaming\\build_downloader\\once_v211_Workbench.json",
+  "target_unpack_dir": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\temp_build_v211_Workbench",
+  "zip_file": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\temp_build_v211_Workbench.zip",
   "build_url": "http://canartifactory.ansys.com:8080/artifactory/v211_EBU_Certified/20200515/Electronics_211_winx64.zip"
 }

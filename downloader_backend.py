@@ -14,11 +14,15 @@ from collections import namedtuple, OrderedDict
 import requests
 import urllib3
 from artifactory_du import artifactory_du
+from influxdb import InfluxDBClient
 
 import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
+
+STATISTICS_SERVER = "OTTBLD01"
+STATISTICS_PORT = 8086
 
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
@@ -108,6 +112,11 @@ class Downloader:
             if self.settings.force_install or not self.versions_identical():
                 self.download_file()
                 self.install()
+                try:
+                    self.send_statistics()
+                except:
+                    # do not really care about stats
+                    pass
                 return
             else:
                 raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
@@ -379,7 +388,8 @@ class Downloader:
             file.write(install_iss.format(self.product_id, os.path.join(self.settings.install_path, "AnsysEM"),
                                           os.environ["TEMP"], integrate_wb, self.installshield_version))
 
-        command = [self.setup_exe, '-s', fr'-f1{install_iss_file}', fr'-f2{install_log_file}']
+        command = [f'"{self.setup_exe}"', '-s', fr'-f1"{install_iss_file}"', fr'-f2"{install_log_file}"']
+        command = " ".join(command)
         self.update_installation_history(status="In-Progress", details=f"Start installation")
         logging.info(f"Execute installation")
         self.subprocess_call(command)
@@ -401,7 +411,9 @@ class Downloader:
             with open(uninstall_iss_file, "w") as file:
                 file.write(iss_templates.uninstall_iss.format(self.product_id, self.installshield_version))
 
-            command = [self.setup_exe, '-uninst', '-s', fr'-f1{uninstall_iss_file}', fr'-f2{uninstall_log_file}']
+            command = [f'"{self.setup_exe}"', '-uninst', '-s', fr'-f1"{uninstall_iss_file}"',
+                       fr'-f2"{uninstall_log_file}"']
+            command = " ".join(command)
             logging.info(f"Execute uninstallation")
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             self.subprocess_call(command)
@@ -496,7 +508,7 @@ class Downloader:
             self.uninstall_wb()
 
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
-            command = [self.setup_exe, '-silent', fr'-install_dir={install_path}"']
+            command = [self.setup_exe, '-silent', '-install_dir', install_path]
             command += self.settings.wb_flags.split()
 
             # the "shared files" is created at the same level as the "ANSYS Inc" so if installing to unique folders,
@@ -505,7 +517,7 @@ class Downloader:
                     "ANSYSLMD_LICENSE_FILE" in os.environ):
                 logging.info("Install using existing license configuration")
             else:
-                command += ['-licserverinfo2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1']
+                command += ['-licserverinfo', '2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1']
                 logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
 
             self.update_installation_history(status="In-Progress", details=f"Start installation")
@@ -595,7 +607,7 @@ class Downloader:
             for file in os.listdir(hpc_folder):
                 if ".acf" in file:
                     options_file = os.path.join(hpc_folder, file)
-                    command = [update_registry_exe, fr'-ProductName{product_version}', fr'-FromFile{options_file}']
+                    command = [update_registry_exe, '-ProductName', product_version, '-FromFile', options_file]
                     logging.info(f"Update registry")
                     self.subprocess_call(command)
 
@@ -630,6 +642,33 @@ class Downloader:
         else:
             self.history = OrderedDict()
 
+    def send_statistics(self):
+        """
+        Send usage statistics to the database. Collect username, time, version and software installed
+        :return: None
+        """
+        client = InfluxDBClient(host=STATISTICS_SERVER, port=STATISTICS_PORT)
+        client.switch_database('downloads')
+
+        version, tool = self.settings.version.split("_")
+        time = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+        json_body = [
+            {
+                "measurement": "downloads",
+                "tags": {
+                    "username": self.settings.username,
+                    "version": version,
+                    "tool": tool
+                },
+                "time": time,
+                "fields": {
+                    "count": 1
+                }
+            }
+        ]
+
+        client.write_points(json_body)
+
     @staticmethod
     def subprocess_call(command):
         """
@@ -638,9 +677,13 @@ class Downloader:
         :return:
         """
         try:
-            command_str = subprocess.list2cmdline(command)
+            if isinstance(command, list):
+                command_str = subprocess.list2cmdline(command)
+            else:
+                command_str = command
             logging.info(command_str)
-            subprocess.call(command_str, shell=True)
+
+            subprocess.call(command)
         except OSError:
             raise SystemExit("Please run as administrator and disable Windows UAC")
     

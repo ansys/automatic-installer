@@ -20,6 +20,7 @@ function set_default_tooltips_main(){
     set_tooltip("time",  "Local computer time at which update will start.\n" + 
                     "Please try to use night time to decrease load on server");
     set_tooltip("schedule-table-div",  "Click on a row to unschedule specific task");
+    set_tooltip("schedule-button",  "Makes copy of current settings (including advanced) and schedules installation");
 
 }
 
@@ -38,7 +39,9 @@ function set_default_tooltips_settings(){
         "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for Electronics Desktop\n" +
         "or \n\\ANSYS Inc\\vXXX for Workbench");
 
-    set_tooltip("hpc-options-table-div", "Click on a row to remove options file")
+    set_tooltip("hpc-options-table-div", "HPC files are exported from Electronics Desktop -> HPC and " + 
+                    "analysis options. \nTo update Registry see example in the help: UpdateRegistry File Format" + 
+                    "\nClick on a row to remove options file", true)
 }
 
 function set_default_tooltips_history(){

@@ -3,3 +3,4 @@ artifactory-du
 urllib3
 PyYAML
 pyinstaller
+influxdb
