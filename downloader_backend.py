@@ -388,7 +388,8 @@ class Downloader:
             file.write(install_iss.format(self.product_id, os.path.join(self.settings.install_path, "AnsysEM"),
                                           os.environ["TEMP"], integrate_wb, self.installshield_version))
 
-        command = [self.setup_exe, '-s', '-f1', install_iss_file, '-f2', install_log_file]
+        command = [f'"{self.setup_exe}"', '-s', fr'-f1"{install_iss_file}"', fr'-f2"{install_log_file}"']
+        command = " ".join(command)
         self.update_installation_history(status="In-Progress", details=f"Start installation")
         logging.info(f"Execute installation")
         self.subprocess_call(command)
@@ -410,7 +411,9 @@ class Downloader:
             with open(uninstall_iss_file, "w") as file:
                 file.write(iss_templates.uninstall_iss.format(self.product_id, self.installshield_version))
 
-            command = [self.setup_exe, '-uninst', '-s', '-f1', uninstall_iss_file, '-f2', uninstall_log_file]
+            command = [f'"{self.setup_exe}"', '-uninst', '-s', fr'-f1"{uninstall_iss_file}"',
+                       fr'-f2"{uninstall_log_file}"']
+            command = " ".join(command)
             logging.info(f"Execute uninstallation")
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             self.subprocess_call(command)
@@ -674,9 +677,13 @@ class Downloader:
         :return:
         """
         try:
-            command_str = subprocess.list2cmdline(command)
+            if isinstance(command, list):
+                command_str = subprocess.list2cmdline(command)
+            else:
+                command_str = command
             logging.info(command_str)
-            subprocess.call(command_str, shell=True)
+
+            subprocess.call(command)
         except OSError:
             raise SystemExit("Please run as administrator and disable Windows UAC")
     
