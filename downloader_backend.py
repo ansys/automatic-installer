@@ -379,7 +379,7 @@ class Downloader:
             file.write(install_iss.format(self.product_id, os.path.join(self.settings.install_path, "AnsysEM"),
                                           os.environ["TEMP"], integrate_wb, self.installshield_version))
 
-        command = [self.setup_exe, '-s', fr'-f1{install_iss_file}', fr'-f2{install_log_file}']
+        command = [self.setup_exe, '-s', '-f1', install_iss_file, '-f2', install_log_file]
         self.update_installation_history(status="In-Progress", details=f"Start installation")
         logging.info(f"Execute installation")
         self.subprocess_call(command)
@@ -401,7 +401,7 @@ class Downloader:
             with open(uninstall_iss_file, "w") as file:
                 file.write(iss_templates.uninstall_iss.format(self.product_id, self.installshield_version))
 
-            command = [self.setup_exe, '-uninst', '-s', fr'-f1{uninstall_iss_file}', fr'-f2{uninstall_log_file}']
+            command = [self.setup_exe, '-uninst', '-s', '-f1', uninstall_iss_file, '-f2', uninstall_log_file]
             logging.info(f"Execute uninstallation")
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             self.subprocess_call(command)
@@ -595,7 +595,7 @@ class Downloader:
             for file in os.listdir(hpc_folder):
                 if ".acf" in file:
                     options_file = os.path.join(hpc_folder, file)
-                    command = [update_registry_exe, fr'-ProductName{product_version}', fr'-FromFile{options_file}']
+                    command = [update_registry_exe, '-ProductName', product_version, '-FromFile', options_file]
                     logging.info(f"Update registry")
                     self.subprocess_call(command)
 
