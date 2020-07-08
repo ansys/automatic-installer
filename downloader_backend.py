@@ -508,7 +508,7 @@ class Downloader:
             self.uninstall_wb()
 
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
-            command = [self.setup_exe, '-silent', '-install_dir', install_path]
+            command = [self.setup_exe, '-silent', '-install_dir', install_path, "-lang", "en"]
             command += self.settings.wb_flags.split()
 
             # the "shared files" is created at the same level as the "ANSYS Inc" so if installing to unique folders,
@@ -581,13 +581,16 @@ class Downloader:
         Cleans downloaded zip and unpacked folder with content
         :return: None
         """
-        if os.path.isfile(self.zip_file) and self.settings.delete_zip:
-            os.remove(self.zip_file)
-            logging.info("ZIP deleted")
+        try:
+            if os.path.isfile(self.zip_file) and self.settings.delete_zip:
+                os.remove(self.zip_file)
+                logging.info("ZIP deleted")
 
-        if os.path.isdir(self.target_unpack_dir):
-            shutil.rmtree(self.target_unpack_dir)
-            logging.info("Unpacked directory removed")
+            if os.path.isdir(self.target_unpack_dir):
+                shutil.rmtree(self.target_unpack_dir)
+                logging.info("Unpacked directory removed")
+        except PermissionError:
+            logging.error("Temp files could not be removed due to permission error")
 
     def update_edt_registry(self):
         """
