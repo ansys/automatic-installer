@@ -108,6 +108,7 @@ class Downloader:
         :return: None
         """
         try:
+            self.check_directories()
             self.get_build_link()
             if self.settings.force_install or not self.versions_identical():
                 self.download_file()
