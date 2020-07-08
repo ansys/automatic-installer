@@ -135,10 +135,10 @@ class Downloader:
         Verify that installation and download path exists.
         If not tries to create a requested path
         """
-        for path in ["install_path", "download_path"]:
-            if not os.path.isdir(self.settings[path]):
+        for path in [self.settings.install_path, self.settings.download_path]:
+            if not os.path.isdir(path):
                 try:
-                    os.makedirs(self.settings[path])
+                    os.makedirs(path)
                 except PermissionError:
                     raise SystemExit(f"{path} could not be created due to insufficient permissions")
 
@@ -267,7 +267,7 @@ class Downloader:
             with requests.get(url, auth=(self.settings.username, password), timeout=30) as url_request:
                 all_files = json.loads(url_request.text)["children"]
                 for child in all_files:
-                    if "Electronics" in child["uri"]:
+                    if "Electronics" in child["uri"] and "winx" in child["uri"]:
                         return latest
 
     def download_file(self, recursion=False):
@@ -289,6 +289,9 @@ class Downloader:
 
             self.zip_file = os.path.join(self.settings.download_path, f"temp_build_{self.settings.version}.zip")
             logging.info(f"Start download file from {url} to {self.zip_file}")
+
+            if url_request.status_code != 200:
+                raise SystemExit(f"Cannot download file. Server returned status code: {url_request.status_code}")
 
             try:
                 file_size = int(url_request.headers['Content-Length'])
