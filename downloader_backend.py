@@ -505,7 +505,7 @@ class Downloader:
         self.setup_exe = os.path.join(self.target_unpack_dir, "setup.exe")
 
         if os.path.isfile(self.setup_exe):
-            self.uninstall_wb()
+            uninstall_exe = self.uninstall_wb()
 
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
             command = [self.setup_exe, '-silent', '-install_dir', install_path, "-lang", "en"]
@@ -523,12 +523,19 @@ class Downloader:
             self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation")
             self.subprocess_call(command)
-            logging.info("New build was installed")
+
+            if os.path.isfile(uninstall_exe):
+                logging.info("New build was installed")
+            else:
+                raise SystemExit("Workbench installation failed. " +
+                                 f"If you see this error message by mistake please report to {__email__}")
         else:
             logging.info("No Workbench setup.exe file detected")
 
     def uninstall_wb(self):
-        """Uninstall Workbench if such exists in the target installation directory"""
+        """
+        Uninstall Workbench if such exists in the target installation directory
+        :return: uninstall_exe: name of the executable of uninstaller"""
 
         uninstall_exe = os.path.join(self.settings.install_path, "ANSYS Inc",
                                      self.settings.version[:4], "Uninstall.exe")
@@ -540,6 +547,7 @@ class Downloader:
             logging.info("Previous build was uninstalled")
         else:
             logging.info("No Workbench Uninstall.exe file detected")
+        return uninstall_exe
 
     def get_build_info_file_from_artifactory(self, url, recursion=False):
         """
