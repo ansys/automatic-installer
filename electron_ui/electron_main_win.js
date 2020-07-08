@@ -2,7 +2,7 @@ const {app, BrowserWindow, Menu, dialog} = require('electron');
 const { autoUpdater } = require('electron-updater');
 const ipc = require('electron').ipcMain;
 
-const updateServer = 'http://ottbld02:80';
+const updateServer = 'http://ottbld02:1337';
 let arch = 'win64';
 
 const feed = `${updateServer}/update/${arch}`;
