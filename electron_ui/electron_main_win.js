@@ -2,7 +2,7 @@ const {app, BrowserWindow, Menu, dialog} = require('electron');
 const { autoUpdater } = require('electron-updater');
 const ipc = require('electron').ipcMain;
 
-const updateServer = 'http://ottbld01:1337';
+const updateServer = 'http://ottbld02:80';
 let arch = 'win64';
 
 const feed = `${updateServer}/update/${arch}`;
@@ -30,6 +30,16 @@ const about_options = {
                 "\nEmail: maksim.beliaev@ansys.com"
     };
 
+const usage_agreement = {
+        type: 'info',
+        buttons: ['OK'],
+        defaultId: 2,
+        title: 'Agreement',
+        message: 'Ansys Beta Build Downloader Usage Agreement',
+        detail: "Using this software you agree on collection of usage statistics" + 
+                " including username, version, software, time, failures of the tool"
+    };
+
 // Each object (dictionary) in a list is a dropdown item
 let submenu_list = [
     {
@@ -43,6 +53,12 @@ let submenu_list = [
         label:'About',
         click(){
             dialog.showMessageBox(null, about_options);
+        }
+    },
+    {
+        label:'Agreement',
+        click(){
+            dialog.showMessageBox(null, usage_agreement);
         }
     },
     {

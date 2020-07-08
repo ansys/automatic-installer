@@ -21,7 +21,7 @@ import iss_templates
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
 
-STATISTICS_SERVER = "OTTBLD01"
+STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
 
 artifactory_dict = OrderedDict([
