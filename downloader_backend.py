@@ -126,6 +126,7 @@ class Downloader:
         except Exception:
             logging.error(traceback.format_exc())
             self.update_installation_history(status="Failed", details="Unexpected error, see logs")
+            self.send_statistics(error=traceback.format_exc())
         self.clean_temp()
 
     def check_directories(self):
@@ -653,19 +654,23 @@ class Downloader:
         else:
             self.history = OrderedDict()
 
-    def send_statistics(self):
+    def send_statistics(self, error=None):
         """
-        Send usage statistics to the database. Collect username, time, version and software installed
+        Send usage statistics to the database.
+        Collect username, time, version and software installed
+        in case of crash send also crash data
+        :parameter: error: error message of what went wrong
         :return: None
         """
         client = InfluxDBClient(host=STATISTICS_SERVER, port=STATISTICS_PORT)
-        client.switch_database('downloads')
+        db_name = "downloads" if not error else "crashes"
+        client.switch_database(db_name)
 
         version, tool = self.settings.version.split("_")
         time = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         json_body = [
             {
-                "measurement": "downloads",
+                "measurement": db_name,
                 "tags": {
                     "username": self.settings.username,
                     "version": version,
@@ -677,6 +682,9 @@ class Downloader:
                 }
             }
         ]
+
+        if error:
+            json_body[0]["tags"]["log"] = error
 
         client.write_points(json_body)
 
