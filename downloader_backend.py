@@ -21,7 +21,7 @@ import iss_templates
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
 
-STATISTICS_SERVER = "OTTBLD01"
+STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
 
 artifactory_dict = OrderedDict([
@@ -126,6 +126,7 @@ class Downloader:
         except Exception:
             logging.error(traceback.format_exc())
             self.update_installation_history(status="Failed", details="Unexpected error, see logs")
+            self.send_statistics(error=traceback.format_exc())
         self.clean_temp()
 
     def check_directories(self):
@@ -505,10 +506,10 @@ class Downloader:
         self.setup_exe = os.path.join(self.target_unpack_dir, "setup.exe")
 
         if os.path.isfile(self.setup_exe):
-            self.uninstall_wb()
+            uninstall_exe = self.uninstall_wb()
 
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
-            command = [self.setup_exe, '-silent', '-install_dir', install_path]
+            command = [self.setup_exe, '-silent', '-install_dir', install_path, "-lang", "en"]
             command += self.settings.wb_flags.split()
 
             # the "shared files" is created at the same level as the "ANSYS Inc" so if installing to unique folders,
@@ -523,12 +524,19 @@ class Downloader:
             self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation")
             self.subprocess_call(command)
-            logging.info("New build was installed")
+
+            if os.path.isfile(uninstall_exe):
+                logging.info("New build was installed")
+            else:
+                raise SystemExit("Workbench installation failed. " +
+                                 f"If you see this error message by mistake please report to {__email__}")
         else:
             logging.info("No Workbench setup.exe file detected")
 
     def uninstall_wb(self):
-        """Uninstall Workbench if such exists in the target installation directory"""
+        """
+        Uninstall Workbench if such exists in the target installation directory
+        :return: uninstall_exe: name of the executable of uninstaller"""
 
         uninstall_exe = os.path.join(self.settings.install_path, "ANSYS Inc",
                                      self.settings.version[:4], "Uninstall.exe")
@@ -540,6 +548,7 @@ class Downloader:
             logging.info("Previous build was uninstalled")
         else:
             logging.info("No Workbench Uninstall.exe file detected")
+        return uninstall_exe
 
     def get_build_info_file_from_artifactory(self, url, recursion=False):
         """
@@ -581,13 +590,16 @@ class Downloader:
         Cleans downloaded zip and unpacked folder with content
         :return: None
         """
-        if os.path.isfile(self.zip_file) and self.settings.delete_zip:
-            os.remove(self.zip_file)
-            logging.info("ZIP deleted")
+        try:
+            if os.path.isfile(self.zip_file) and self.settings.delete_zip:
+                os.remove(self.zip_file)
+                logging.info("ZIP deleted")
 
-        if os.path.isdir(self.target_unpack_dir):
-            shutil.rmtree(self.target_unpack_dir)
-            logging.info("Unpacked directory removed")
+            if os.path.isdir(self.target_unpack_dir):
+                shutil.rmtree(self.target_unpack_dir)
+                logging.info("Unpacked directory removed")
+        except PermissionError:
+            logging.error("Temp files could not be removed due to permission error")
 
     def update_edt_registry(self):
         """
@@ -642,19 +654,23 @@ class Downloader:
         else:
             self.history = OrderedDict()
 
-    def send_statistics(self):
+    def send_statistics(self, error=None):
         """
-        Send usage statistics to the database. Collect username, time, version and software installed
+        Send usage statistics to the database.
+        Collect username, time, version and software installed
+        in case of crash send also crash data
+        :parameter: error: error message of what went wrong
         :return: None
         """
         client = InfluxDBClient(host=STATISTICS_SERVER, port=STATISTICS_PORT)
-        client.switch_database('downloads')
+        db_name = "downloads" if not error else "crashes"
+        client.switch_database(db_name)
 
         version, tool = self.settings.version.split("_")
         time = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         json_body = [
             {
-                "measurement": "downloads",
+                "measurement": db_name,
                 "tags": {
                     "username": self.settings.username,
                     "version": version,
@@ -666,6 +682,9 @@ class Downloader:
                 }
             }
         ]
+
+        if error:
+            json_body[0]["tags"]["log"] = error
 
         client.write_points(json_body)
 

@@ -315,8 +315,17 @@ $("#install-once-button").click(function (){
         fs.copyFileSync(settings_path, install_once_settings, (err) => {
             if (err) throw err;
         });
-        install_once(install_once_settings); 
-        alert("Installation started! You can check the progress on Installation History page")     
+        install_once(install_once_settings);
+        answer = dialog.showMessageBoxSync(remote.getCurrentWindow(), {
+                type: "question",
+                buttons: ["Yes", "No"],
+                message: "Installation started! Do you want to open progress monitor on Installation History page?"
+            }
+        )
+
+        if (answer == 0) {
+            location.href = 'file://' + __dirname + '/history.html', "_self";
+        }    
     } else {
         alert("Version does not exist on artifactory");
     }

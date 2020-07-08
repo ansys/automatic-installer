@@ -7,7 +7,7 @@ function set_default_tooltips_main(){
         "2. Log into Artifactory using SSO credentials\n" +
         "\t2.1 Click on your userID (top right)\n" +
         "\t2.2 Enter your password to Unlock Artifactory Encrypted Password\n" +
-        "\t2.3 Copy over Artifactory Encrypted Password\n" +
+        "\t2.3 Copy over Artifactory Encrypted Password and press Enter\n" +
         "[Note] Artifactory Encrypted Password is not valid for other artifactories.\n" +
         "Encrypted password will change anytime your SSO password changes.", true);
 

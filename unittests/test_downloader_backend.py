@@ -15,10 +15,6 @@ class InstallUninstallTest(unittest.TestCase):
         with mock.patch('sys.argv', ["__file__", r'-p', test_settings["settings_file"]]):
             self.downloader = downloader_backend.Downloader()
 
-            # following setup is overwritten in full_run_test
-            self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
-            self.downloader.zip_file = test_settings["zip_file"]
-
     def download_file_test(self):
         """
             Test getting link according to settings file and download of the build from server
@@ -44,6 +40,7 @@ class InstallUninstallTest(unittest.TestCase):
                 arguments mock up of settings_file
                 downloader.target_unpack_dir
         """
+        self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
         self.downloader.install_wb()
 
     def uninstall_edt_test(self):
@@ -54,6 +51,7 @@ class InstallUninstallTest(unittest.TestCase):
                 downloader.target_unpack_dir
                 downloader.installed_product
         """
+        self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
         self.downloader.parse_iss()
         self.downloader.uninstall_edt()
 
@@ -64,6 +62,7 @@ class InstallUninstallTest(unittest.TestCase):
                 arguments mock up of settings_file
                 downloader.target_unpack_dir
         """
+        self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
         self.downloader.install_edt()
 
     def install_all_test(self):
@@ -74,6 +73,7 @@ class InstallUninstallTest(unittest.TestCase):
                 arguments mock up of settings_file
                 downloader.zip_file
         """
+        self.downloader.zip_file = test_settings["zip_file"]
         self.downloader.install()
 
     def clean_temp_test(self):
@@ -84,9 +84,14 @@ class InstallUninstallTest(unittest.TestCase):
                 downloader.target_unpack_dir
                 downloader.zip_file
         """
+        self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
         self.downloader.clean_temp()
 
     def update_registry_test(self):
+        """
+        Test update of the registry in the AEDT
+        :return:
+        """
         hpc_folder = os.path.join(os.environ["APPDATA"], "build_downloader", "HPC_Options")
         if not os.path.isdir(hpc_folder):
             os.makedirs(hpc_folder)
@@ -105,6 +110,13 @@ class InstallUninstallTest(unittest.TestCase):
         """
         self.downloader.update_installation_history("Failed", "VPN turned off")
 
+    def statistics_test(self):
+        """
+        Verify how statistics is written to database
+        :return:
+        """
+        self.downloader.send_statistics()
+
     def full_run_test(self):
         self.downloader.run()
 
@@ -121,6 +133,7 @@ if __name__ == '__main__':
     # suite.addTest(InstallUninstallTest("install_wb_test"))
     # suite.addTest(InstallUninstallTest("install_all_test"))
     # suite.addTest(InstallUninstallTest("write_history_test"))
-    suite.addTest(InstallUninstallTest("full_run_test"))
+    suite.addTest(InstallUninstallTest("statistics_test"))
+    # suite.addTest(InstallUninstallTest("full_run_test"))
     runner = unittest.TextTestRunner()
     runner.run(suite)
