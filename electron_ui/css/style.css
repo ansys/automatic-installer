@@ -6,7 +6,7 @@
   position: fixed;
   bottom: 20px;
   left: 20px;
-  width: 200px;
+  width: 235px;
   padding: 20px;
   border-radius: 5px;
   background-color: #000;
@@ -21,6 +21,10 @@
 #close-button, #restart-button{
   border-radius: 5px;
   color: black;
+}
+
+#restart-button{
+  margin-left: 40px;
 }
 
 /* History table*/

@@ -36,9 +36,11 @@ const usage_agreement = {
         defaultId: 2,
         title: 'Agreement',
         message: 'Ansys Beta Build Downloader Usage Agreement',
-        detail: "Using this software you agree on collection of usage statistics" + 
-                " including username, version, software, time, failures of the tool"
+        detail: "This software collects information to support quality improvement, including user ID, version, " +
+                "downloaded software, time and status of the download."
     };
+
+global.agreement = usage_agreement;
 
 // Each object (dictionary) in a list is a dropdown item
 let submenu_list = [

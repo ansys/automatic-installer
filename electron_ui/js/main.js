@@ -58,6 +58,7 @@ window.onload = function() {
         if (!fs.existsSync(app_folder)) fs.mkdirSync(app_folder);
         let data = JSON.stringify(settings, null, 4);
         fs.writeFileSync(settings_path, data);
+        dialog.showMessageBox(null, remote.getGlobal('agreement'));
     } else {
         var settings_data = fs.readFileSync(settings_path);
         settings = JSON.parse(settings_data);
