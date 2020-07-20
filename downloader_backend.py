@@ -7,7 +7,6 @@ import random
 import re
 import shutil
 import subprocess
-import sys
 import traceback
 import zipfile
 from collections import namedtuple, OrderedDict
@@ -130,6 +129,14 @@ class Downloader:
         except SystemExit as e:
             logging.error(e)
             self.update_installation_history(status="Failed", details=str(e))
+        except requests.exceptions.ReadTimeout:
+            self.catch_timeout()
+        except requests.exceptions.ConnectionError:
+            self.catch_timeout()
+        except urllib3.exceptions.ProtocolError:
+            self.catch_timeout()
+        except urllib3.exceptions.ReadTimeoutError:
+            self.catch_timeout()
         except Exception:
             logging.error(traceback.format_exc())
             self.update_installation_history(status="Failed", details="Unexpected error, see logs")
@@ -195,14 +202,10 @@ class Downloader:
             raise SystemExit("Please provide username and artifactory password")
 
         server = artifactory_dict[self.settings.artifactory]
-        try:
-            with requests.get(server + "/api/repositories", auth=(self.settings.username, password),
-                              timeout=TIMEOUT) as url_request:
-                artifacts_list = json.loads(url_request.text)
-        except requests.exceptions.ReadTimeout:
-            self.catch_timeout()
-        except requests.exceptions.ConnectionError:
-            self.catch_timeout()
+
+        with requests.get(server + "/api/repositories", auth=(self.settings.username, password),
+                          timeout=TIMEOUT) as url_request:
+            artifacts_list = json.loads(url_request.text)
 
         # catch 401 for bad credentials or similar
         if url_request.status_code != 200:
@@ -234,13 +237,9 @@ class Downloader:
 
         if "ElectronicsDesktop" in self.settings.version:
             url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
-            try:
-                with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
-                    folder_dict_list = json.loads(url_request.text)['files']
-            except requests.exceptions.ReadTimeout:
-                self.catch_timeout()
-            except requests.exceptions.ConnectionError:
-                self.catch_timeout()
+
+            with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
+                folder_dict_list = json.loads(url_request.text)['files']
 
             builds_dates = []
             for folder_dict in folder_dict_list:
@@ -274,18 +273,11 @@ class Downloader:
         while builds_list:
             latest = builds_list.pop()
             url = f"{server}/api/storage/{repo}/{latest}"
-            try:
-                with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
-                    all_files = json.loads(url_request.text)["children"]
-                    for child in all_files:
-                        if "Electronics" in child["uri"] and "winx" in child["uri"]:
-                            return latest
-            except requests.exceptions.ConnectTimeout:
-                self.catch_timeout()
-            except requests.exceptions.ReadTimeout:
-                self.catch_timeout()
-            except requests.exceptions.ConnectionError:
-                self.catch_timeout()
+            with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
+                all_files = json.loads(url_request.text)["children"]
+                for child in all_files:
+                    if "Electronics" in child["uri"] and "winx" in child["uri"]:
+                        return latest
 
     def download_file(self, recursion=False):
         """
@@ -334,21 +326,16 @@ class Downloader:
                     file_size = 11e+9
 
             percent = 0
-            try:
-                with open(self.zip_file, 'wb') as zip_file:
-                    while True:
-                        chunk = url_request.raw.read(int(file_size/100))
-                        if not chunk:
-                            break
-                        val = min(100, percent)
-                        logging.info(f"Download progress: {val}%")
-                        self.update_installation_history(status="In-Progress", details=f"Download progress: {val}%")
-                        percent += 1
-                        zip_file.write(chunk)
-            except urllib3.exceptions.ProtocolError:
-                raise SystemExit("VPN was turned off or connection was broken. Download failed")
-            except urllib3.exceptions.ReadTimeoutError:
-                self.catch_timeout()
+            with open(self.zip_file, 'wb') as zip_file:
+                while True:
+                    chunk = url_request.raw.read(int(file_size/100))
+                    if not chunk:
+                        break
+                    val = min(100, percent)
+                    logging.info(f"Download progress: {val}%")
+                    self.update_installation_history(status="In-Progress", details=f"Download progress: {val}%")
+                    percent += 1
+                    zip_file.write(chunk)
 
         if not self.zip_file:
             raise SystemExit("ZIP download failed")
@@ -685,14 +672,17 @@ class Downloader:
         On timeout error try to restart the download. If timeout more than 3 times, then abort
         :return: None
         """
+        total_attempts = 4
         self.connection_attempt += 1
-        if self.connection_attempt <= 3:
-            logging.warning(f"Timeout on connection, attempt: {self.connection_attempt}/3")
+        if self.connection_attempt <= total_attempts:
+            logging.warning(f"Timeout on connection, attempt: {self.connection_attempt}/{total_attempts}")
             self.run()
-            sys.exit(1)
         else:
-            raise SystemExit("Timeout on connection, please verify that you are on VPN, your connection is stable " +
-                             "and your username and password for {}".format(self.settings.artifactory))
+            error = (f"Timeout on connection, please verify that you are on VPN, your connection is stable " +
+                     f"and username and password for {self.settings.artifactory} are correct. " +
+                     f"Number of attempts: {total_attempts}/{total_attempts}")
+            logging.error(error)
+            self.update_installation_history(status="Failed", details=str(error))
 
     def send_statistics(self, error=None):
         """
