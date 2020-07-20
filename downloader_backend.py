@@ -126,7 +126,7 @@ class Downloader:
                     pass
             else:
                 raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
-            sys.exit(0)  # use sys.exit because number of attempts may not exceed and we need to kill all recursions
+            return
         except SystemExit as e:
             logging.error(e)
             self.update_installation_history(status="Failed", details=str(e))
@@ -202,7 +202,7 @@ class Downloader:
         except requests.exceptions.ReadTimeout:
             self.catch_timeout()
         except requests.exceptions.ConnectionError:
-            raise SystemExit("Connection error, please verify that you are on VPN")
+            self.catch_timeout()
 
         # catch 401 for bad credentials or similar
         if url_request.status_code != 200:
@@ -234,8 +234,13 @@ class Downloader:
 
         if "ElectronicsDesktop" in self.settings.version:
             url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
-            with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
-                folder_dict_list = json.loads(url_request.text)['files']
+            try:
+                with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
+                    folder_dict_list = json.loads(url_request.text)['files']
+            except requests.exceptions.ReadTimeout:
+                self.catch_timeout()
+            except requests.exceptions.ConnectionError:
+                self.catch_timeout()
 
             builds_dates = []
             for folder_dict in folder_dict_list:
@@ -269,11 +274,18 @@ class Downloader:
         while builds_list:
             latest = builds_list.pop()
             url = f"{server}/api/storage/{repo}/{latest}"
-            with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
-                all_files = json.loads(url_request.text)["children"]
-                for child in all_files:
-                    if "Electronics" in child["uri"] and "winx" in child["uri"]:
-                        return latest
+            try:
+                with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
+                    all_files = json.loads(url_request.text)["children"]
+                    for child in all_files:
+                        if "Electronics" in child["uri"] and "winx" in child["uri"]:
+                            return latest
+            except requests.exceptions.ConnectTimeout:
+                self.catch_timeout()
+            except requests.exceptions.ReadTimeout:
+                self.catch_timeout()
+            except requests.exceptions.ConnectionError:
+                self.catch_timeout()
 
     def download_file(self, recursion=False):
         """
@@ -677,8 +689,10 @@ class Downloader:
         if self.connection_attempt <= 3:
             logging.warning(f"Timeout on connection, attempt: {self.connection_attempt}/3")
             self.run()
-        raise SystemExit("Timeout on connection, please verify your username and password for {}".format(
-            self.settings.artifactory))
+            sys.exit(1)
+        else:
+            raise SystemExit("Timeout on connection, please verify that you are on VPN, your connection is stable " +
+                             "and your username and password for {}".format(self.settings.artifactory))
 
     def send_statistics(self, error=None):
         """
