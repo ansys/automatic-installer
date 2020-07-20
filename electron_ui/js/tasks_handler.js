@@ -73,7 +73,7 @@ function schedule_task(settings_file) {
             days.push(unpack_days[short_day]);
       }
 
-      command = (`schtasks /CREATE /TN "AnsysDownloader\\${settings.version}" ` +
+      command = (`schtasks /CREATE /TN "AnsysDownloader\\${settings.version}" /RL HIGHEST ` +
                   `/TR "${backend_exe} -p ${settings_file}" /d ${days.join(",")} /sc WEEKLY /st ${settings["time"]} /f`)
 
       execSync(command);

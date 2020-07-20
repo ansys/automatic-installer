@@ -29,7 +29,10 @@
         "url": "http://ottbld02:1337",
         "files": "!electron_backend.py"
       }
-    ]
+    ],
+    "win": {
+      "requestedExecutionLevel": "highestAvailable"
+    }
   },
   "devDependencies": {
     "electron": "^8.3.0",
