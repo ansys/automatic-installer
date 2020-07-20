@@ -433,6 +433,9 @@ class Downloader:
             self.subprocess_call(command)
 
             self.check_result_code(uninstall_log_file, False)
+            em_main_dir = os.path.dirname(self.ansys_em_dir)
+            if os.path.isdir(em_main_dir):
+                shutil.rmtree(em_main_dir)
         else:
             logging.info("Version is not installed, skip uninstallation")
 
@@ -697,7 +700,7 @@ class Downloader:
         client.switch_database(db_name)
 
         version, tool = self.settings.version.split("_")
-        time = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+        time = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         json_body = [
             {
                 "measurement": db_name,
