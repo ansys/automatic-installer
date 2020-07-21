@@ -1,3 +1,4 @@
+psutil
 requests
 artifactory-du
 urllib3

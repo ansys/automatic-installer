@@ -11,6 +11,7 @@ import traceback
 import zipfile
 from collections import namedtuple, OrderedDict
 
+import psutil
 import requests
 import urllib3
 from artifactory_du import artifactory_du
@@ -64,7 +65,7 @@ class Downloader:
         self.product_id (str): product GUID extracted from iss template
         self.installshield_version (str): version of the InstallShield
         self.installed_product_info (str): path to the product.info of the installed build
-        self.ansys_em_dir (str): root path of Ansys Electronics Desktop installation
+        self.product_root_path (str): root path of Ansys Electronics Desktop/ Workbench installation
         self.product_version (str): version to use in env variables eg 202
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
         self.connection_attempt (int): number of attempts to download
@@ -77,7 +78,7 @@ class Downloader:
         self.product_id = ""
         self.installshield_version = ""
         self.installed_product_info = ""
-        self.ansys_em_dir = ""
+        self.product_root_path = ""
         self.product_version = ""
         self.setup_exe = ""
 
@@ -102,10 +103,12 @@ class Downloader:
 
         if "ElectronicsDesktop" in self.settings.version:
             self.product_version = self.settings.version[1:4]
-            self.ansys_em_dir = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
-                                             self.product_version[:2] + "." + self.product_version[2:], "Win64")
+            self.product_root_path = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
+                                                  self.product_version[:2] + "." + self.product_version[2:], "Win64")
 
-            self.installed_product_info = os.path.join(self.ansys_em_dir, "product.info")
+            self.installed_product_info = os.path.join(self.product_root_path, "product.info")
+        elif "Workbench" in self.settings.version:
+            self.product_root_path = os.path.join(self.settings.install_path, "ANSYS Inc", self.settings.version[:4])
 
     def run(self):
         """
@@ -114,6 +117,7 @@ class Downloader:
         """
         try:
             self.check_directories()
+            self.check_process_lock()
             self.get_build_link()
             if self.settings.force_install or not self.versions_identical():
                 self.download_file()
@@ -155,14 +159,31 @@ class Downloader:
                 except PermissionError:
                     raise SystemExit(f"{path} could not be created due to insufficient permissions")
 
+    def check_process_lock(self):
+        """
+        Verify if some executable is running from installation folder
+        Abort installation if any process is running from installation folder
+        :return: None
+        """
+        process_list = []
+        for process in psutil.process_iter():
+            try:
+                if self.product_root_path in process.cwd():
+                    process_list.append(process.name())
+            except psutil.AccessDenied:
+                pass
+
+        if process_list:
+            raise SystemExit("Following processes are running from installation directory: " +
+                             f"{','.join(process_list)}. Please stop all processes and try again")
+
     def versions_identical(self):
         """
         verify if version on the server is the same as installed one
         :return: (bool): False if versions are different or no version installed, True if identical
         """
         if "Workbench" in self.settings.version:
-            product_installed = os.path.join(self.settings.install_path, "ANSYS Inc",
-                                             self.settings.version[:4], "package.id")
+            product_installed = os.path.join(self.product_root_path, "package.id")
         else:
             product_installed = self.installed_product_info
 
@@ -433,7 +454,7 @@ class Downloader:
             self.subprocess_call(command)
 
             self.check_result_code(uninstall_log_file, False)
-            em_main_dir = os.path.dirname(self.ansys_em_dir)
+            em_main_dir = os.path.dirname(self.product_root_path)
             if os.path.isdir(em_main_dir):
                 shutil.rmtree(em_main_dir)
         else:
@@ -624,8 +645,8 @@ class Downloader:
         """
         hpc_folder = os.path.join(self.settings_folder, "HPC_Options")
 
-        update_registry_exe = os.path.join(self.ansys_em_dir, "UpdateRegistry.exe")
-        productlist_file = os.path.join(self.ansys_em_dir, "config", "ProductList.txt")
+        update_registry_exe = os.path.join(self.product_root_path, "UpdateRegistry.exe")
+        productlist_file = os.path.join(self.product_root_path, "config", "ProductList.txt")
 
         with open(productlist_file) as file:
             product_version = next(file).rstrip()  # get first line
