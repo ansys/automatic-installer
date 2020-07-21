@@ -371,11 +371,13 @@ class Downloader:
         """
         self.update_installation_history(status="In-Progress", details=f"Start unpacking")
         self.target_unpack_dir = self.zip_file.replace(".zip", "")
-        with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
-            try:
+        try:
+            with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
                 zip_ref.extractall(self.target_unpack_dir)
-            except OSError:
-                raise SystemExit("No disk space available in download folder!")
+        except OSError:
+            raise SystemExit("No disk space available in download folder!")
+        except zipfile.BadZipFile:
+            raise SystemExit("Zip file is broken. Please try again later or use another artifactory.")
 
         logging.info(f"File is unpacked to {self.target_unpack_dir}")
 
@@ -729,7 +731,8 @@ class Downloader:
                 "tags": {
                     "username": self.settings.username,
                     "version": version,
-                    "tool": tool
+                    "tool": tool,
+                    "artifactory": self.settings.artifactory
                 },
                 "time": time,
                 "fields": {
