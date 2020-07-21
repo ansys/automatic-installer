@@ -168,14 +168,15 @@ class Downloader:
         process_list = []
         for process in psutil.process_iter():
             try:
-                if self.product_root_path in process.cwd():
+                if self.product_root_path in process.exe():
                     process_list.append(process.name())
             except psutil.AccessDenied:
                 pass
 
         if process_list:
+            process_list.sort(key=len)  # to fit into UI
             raise SystemExit("Following processes are running from installation directory: " +
-                             f"{','.join(process_list)}. Please stop all processes and try again")
+                             f"{', '.join(process_list)}. Please stop all processes and try again")
 
     def versions_identical(self):
         """
