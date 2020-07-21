@@ -37,7 +37,7 @@ const usage_agreement = {
         title: 'Agreement',
         message: 'Ansys Beta Build Downloader Usage Agreement',
         detail: "This software collects information to support quality improvement, including user ID, version, " +
-                "downloaded software, time and status of the download."
+                "downloaded software, time and status of the installation."
     };
 
 global.agreement = usage_agreement;

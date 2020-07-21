@@ -24,6 +24,8 @@ __email__ = "maksim.beliaev@ansys.com"
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
 
+TIMEOUT = 90
+
 artifactory_dict = OrderedDict([
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
     ('Boulder', r'http://bouatsrv01:8080/artifactory'),
@@ -65,6 +67,7 @@ class Downloader:
         self.ansys_em_dir (str): root path of Ansys Electronics Desktop installation
         self.product_version (str): version to use in env variables eg 202
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
+        self.connection_attempt (int): number of attempts to download
         self.hash (str): hash code used for this run of the program
         self.pid: pid (process ID of the current Python run, required to allow kill in UI)
         """
@@ -77,6 +80,8 @@ class Downloader:
         self.ansys_em_dir = ""
         self.product_version = ""
         self.setup_exe = ""
+
+        self.connection_attempt = 1
 
         self.pid = str(os.getpid())
 
@@ -118,12 +123,20 @@ class Downloader:
                 except:
                     # do not really care about stats
                     pass
-                return
             else:
                 raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
+            return
         except SystemExit as e:
             logging.error(e)
             self.update_installation_history(status="Failed", details=str(e))
+        except requests.exceptions.ReadTimeout:
+            self.catch_timeout()
+        except requests.exceptions.ConnectionError:
+            self.catch_timeout()
+        except urllib3.exceptions.ProtocolError:
+            self.catch_timeout()
+        except urllib3.exceptions.ReadTimeoutError:
+            self.catch_timeout()
         except Exception:
             logging.error(traceback.format_exc())
             self.update_installation_history(status="Failed", details="Unexpected error, see logs")
@@ -189,15 +202,10 @@ class Downloader:
             raise SystemExit("Please provide username and artifactory password")
 
         server = artifactory_dict[self.settings.artifactory]
-        try:
-            with requests.get(server + "/api/repositories", auth=(self.settings.username, password),
-                              timeout=30) as url_request:
-                artifacts_list = json.loads(url_request.text)
-        except requests.exceptions.ReadTimeout:
-            raise SystemExit("Timeout on connection, please verify your username and password for {}".format(
-                self.settings.artifactory))
-        except requests.exceptions.ConnectionError:
-            raise SystemExit("Connection error, please verify that you are on VPN")
+
+        with requests.get(server + "/api/repositories", auth=(self.settings.username, password),
+                          timeout=TIMEOUT) as url_request:
+            artifacts_list = json.loads(url_request.text)
 
         # catch 401 for bad credentials or similar
         if url_request.status_code != 200:
@@ -229,7 +237,8 @@ class Downloader:
 
         if "ElectronicsDesktop" in self.settings.version:
             url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
-            with requests.get(url, auth=(self.settings.username, password), timeout=30) as url_request:
+
+            with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
                 folder_dict_list = json.loads(url_request.text)['files']
 
             builds_dates = []
@@ -264,7 +273,7 @@ class Downloader:
         while builds_list:
             latest = builds_list.pop()
             url = f"{server}/api/storage/{repo}/{latest}"
-            with requests.get(url, auth=(self.settings.username, password), timeout=30) as url_request:
+            with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
                 all_files = json.loads(url_request.text)["children"]
                 for child in all_files:
                     if "Electronics" in child["uri"] and "winx" in child["uri"]:
@@ -281,7 +290,7 @@ class Downloader:
         password = getattr(self.settings.password, self.settings.artifactory)
         url = self.build_url.replace("-cache", "") if recursion else self.build_url
 
-        with requests.get(url, auth=(self.settings.username, password), timeout=50, stream=True) as url_request:
+        with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT, stream=True) as url_request:
             if url_request.status_code == 404 and not recursion:
                 # in HQ cached build does not exist and will return 404. Recursively start download with new url
                 self.download_file(recursion=True)
@@ -317,19 +326,16 @@ class Downloader:
                     file_size = 11e+9
 
             percent = 0
-            try:
-                with open(self.zip_file, 'wb') as zip_file:
-                    while True:
-                        chunk = url_request.raw.read(int(file_size/100))
-                        if not chunk:
-                            break
-                        val = min(100, percent)
-                        logging.info(f"Download progress: {val}%")
-                        self.update_installation_history(status="In-Progress", details=f"Download progress: {val}%")
-                        percent += 1
-                        zip_file.write(chunk)
-            except urllib3.exceptions.ProtocolError:
-                raise SystemExit("VPN was turned off or connection was broken. Download failed")
+            with open(self.zip_file, 'wb') as zip_file:
+                while True:
+                    chunk = url_request.raw.read(int(file_size/100))
+                    if not chunk:
+                        break
+                    val = min(100, percent)
+                    logging.info(f"Download progress: {val}%")
+                    self.update_installation_history(status="In-Progress", details=f"Download progress: {val}%")
+                    percent += 1
+                    zip_file.write(chunk)
 
         if not self.zip_file:
             raise SystemExit("ZIP download failed")
@@ -344,7 +350,10 @@ class Downloader:
         self.update_installation_history(status="In-Progress", details=f"Start unpacking")
         self.target_unpack_dir = self.zip_file.replace(".zip", "")
         with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
-            zip_ref.extractall(self.target_unpack_dir)
+            try:
+                zip_ref.extractall(self.target_unpack_dir)
+            except OSError:
+                raise SystemExit("No disk space available in download folder!")
 
         logging.info(f"File is unpacked to {self.target_unpack_dir}")
 
@@ -424,6 +433,9 @@ class Downloader:
             self.subprocess_call(command)
 
             self.check_result_code(uninstall_log_file, False)
+            em_main_dir = os.path.dirname(self.ansys_em_dir)
+            if os.path.isdir(em_main_dir):
+                shutil.rmtree(em_main_dir)
         else:
             logging.info("Version is not installed, skip uninstallation")
 
@@ -565,7 +577,7 @@ class Downloader:
         """
         password = getattr(self.settings.password, self.settings.artifactory)
 
-        with requests.get(url, auth=(self.settings.username, password), timeout=50, stream=True) as url_request:
+        with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT, stream=True) as url_request:
             if url_request.status_code == 404 and not recursion:
                 # in HQ cached build does not exist and will return 404. Recursively start download with new url
                 return self.get_build_info_file_from_artifactory(url.replace("-cache", ""), recursion=True)
@@ -658,6 +670,23 @@ class Downloader:
         else:
             self.history = OrderedDict()
 
+    def catch_timeout(self):
+        """
+        On timeout error try to restart the download. If timeout more than 3 times, then abort
+        :return: None
+        """
+        total_attempts = 4
+        self.connection_attempt += 1
+        if self.connection_attempt <= total_attempts:
+            logging.warning(f"Timeout on connection, attempt: {self.connection_attempt}/{total_attempts}")
+            self.run()
+        else:
+            error = (f"Timeout on connection, please verify that you are on VPN, your connection is stable " +
+                     f"and username and password for {self.settings.artifactory} are correct. " +
+                     f"Number of attempts: {total_attempts}/{total_attempts}")
+            logging.error(error)
+            self.update_installation_history(status="Failed", details=str(error))
+
     def send_statistics(self, error=None):
         """
         Send usage statistics to the database.
@@ -671,7 +700,7 @@ class Downloader:
         client.switch_database(db_name)
 
         version, tool = self.settings.version.split("_")
-        time = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+        time = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         json_body = [
             {
                 "measurement": db_name,
