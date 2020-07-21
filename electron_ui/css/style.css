@@ -46,6 +46,11 @@
   padding-right: 0;
 }
 
+.td-sizer {
+  line-height: 18px;
+  padding-left: 5px !important;
+}
+
 /* flags page */
 .w-col-offset-1 {
   margin-left: 8.33333333%;

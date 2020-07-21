@@ -25,7 +25,8 @@ $(document).ready(function() {
             { "width": "150px", "targets": [1] },
             { "width": "100px", "targets": [2] },
             { "width": "320px", "targets": [3] },
-            { "className": "text-center", "targets": [0, 1, 2, 4] },
+            { "className": "text-center", "targets": [0, 1, 2] },
+            { "className": "td-sizer text-center", "targets": [4] },
             { "visible": false, "targets": [5, 6]} // columns with PID and hash
         ]
     } );
