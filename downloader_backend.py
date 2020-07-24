@@ -50,12 +50,24 @@ artifactory_dict = OrderedDict([
 
 class Downloader:
     """
-        Main class that operates the download process:
+        Main class that operates the download and installation process:
         1. enables logs
         2. parses arguments to get settings file
         3. loads JSON to named tuple
         4. gets URL for selected version based on server
         5. downloads zip archive with BETA build
+        6. unpacks it to download folder
+        7. depending on the choice proceeds to installation of EDT or WB
+        8. uninstalls previous build if one exists
+        9. updates registry of EDT
+        10. sends statistics to the server
+
+        Performs checks:
+        1. if the same build date is already installed, then do not proceed to download
+        2. if some process is running from installation folder it will abort download
+
+        Notes:
+        Software attempts to download 4 times, if connection is still bad will abort
     """
     def __init__(self):
         """
@@ -88,7 +100,7 @@ class Downloader:
 
         self.hash = generate_hash_str()
         self.settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
-        self.download_log = os.path.join(self.settings_folder, "edt_install.log")
+        self.check_and_make_directories(self.settings_folder)
 
         self.history = OrderedDict()
         self.history_file = os.path.join(self.settings_folder, "installation_history.json")
@@ -116,11 +128,12 @@ class Downloader:
         :return: None
         """
         try:
-            self.check_directories()
+            self.check_and_make_directories(self.settings.install_path, self.settings.download_path)
             self.check_process_lock()
             self.get_build_link()
             if self.settings.force_install or not self.versions_identical():
                 self.download_file()
+                self.check_process_lock()  # download can take time, better to recheck again
                 self.install()
                 try:
                     self.send_statistics()
@@ -147,12 +160,14 @@ class Downloader:
             self.send_statistics(error=traceback.format_exc())
         self.clean_temp()
 
-    def check_directories(self):
+    @staticmethod
+    def check_and_make_directories(*paths):
         """
         Verify that installation and download path exists.
         If not tries to create a requested path
+        :parameter: paths: list of paths that we need to check and create
         """
-        for path in [self.settings.install_path, self.settings.download_path]:
+        for path in paths:
             if not os.path.isdir(path):
                 try:
                     os.makedirs(path)
@@ -578,8 +593,7 @@ class Downloader:
         Uninstall Workbench if such exists in the target installation directory
         :return: uninstall_exe: name of the executable of uninstaller"""
 
-        uninstall_exe = os.path.join(self.settings.install_path, "ANSYS Inc",
-                                     self.settings.version[:4], "Uninstall.exe")
+        uninstall_exe = os.path.join(self.product_root_path, "Uninstall.exe")
         if os.path.isfile(uninstall_exe):
             command = [uninstall_exe, '-silent']
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
