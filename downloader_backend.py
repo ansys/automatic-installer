@@ -379,10 +379,11 @@ class Downloader:
 
         logging.info(f"File is downloaded to: {self.zip_file}")
 
-    def install(self):
+    def install(self, local_lang=False):
         """
         Unpack downloaded zip and proceed to installation. Different executions for Electronics Desktop and Workbench
-        :return:
+        :param local_lang: if not specified then use English as default installation language
+        :return: None
         """
         self.update_installation_history(status="In-Progress", details=f"Start unpacking")
         self.target_unpack_dir = self.zip_file.replace(".zip", "")
@@ -398,8 +399,10 @@ class Downloader:
 
         if "ElectronicsDesktop" in self.settings.version:
             self.install_edt()
+        elif "Workbench" in self.settings.version:
+            self.install_wb(local_lang)
         else:
-            self.install_wb()
+            self.install_license_manager()
 
         self.update_installation_history(status="In-Progress", details=f"Clean temp directory")
         self.clean_temp()
@@ -556,15 +559,33 @@ class Downloader:
         else:
             raise SystemExit("Unable to extract product ID")
 
-    def install_wb(self):
-        """Install Workbench to the target installation directory"""
+    def install_license_manager(self):
+        self.setup_exe = os.path.join(self.target_unpack_dir, "setup.exe")
+
+        if os.path.isfile(self.setup_exe):
+            install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
+            command = [self.setup_exe, '-silent', '-install_dir', install_path, "-lang", "en",
+                       "-licfilepath", self.settings.license_file]
+            self.update_installation_history(status="In-Progress", details=f"Start installation")
+            logging.info(f"Execute installation")
+            self.subprocess_call(command)
+        else:
+            raise SystemExit("No LicenseManager setup.exe file detected")
+
+    def install_wb(self, local_lang=False):
+        """
+        Install Workbench to the target installation directory
+        :param local_lang: if not specified then use English as default installation language
+        """
         self.setup_exe = os.path.join(self.target_unpack_dir, "setup.exe")
 
         if os.path.isfile(self.setup_exe):
             uninstall_exe = self.uninstall_wb()
 
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
-            command = [self.setup_exe, '-silent', '-install_dir', install_path, "-lang", "en"]
+            command = [self.setup_exe, '-silent', '-install_dir', install_path]
+            if not local_lang:
+                command += ["-lang", "en"]
             command += self.settings.wb_flags.split()
 
             # the "shared files" is created at the same level as the "ANSYS Inc" so if installing to unique folders,
@@ -586,7 +607,7 @@ class Downloader:
                 raise SystemExit("Workbench installation failed. " +
                                  f"If you see this error message by mistake please report to {__email__}")
         else:
-            logging.info("No Workbench setup.exe file detected")
+            raise SystemExit("No Workbench setup.exe file detected")
 
     def uninstall_wb(self):
         """
