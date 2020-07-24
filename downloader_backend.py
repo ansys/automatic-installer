@@ -599,6 +599,8 @@ class Downloader:
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             logging.info(f"Execute uninstallation")
             self.subprocess_call(command)
+            if os.path.isdir(self.product_root_path):
+                shutil.rmtree(self.product_root_path)
             logging.info("Previous build was uninstalled")
         else:
             logging.info("No Workbench Uninstall.exe file detected")
