@@ -21,6 +21,7 @@ import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
+__version__ = "1.3.1"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
@@ -69,8 +70,10 @@ class Downloader:
         Notes:
         Software attempts to download 4 times, if connection is still bad will abort
     """
-    def __init__(self):
+    def __init__(self, version):
         """
+        :parameter: version: version of the file, used if invoke file with argument -V to get version
+
         self.build_url (str): URL to the latest build that will be used to download .zip archive
         self.zip_file (str): path to the zip file on the PC
         self.target_unpack_dir (str): path where to unpack .zip
@@ -83,6 +86,10 @@ class Downloader:
         self.connection_attempt (int): number of attempts to download
         self.hash (str): hash code used for this run of the program
         self.pid: pid (process ID of the current Python run, required to allow kill in UI)
+        self.settings_folder (str): default folder where all configurations would be saved
+        self.history_file (str): file where installation progress would be written (this file is tracked by UI)
+        self.logging_file (str): file where detailed log for all runs is saved
+
         """
         self.build_url = ""
         self.zip_file = ""
@@ -106,10 +113,9 @@ class Downloader:
         self.history_file = os.path.join(self.settings_folder, "installation_history.json")
         self.get_installation_history()
 
-        logging_file = os.path.join(self.settings_folder, "downloader.log")
-        set_logger(logging_file)
+        self.logging_file = os.path.join(self.settings_folder, "downloader.log")
 
-        self.settings_path = self.parse_args()
+        self.settings_path = self.parse_args(version)
         with open(self.settings_path, "r") as file:
             self.settings = json.load(file, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
 
@@ -128,7 +134,18 @@ class Downloader:
         :return: None
         """
         try:
+            set_logger(self.logging_file)
+            logging.info(f"Settings path is set to {self.settings_path}")
+
+            self.update_installation_history(status="In-Progress", details="Verifying configuration")
             self.check_and_make_directories(self.settings.install_path, self.settings.download_path)
+            if "ElectronicsDesktop" in self.settings.version or "Workbench" in self.settings.version:
+                space_required = 15
+            else:
+                space_required = 1
+            self.check_free_space(self.settings.download_path, space_required/2)
+            self.check_free_space(self.settings.install_path, space_required)
+
             self.check_process_lock()
             self.get_build_link()
             if self.settings.force_install or not self.versions_identical():
@@ -173,6 +190,18 @@ class Downloader:
                     os.makedirs(path)
                 except PermissionError:
                     raise SystemExit(f"{path} could not be created due to insufficient permissions")
+
+    @staticmethod
+    def check_free_space(path, required):
+        """
+        Verifies that enough disk space is available. Raises error if not enough space
+        :param path: path where to check
+        :param required: value that should be available on drive to pass the check
+        :return:
+        """
+        free_space = shutil.disk_usage(path).free // (2 ** 30)
+        if free_space < required:
+            raise SystemExit(f"Disk space in {path} is less than {required}Gb. This would not be enough to proceed")
 
     def check_process_lock(self):
         """
@@ -476,8 +505,7 @@ class Downloader:
 
             self.check_result_code(uninstall_log_file, False)
             em_main_dir = os.path.dirname(self.product_root_path)
-            if os.path.isdir(em_main_dir):
-                shutil.rmtree(em_main_dir)
+            self.remove_path(em_main_dir)
         else:
             logging.info("Version is not installed, skip uninstallation")
 
@@ -560,17 +588,61 @@ class Downloader:
             raise SystemExit("Unable to extract product ID")
 
     def install_license_manager(self):
+        """
+        Install license manager and feed it with license file
+        """
         self.setup_exe = os.path.join(self.target_unpack_dir, "setup.exe")
 
         if os.path.isfile(self.setup_exe):
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
-            command = [self.setup_exe, '-silent', '-install_dir', install_path, "-lang", "en",
+            if not os.path.isfile(self.settings.license_file):
+                raise SystemExit(f"No license file was detected under {self.settings.license_file}")
+
+            command = [self.setup_exe, '-silent', '-LM', '-install_dir', install_path, "-lang", "en",
                        "-licfilepath", self.settings.license_file]
             self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation")
             self.subprocess_call(command)
+
+            package_build = self.parse_lm_installer_builddate()
+            installed_build = self.get_license_manager_build_date()
+            if all([package_build, installed_build]) and package_build == installed_build:
+                self.update_installation_history(status="Success", details=f"Normal completion")
+            else:
+                raise SystemExit("License Manager was not installed")
         else:
             raise SystemExit("No LicenseManager setup.exe file detected")
+
+    def parse_lm_installer_builddate(self):
+        """
+        Check build date of installation package of License Manager
+        """
+        build_file = os.path.join(self.target_unpack_dir, "builddate.txt")
+        if os.path.isfile(build_file):
+            with open(build_file) as file:
+                for line in file:
+                    if "license management center" in line.lower():
+                        lm_build_date = line.split()[-1]
+                        try:
+                            lm_build_date = int(lm_build_date)
+                            return lm_build_date
+                        except TypeError:
+                            raise SystemExit("Cannot extract build date of installation package")
+        else:
+            logging.warning("builddate.txt was not found in installation package")
+
+    def get_license_manager_build_date(self):
+        """
+        Check build date of installed License Manager
+        """
+        build_date_file = os.path.join(self.product_root_path, "lmcenter_blddate.txt")
+        with open(build_date_file) as file:
+            lm_build_date = next(file).split()[-1]
+            try:
+                lm_build_date = int(lm_build_date)
+                return lm_build_date
+            except TypeError:
+                raise SystemExit("Cannot extract build date of installed License Manager")
 
     def install_wb(self, local_lang=False):
         """
@@ -620,12 +692,41 @@ class Downloader:
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             logging.info(f"Execute uninstallation")
             self.subprocess_call(command)
-            if os.path.isdir(self.product_root_path):
-                shutil.rmtree(self.product_root_path)
-            logging.info("Previous build was uninstalled")
+            logging.info("Previous build was uninstalled using uninstaller")
         else:
             logging.info("No Workbench Uninstall.exe file detected")
+
+        self.remove_path(self.product_root_path)
+
         return uninstall_exe
+
+    def remove_path(self, path):
+        """
+        Function to safely remove path if rmtree fails
+        :param path:
+        :return:
+        """
+        def hard_remove():
+            try:
+                # try this dirty method to force remove all files in directory
+                all_files = os.path.join(path, "*.*")
+                command = ["DEL", "/F", "/Q", "/S", all_files, ">", "NUL"]
+                self.subprocess_call(command, shell=True)
+
+                command = ["rmdir", "/Q", "/S", path]
+                self.subprocess_call(command, shell=True)
+            except:
+                logging.warning("Failed to remove directory")
+
+        if os.path.isdir(path):
+            logging.info("Remove previous installation directory")
+            try:
+                shutil.rmtree(path)
+            except PermissionError:
+                logging.warning("Permission error. Try CMD")
+                hard_remove()
+            except FileNotFoundError:
+                hard_remove()
 
     def get_build_info_file_from_artifactory(self, url, recursion=False):
         """
@@ -784,9 +885,10 @@ class Downloader:
         client.write_points(json_body)
 
     @staticmethod
-    def subprocess_call(command):
+    def subprocess_call(command, shell=False):
         """
         Wrapper for subprocess call to handle non admin run or UAC issue
+        :param shell: call with shell mode or not
         :param command: (str) command to run
         :return:
         """
@@ -797,12 +899,12 @@ class Downloader:
                 command_str = command
             logging.info(command_str)
 
-            subprocess.call(command)
+            subprocess.call(command, shell=shell)
         except OSError:
             raise SystemExit("Please run as administrator and disable Windows UAC")
     
     @staticmethod
-    def parse_args():
+    def parse_args(version):
         """
         Function to parse arguments provided to the script. Search for -p key to get settings path
         :return: settings_path: path to the configuration file
@@ -810,6 +912,7 @@ class Downloader:
         parser = argparse.ArgumentParser()
         # Add long and short argument
         parser.add_argument("--path", "-p", help="set path to the settings file generated by UI")
+        parser.add_argument("--version", "-V", action='version', version=f'%(prog)s {version}')
         args = parser.parse_args()
 
         if args.path:
@@ -817,7 +920,6 @@ class Downloader:
             if not os.path.isfile(settings_path):
                 raise SystemExit("Settings file does not exist")
 
-            logging.info(f"Settings path is set to {settings_path}")
             return settings_path
         else:
             raise SystemExit("Please provide --path argument")
@@ -843,11 +945,11 @@ def set_logger(logging_file):
         os.makedirs(work_dir)
 
     # add logging to console and log file
-    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.DEBUG,
+    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.NOTSET,
                         datefmt='%d.%m.%Y %H:%M:%S')
     logging.getLogger().addHandler(logging.StreamHandler())
 
 
 if __name__ == "__main__":
-    app = Downloader()
+    app = Downloader(__version__)
     app.run()
