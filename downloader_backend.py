@@ -7,21 +7,30 @@ import random
 import re
 import shutil
 import subprocess
+import sys
+import time
 import traceback
 import zipfile
 from collections import namedtuple, OrderedDict
+from functools import wraps
 
 import psutil
 import requests
-import urllib3
 from artifactory_du import artifactory_du
 from influxdb import InfluxDBClient
+from plyer import notification
+from requests.exceptions import ReadTimeout, ConnectionError
+from urllib3.exceptions import ReadTimeoutError, ProtocolError
+
+from office365.sharepoint.client_context import ClientContext
+from office365.runtime.auth.authentication_context import AuthenticationContext
+from office365.runtime.http.request_options import RequestOptions
 
 import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "1.3.1"
+__version__ = "2.0.0"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
@@ -48,6 +57,54 @@ artifactory_dict = OrderedDict([
     ('Waterloo', r'http://watatsrv01.ansys.com:8080/artifactory')
 ])
 
+sharepoint_site_url = r"https://ansys.sharepoint.com/sites/BetaDownloader"
+
+
+def retry(exceptions, tries=4, delay=3, backoff=1, logger=None):
+    """
+    Retry calling the decorated function using an exponential backoff.
+
+        :param exceptions: the exception to check. may be a tuple of
+            exceptions to check
+        :type exceptions: Exception or tuple
+        :param tries: number of times to try (not retry) before giving up
+        :type tries: int
+        :param delay: initial delay between retries in seconds
+        :type delay: int
+        :param backoff: backoff multiplier e.g. value of 2 will double the delay
+            each retry
+        :type backoff: int
+        :param logger: logger to use. If None, print
+        :type logger: logging.Logger instance
+    """
+    def deco_retry(func):
+
+        @wraps(func)
+        def f_retry(self, *args, **kwargs):
+            mtries, mdelay = tries, delay
+            while mtries > 0:
+                try:
+                    return func(self, *args, **kwargs)
+                except exceptions as e:
+                    msg = f"{e}. Error occurred, attempt: {tries - mtries + 1}/{tries}"
+                    if logger:
+                        logger.warning(msg)
+                    else:
+                        print(msg)
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            else:
+                error = (f"Please verify that you are on VPN, your connection is stable " +
+                         f"and username and password for {self.settings.artifactory} are correct. " +
+                         f"Number of attempts: {tries}/{tries}")
+                if logger:
+                    raise SystemExit(error)
+                else:
+                    print(error)
+        return f_retry  # true decorator
+    return deco_retry
+
 
 class Downloader:
     """
@@ -70,7 +127,7 @@ class Downloader:
         Notes:
         Software attempts to download 4 times, if connection is still bad will abort
     """
-    def __init__(self, version):
+    def __init__(self, version, settings_folder="", settings_path=""):
         """
         :parameter: version: version of the file, used if invoke file with argument -V to get version
 
@@ -83,6 +140,7 @@ class Downloader:
         self.product_root_path (str): root path of Ansys Electronics Desktop/ Workbench installation
         self.product_version (str): version to use in env variables eg 202
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
+        self.remote_build_date (str): build date that receive from SharePoint
         self.connection_attempt (int): number of attempts to download
         self.hash (str): hash code used for this run of the program
         self.pid: pid (process ID of the current Python run, required to allow kill in UI)
@@ -100,13 +158,18 @@ class Downloader:
         self.product_root_path = ""
         self.product_version = ""
         self.setup_exe = ""
+        self.remote_build_date = ""
 
         self.connection_attempt = 1
 
         self.pid = str(os.getpid())
 
         self.hash = generate_hash_str()
-        self.settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
+        if not settings_folder:
+            self.settings_folder = os.path.join(os.environ["APPDATA"], "build_downloader")
+        else:
+            self.settings_folder = settings_folder
+
         self.check_and_make_directories(self.settings_folder)
 
         self.history = OrderedDict()
@@ -115,7 +178,7 @@ class Downloader:
 
         self.logging_file = os.path.join(self.settings_folder, "downloader.log")
 
-        self.settings_path = self.parse_args(version)
+        self.settings_path = settings_path if settings_path else self.parse_args(version)
         with open(self.settings_path, "r") as file:
             self.settings = json.load(file, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
 
@@ -127,6 +190,42 @@ class Downloader:
             self.installed_product_info = os.path.join(self.product_root_path, "product.info")
         elif "Workbench" in self.settings.version:
             self.product_root_path = os.path.join(self.settings.install_path, "ANSYS Inc", self.settings.version[:4])
+
+        if self.settings.artifactory == "SharePoint":
+            self.ctx = self.authorize_sharepoint()
+
+    def authorize_sharepoint(self):
+        """
+        Function that uses PnP to authorize user in SharePoint using Windows account and to get actual client_id and
+        client_secret
+        Returns: ctx: authorization context for Office365 library
+
+        """
+        self.update_installation_history(status="In-Progress", details="Authorizing in SharePoint")
+
+        command = 'powershell.exe '
+        command += 'Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin;'
+        command += '(Get-PnPListItem -List secret_list -Fields "Title","client_id","client_secret").FieldValues'
+        out_str = self.subprocess_call(command, shell=True)
+
+        secret_list = []
+        for line in out_str.splitlines():
+            if "Title" in line:
+                secret_dict = {"Title": line.split()[1]}
+            elif "client_id" in line:
+                secret_dict["client_id"] = line.split()[1]
+            elif "client_secret" in line:
+                secret_dict["client_secret"] = line.split()[1]
+                secret_list.append(secret_dict)
+
+        secret_list.sort(key=lambda elem: elem['Title'], reverse=True)
+
+        context_auth = AuthenticationContext(url=sharepoint_site_url)
+        context_auth.acquire_token_for_app(client_id=secret_list[0]['client_id'],
+                                           client_secret=secret_list[0]['client_secret'])
+
+        ctx = ClientContext(sharepoint_site_url, context_auth)
+        return ctx
 
     def run(self):
         """
@@ -147,6 +246,7 @@ class Downloader:
             self.check_free_space(self.settings.install_path, space_required)
 
             self.check_process_lock()
+
             self.get_build_link()
             if self.settings.force_install or not self.versions_identical():
                 self.download_file()
@@ -163,14 +263,6 @@ class Downloader:
         except SystemExit as e:
             logging.error(e)
             self.update_installation_history(status="Failed", details=str(e))
-        except requests.exceptions.ReadTimeout:
-            self.catch_timeout()
-        except requests.exceptions.ConnectionError:
-            self.catch_timeout()
-        except urllib3.exceptions.ProtocolError:
-            self.catch_timeout()
-        except urllib3.exceptions.ReadTimeoutError:
-            self.catch_timeout()
         except Exception:
             logging.error(traceback.format_exc())
             self.update_installation_history(status="Failed", details="Unexpected error, see logs")
@@ -240,28 +332,48 @@ class Downloader:
                         product_version = int(product_version.split("P")[0])
                     except ValueError:
                         return False
-                url = self.build_url.replace(r"/api/archive/download", "").replace(r"?archiveType=zip",
-                                                                                   "") + "/package.id"
             else:
                 product_version = self.get_edt_build_date(product_installed)
-                url = self.build_url.split("/Electronics")[0] + "/product_windows.info"
 
             logging.info(f"Installed version of {self.settings.version} is {product_version}")
-            logging.info(f"Request info about new package: {url}")
-            new_product_version = self.get_build_info_file_from_artifactory(url)
-            logging.info(f"Version on artifactory is {new_product_version}")
+            new_product_version = self.get_new_build_date()
 
             if all([new_product_version, product_version]) and new_product_version <= product_version:
                 return True
         return False
 
+    def get_new_build_date(self):
+        if self.settings.artifactory != "SharePoint":
+            if "Workbench" in self.settings.version:
+                url = self.build_url.replace(r"/api/archive/download", "").replace(r"?archiveType=zip", "")
+                url += "/package.id"
+            else:
+                url = self.build_url.split("/Electronics")[0] + "/product_windows.info"
+
+            logging.info(f"Request info about new package: {url}")
+            new_product_version = self.get_build_info_file_from_artifactory(url)
+        else:
+            try:
+                new_product_version = int(self.remote_build_date)
+            except ValueError:
+                return False
+
+        logging.info(f"Version on artifactory/SP is {new_product_version}")
+        return new_product_version
+
+    @retry((ReadTimeoutError, ReadTimeout, ConnectionError, ProtocolError), 4, logger=logging)
     def get_build_link(self):
         """
         Function that sends HTTP request to JFrog and get the list of folders with builds for Electronics Desktop and
         checks user password
+        If use SharePoint then readdress to SP list
         :modify: (str) self.build_url: URL link to the latest build that will be used to download .zip archive
         """
         self.update_installation_history(status="In-Progress", details=f"Search latest build URL")
+        if self.settings.artifactory == "SharePoint":
+            self.get_sharepoint_build_info()
+            return
+
         password = getattr(self.settings.password, self.settings.artifactory)
 
         if not self.settings.username or not password:
@@ -327,6 +439,38 @@ class Downloader:
         if not self.build_url:
             raise SystemExit("Cannot receive URL")
 
+    def get_sharepoint_build_info(self):
+        """
+        Gets link to the latest build from SharePoint and builddate itself
+        Returns: None
+
+        """
+        product_list = self.ctx.web.lists.get_by_title("product_list")
+        items = product_list.items
+        self.ctx.load(items).execute_query()
+
+        build_list = []
+        for item in items:
+            title = item.properties["Title"]
+            if title != self.settings.version:
+                continue
+
+            build_dict = {
+                "Title": title,
+                "build_date": item.properties["build_date"],
+                "relative_url": item.properties["relative_url"]
+            }
+            build_list.append(build_dict)
+
+        build_list.sort(key=lambda elem: elem['build_date'], reverse=True)
+
+        build_dict = build_list[0] if build_list else {}
+        if not build_dict:
+            raise SystemExit(f"No version of {self.settings.version} is available on SharePoint")
+
+        self.build_url = build_dict["relative_url"]
+        self.remote_build_date = build_dict["build_date"]
+
     def verify_remote_build_existence(self, server, repo, password, builds_list):
         """
         Check that folder with Electronics Desktop is not just empty (the case if artifact is not yet uploaded)
@@ -353,6 +497,12 @@ class Downloader:
         run the same function but with new_url, however to prevent infinity loop we need this arg
         :modify: (str) zip_file: link to the zip file
         """
+
+        self.zip_file = os.path.join(self.settings.download_path, f"temp_build_{self.settings.version}.zip")
+        if self.settings.artifactory == "SharePoint":
+            self.download_from_sharepoint()
+            return
+
         password = getattr(self.settings.password, self.settings.artifactory)
         url = self.build_url.replace("-cache", "") if recursion else self.build_url
 
@@ -362,7 +512,6 @@ class Downloader:
                 self.download_file(recursion=True)
                 return
 
-            self.zip_file = os.path.join(self.settings.download_path, f"temp_build_{self.settings.version}.zip")
             logging.info(f"Start download file from {url} to {self.zip_file}")
 
             if url_request.status_code != 200:
@@ -407,6 +556,36 @@ class Downloader:
             raise SystemExit("ZIP download failed")
 
         logging.info(f"File is downloaded to: {self.zip_file}")
+
+    def download_from_sharepoint(self):
+        """
+        Will download file from Sharepoint using PnP
+        Returns:
+        """
+
+        def print_download_progress(offset, total_size):
+            msg = "Downloaded '{}' MB from '{}'...[{}%]".format(round(offset/1024/1024, 2),
+                                                                round(total_size/1024/1024, 0),
+                                                                round(offset/total_size * 100, 2))
+            logging.info(msg)
+            self.update_installation_history(status="In-Progress", details=msg)
+
+        self.update_installation_history(status="In-Progress", details=f"Downloading file from SharePoint")
+        request = RequestOptions(
+            r"{0}web/getFileByServerRelativeUrl('{1}')/\$value".format(self.ctx.service_root_url(),
+                                                                       f"/sites/BetaDownloader/{self.build_url}"))
+        request.stream = True
+        response = self.ctx.execute_request_direct(request)
+        file_size = int(response.headers['Content-Length'])
+        response.raise_for_status()
+        bytes_read = 0
+        chunk_size = 100 * 1024 * 1024
+        with open(self.zip_file, "wb") as zip_file:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                bytes_read += len(chunk)
+                if callable(print_download_progress):
+                    print_download_progress(bytes_read, file_size)
+                zip_file.write(chunk)
 
     def install(self, local_lang=False):
         """
@@ -481,6 +660,7 @@ class Downloader:
 
         self.check_result_code(install_log_file)
         self.update_edt_registry()
+        self.remove_aedt_shortcuts()
 
     def uninstall_edt(self):
         """
@@ -730,8 +910,7 @@ class Downloader:
 
     def get_build_info_file_from_artifactory(self, url, recursion=False):
         """
-        Downloads file in chunks and saves to the temp.zip file
-        Uses url to the zip archive or special JFrog API to download Workbench folder
+        Downloads product info file from artifactory
         :param (bool) recursion: Some artifactories do not have cached folders with Workbench  and we need recursively
         run the same function but with new_url, however to prevent infinity loop we need this arg
         :param (str) url: url to the package_id file
@@ -779,6 +958,26 @@ class Downloader:
         except PermissionError:
             logging.error("Temp files could not be removed due to permission error")
 
+    def remove_aedt_shortcuts(self):
+        """
+        Function to remove newly created AEDT shortcuts and replace them with new one
+        """
+        if not hasattr(self.settings, "replace_shortcut"):
+            # old Downloader version settings file
+            return
+
+        if self.settings.replace_shortcut:
+            desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+            for shortcut in ["ANSYS Savant", "ANSYS EMIT", "ANSYS SIwave", "ANSYS Twin Builder"]:
+                self.remove_path(os.path.join(desktop, shortcut))
+
+            new_name = os.path.join(desktop, f"AEDT {self.product_version}")
+            aedt_shortcut = os.path.join(desktop, "Ansys Electronics Desktop")
+            if not os.path.isfile(new_name):
+                os.rename(aedt_shortcut, new_name)
+            else:
+                self.remove_path(aedt_shortcut)
+
     def update_edt_registry(self):
         """
         Update Electronics Desktop registry based on the files in the HPC_Options folder that are added from UI
@@ -810,12 +1009,36 @@ class Downloader:
         """
         self.get_installation_history()  # in case if file was deleted during run of installation
         time_now = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
-        shorten_path = self.settings_path.replace(os.environ["APPDATA"], "%APPDATA%")
+        try:
+            shorten_path = self.settings_path.replace(os.environ["APPDATA"], "%APPDATA%")
+        except KeyError:
+            shorten_path = self.settings_path
+
         self.history[self.hash] = [
             status, self.settings.version, time_now, shorten_path, details, self.pid
         ]
         with open(self.history_file, "w") as file:
             json.dump(self.history, file, indent=4)
+
+        if status == "Failed" or status == "Success":
+            self.toaster_notification(status, details)
+
+    @staticmethod
+    def toaster_notification(status, details):
+        """
+        Send toaster notification
+        :param status: Failed | Success | In-Progress
+        :param details: Message for details field
+        :return:
+        """
+        icon = "fail.ico" if status == "Failed" else "success.ico"
+        root_path = os.path.dirname(os.path.realpath(__file__))
+        notification.notify(
+            title=status,
+            message=details,
+            app_icon=os.path.join(root_path, "notifications", icon),
+            timeout=15,
+        )
 
     def get_installation_history(self):
         """
@@ -832,23 +1055,6 @@ class Downloader:
         else:
             self.history = OrderedDict()
 
-    def catch_timeout(self):
-        """
-        On timeout error try to restart the download. If timeout more than 3 times, then abort
-        :return: None
-        """
-        total_attempts = 4
-        self.connection_attempt += 1
-        if self.connection_attempt <= total_attempts:
-            logging.warning(f"Timeout on connection, attempt: {self.connection_attempt}/{total_attempts}")
-            self.run()
-        else:
-            error = (f"Timeout on connection, please verify that you are on VPN, your connection is stable " +
-                     f"and username and password for {self.settings.artifactory} are correct. " +
-                     f"Number of attempts: {total_attempts}/{total_attempts}")
-            logging.error(error)
-            self.update_installation_history(status="Failed", details=str(error))
-
     def send_statistics(self, error=None):
         """
         Send usage statistics to the database.
@@ -857,12 +1063,16 @@ class Downloader:
         :parameter: error: error message of what went wrong
         :return: None
         """
+
+        version, tool = self.settings.version.split("_")
+        time_now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+        if self.settings.artifactory == "SharePoint":
+            self.send_statistics_to_sharepoint(version, tool, time_now, error)
+            return
+
         client = InfluxDBClient(host=STATISTICS_SERVER, port=STATISTICS_PORT)
         db_name = "downloads" if not error else "crashes"
         client.switch_database(db_name)
-
-        version, tool = self.settings.version.split("_")
-        time = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         json_body = [
             {
                 "measurement": db_name,
@@ -872,7 +1082,7 @@ class Downloader:
                     "tool": tool,
                     "artifactory": self.settings.artifactory
                 },
-                "time": time,
+                "time": time_now,
                 "fields": {
                     "count": 1
                 }
@@ -884,13 +1094,37 @@ class Downloader:
 
         client.write_points(json_body)
 
+    def send_statistics_to_sharepoint(self, version, tool, time_now, error):
+        """
+        Send statistics to SharePoint list
+        Args:
+            error:
+        Returns:
+        """
+        list_name = "statistics" if not error else "crashes"
+        target_list = self.ctx.web.lists.get_by_title(list_name)
+
+        item = {
+            "Title": self.settings.username,
+            "Date": str(time_now),
+            "tool": tool,
+            "version": version,
+            "in_influx": False
+        }
+        if error:
+            error = error.replace('\n', '#N').replace('\r', '')
+            item["error"] = error
+
+        target_list.add_item(item)
+        self.ctx.execute_query()
+
     @staticmethod
     def subprocess_call(command, shell=False):
         """
         Wrapper for subprocess call to handle non admin run or UAC issue
         :param shell: call with shell mode or not
         :param command: (str) command to run
-        :return:
+        :return: output (str), output of the command run
         """
         try:
             if isinstance(command, list):
@@ -899,7 +1133,8 @@ class Downloader:
                 command_str = command
             logging.info(command_str)
 
-            subprocess.call(command, shell=shell)
+            output = subprocess.check_output(command, shell=shell).decode(sys.stdout.encoding)
+            return output
         except OSError:
             raise SystemExit("Please run as administrator and disable Windows UAC")
     
@@ -945,7 +1180,8 @@ def set_logger(logging_file):
         os.makedirs(work_dir)
 
     # add logging to console and log file
-    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.NOTSET,
+    # If you set the log level to INFO, it will include INFO, WARNING, ERROR, and CRITICAL messages
+    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.INFO,
                         datefmt='%d.%m.%Y %H:%M:%S')
     logging.getLogger().addHandler(logging.StreamHandler())
 

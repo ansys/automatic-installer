@@ -87,9 +87,10 @@ app.on('ready', () => {
     MainWindow = new BrowserWindow({
               show: false,    // disable show from the beginning to avoid white screen, see ready-to-show
                     webPreferences: {
-                            nodeIntegration: true
+                            nodeIntegration: true,
+                            enableRemoteModule: true  // starting from V9
                     },
-        height: 600,
+        height: 650,
         width: app_width,
         resizable: false
 	  });

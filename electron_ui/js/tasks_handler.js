@@ -3,6 +3,7 @@ const { remote } = require('electron');
 const { app, dialog } = remote;
 const { exec, execSync} = require('child_process');
 var parser = require('fast-xml-parser');
+const { build } = require('electron-builder');
 
 if (app.isPackaged) {
       backend_exe = path.join(app.getAppPath() + ".unpacked", "python_build", "downloader_backend.exe"); // production
@@ -81,5 +82,40 @@ function schedule_task(settings_file) {
 
 function install_once(settings_file) {
       command = `${backend_exe} -p "${settings_file}"`
-      exec(command);  // async
+      setTimeout(() => {
+            // some issue with SharePoint. Better to put some timeout
+            exec(command);  // async
+        }, 6000);
+}
+
+function get_sharepoint_builds() {
+      let installed = execSync("powershell.exe Get-Module SharePointPnPPowerShellOnline -ListAvailable").toString();
+
+      if (installed == 0) {
+            // install module
+            execSync("powershell.exe Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force");
+            execSync("powershell.exe Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted");
+            execSync("powershell.exe Install-Module SharePointPnPPowerShellOnline");
+      }
+      // execSync("powershell.exe Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin");
+      let command = 'powershell.exe Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin; ';
+      command += 'Get-PnPListItem -List product_list -Fields Title; ';
+
+      let builds_query = execSync(command).toString();
+      builds_query = builds_query.split("\n").slice(3);
+      let builds = [];
+      for(var i = 0; i < builds_query.length; i++){
+            var new_build = builds_query[i].split(" ");
+            new_build = new_build.filter((item) => item != "" && item != "\r");
+            if (new_build.length == 2) {
+                  new_build = new_build[1];
+            } else {
+                  continue;
+            }
+
+            if (!builds.includes(new_build)){
+                  builds.push(new_build);
+            }
+      }
+      fill_versions(builds);
 }
