@@ -22,11 +22,12 @@ artifactory_dict = {
     'Sheffield': 'http://shfvmartifact.win.ansys.com:8080/artifactory',
     'SanJose': 'http://sjoartsrv01.ansys.com:8080/artifactory',
     'Waterloo': 'http://watatsrv01.ansys.com:8080/artifactory',
-    'SharePoint': 'https://ansys.sharepoint.com/sites/BetaDownloader/Lists/product_list'
+    'SharePoint': 'https://ansys.sharepoint.com/sites/BetaDownloader'
 };
 
 app_folder = os_path.join(app.getPath("appData"), "build_downloader")
 settings_path = os_path.join(app_folder, "default_settings.json");
+whatisnew_path = os_path.join(app_folder, "whatisnew.json");
 all_days = ["mo", "tu", "we", "th", "fr", "sa", "su"]
 
 window.onload = function() {
@@ -38,6 +39,22 @@ window.onload = function() {
      * Gets active schtasks.
      * Runs function to set tooltips text
      */
+
+    if (!fs.existsSync(app_folder)) fs.mkdirSync(app_folder);
+
+    if (!fs.existsSync(whatisnew_path)) {
+        ipcRenderer.send('whatsnew_show');
+    } else {
+        let new_versions_data = fs.readFileSync(whatisnew_path);
+        let new_versions = JSON.parse(new_versions_data);
+        for (var key in whatsnew) {
+            // check if all versions were shown to user
+            if (!new_versions.shown.includes(key)) {
+                ipcRenderer.send('whatsnew_show');
+                break;
+            }
+        }
+    }
 
     if (!fs.existsSync(settings_path)) {
         settings = {
@@ -56,7 +73,6 @@ window.onload = function() {
             "force_install": false
         }
 
-        if (!fs.existsSync(app_folder)) fs.mkdirSync(app_folder);
         let data = JSON.stringify(settings, null, 4);
         fs.writeFileSync(settings_path, data);
         dialog.showMessageBox(null, remote.getGlobal('agreement'));
@@ -167,12 +183,12 @@ var request_builds = function (){
     $("#version").empty();
     $("#version").append($('<option>', {value:1, text:"Loading data..."}))
 
-    if ($("#artifactory").val() != "SharePoint"){
-        if (!settings.username) {
-            error_tooltip.call($('#username'), "Provide your Ansys User ID");
-            return;
-        }
+    if (!settings.username) {
+        error_tooltip.call($('#username'), "Provide your Ansys User ID");
+        return;
+    }
 
+    if ($("#artifactory").val() != "SharePoint"){
         if (!settings.password[settings.artifactory]) {
             error_tooltip.call($('#password'), "Provide Artifactory unique password");
             return;
@@ -279,8 +295,6 @@ const change_password = function (){
         password = (settings.password.hasOwnProperty(settings.artifactory)) ? settings.password[settings.artifactory] : "";
         $("#password").val(password);
     }
-    $("#username").css('visibility', visible);
-    $('label[for="username"]').css('visibility', visible);
 
     $("#password").css('visibility', visible);
     $('label[for="password"]').css('visibility', visible);
@@ -296,7 +310,7 @@ $('.clockpicker').clockpicker({
 
 $("#artifactory, #username, #password, #time, #version, .days-checkbox").bind("change", save_settings);
 $("#artifactory").bind("change", change_password);
-$("#artifactory").bind("dblclick", open_artifactory_site);
+$("#artifactory").contextmenu(open_artifactory_site);
 $("#artifactory, #username, #password").bind("change", request_builds);
 
 $("#schedule-button").click(function (){
@@ -349,7 +363,10 @@ $("#install-once-button").click(function (){
         )
 
         if (answer == 0) {
-            location.href = 'file://' + __dirname + '/history.html', "_self";
+            setTimeout(() => {
+                // some issue with SharePoint. Better to put some timeout
+                location.href = 'file://' + __dirname + '/history.html', "_self";
+            }, 1700);
         }    
     } else {
         alert("Version does not exist on artifactory");

@@ -130,6 +130,10 @@ class InstallUninstallTest(unittest.TestCase):
         list_str = self.downloader.get_sharepoint_build_info()
         print(self.downloader.build_url)
 
+    def test_13_remove_shortcuts(self):
+
+        self.downloader.remove_aedt_shortcuts()
+
 
 if __name__ == '__main__':
     # unittest.main()

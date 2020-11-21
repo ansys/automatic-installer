@@ -206,7 +206,7 @@ class Downloader:
         command = 'powershell.exe '
         command += 'Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin;'
         command += '(Get-PnPListItem -List secret_list -Fields "Title","client_id","client_secret").FieldValues'
-        out_str = self.subprocess_call(command, shell=True)
+        out_str = self.subprocess_call(command, shell=True, popen=True)
 
         secret_list = []
         for line in out_str.splitlines():
@@ -312,7 +312,7 @@ class Downloader:
         if process_list:
             process_list.sort(key=len)  # to fit into UI
             raise SystemExit("Following processes are running from installation directory: " +
-                             f"{', '.join(process_list)}. Please stop all processes and try again")
+                             f"{', '.join(set(process_list))}. Please stop all processes and try again")
 
     def versions_identical(self):
         """
@@ -343,6 +343,10 @@ class Downloader:
         return False
 
     def get_new_build_date(self):
+        """
+        Create URL for new build extraction or extract version from self.remote_build_date for SharePoint download
+        Returns: new_product_version (str) version of the product on the server
+        """
         if self.settings.artifactory != "SharePoint":
             if "Workbench" in self.settings.version:
                 url = self.build_url.replace(r"/api/archive/download", "").replace(r"?archiveType=zip", "")
@@ -540,36 +544,13 @@ class Downloader:
                 except ValueError:
                     file_size = 11e+9
 
-            percent = 0
-            with open(self.zip_file, 'wb') as zip_file:
-                while True:
-                    chunk = url_request.raw.read(int(file_size/100))
-                    if not chunk:
-                        break
-                    val = min(100, percent)
-                    logging.info(f"Download progress: {val}%")
-                    self.update_installation_history(status="In-Progress", details=f"Download progress: {val}%")
-                    percent += 1
-                    zip_file.write(chunk)
-
-        if not self.zip_file:
-            raise SystemExit("ZIP download failed")
-
-        logging.info(f"File is downloaded to: {self.zip_file}")
+            self.download_response(url_request, file_size)
 
     def download_from_sharepoint(self):
         """
         Will download file from Sharepoint using PnP
         Returns:
         """
-
-        def print_download_progress(offset, total_size):
-            msg = "Downloaded '{}' MB from '{}'...[{}%]".format(round(offset/1024/1024, 2),
-                                                                round(total_size/1024/1024, 0),
-                                                                round(offset/total_size * 100, 2))
-            logging.info(msg)
-            self.update_installation_history(status="In-Progress", details=msg)
-
         self.update_installation_history(status="In-Progress", details=f"Downloading file from SharePoint")
         request = RequestOptions(
             r"{0}web/getFileByServerRelativeUrl('{1}')/\$value".format(self.ctx.service_root_url(),
@@ -578,6 +559,24 @@ class Downloader:
         response = self.ctx.execute_request_direct(request)
         file_size = int(response.headers['Content-Length'])
         response.raise_for_status()
+        self.download_response(response, file_size)
+
+    def download_response(self, response, file_size):
+        """
+        General function to download from server URL response
+        Args:
+            response: response object
+            file_size (int): file size
+        Returns:
+
+        """
+        def print_download_progress(offset, total_size):
+            msg = "Downloaded {}/{}MB...[{}%]".format(int(offset/1024/1024),
+                                                      int(total_size/1024/1024),
+                                                      round(offset/total_size * 100, 2))
+            logging.info(msg)
+            self.update_installation_history(status="In-Progress", details=msg)
+
         bytes_read = 0
         chunk_size = 100 * 1024 * 1024
         with open(self.zip_file, "wb") as zip_file:
@@ -586,6 +585,11 @@ class Downloader:
                 if callable(print_download_progress):
                     print_download_progress(bytes_read, file_size)
                 zip_file.write(chunk)
+
+        if not self.zip_file:
+            raise SystemExit("ZIP download failed")
+
+        logging.info(f"File is downloaded to: {self.zip_file}")
 
     def install(self, local_lang=False):
         """
@@ -907,6 +911,8 @@ class Downloader:
                 hard_remove()
             except FileNotFoundError:
                 hard_remove()
+        elif os.path.isfile(path):
+            os.remove(path)
 
     def get_build_info_file_from_artifactory(self, url, recursion=False):
         """
@@ -967,14 +973,18 @@ class Downloader:
             return
 
         if self.settings.replace_shortcut:
-            desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+            desktop = r"C:\Users\Public\Desktop"
             for shortcut in ["ANSYS Savant", "ANSYS EMIT", "ANSYS SIwave", "ANSYS Twin Builder"]:
-                self.remove_path(os.path.join(desktop, shortcut))
+                self.remove_path(os.path.join(desktop, shortcut + ".lnk"))
 
-            new_name = os.path.join(desktop, f"AEDT {self.product_version}")
-            aedt_shortcut = os.path.join(desktop, "Ansys Electronics Desktop")
+            new_name = os.path.join(desktop,
+                                    f"20{self.product_version[:2]}R{self.product_version[2:]} Electronics Desktop.lnk")
+            aedt_shortcut = os.path.join(desktop, "ANSYS Electronics Desktop.lnk")
             if not os.path.isfile(new_name):
-                os.rename(aedt_shortcut, new_name)
+                try:
+                    os.rename(aedt_shortcut, new_name)
+                except FileNotFoundError:
+                    pass
             else:
                 self.remove_path(aedt_shortcut)
 
@@ -1032,12 +1042,19 @@ class Downloader:
         :return:
         """
         icon = "fail.ico" if status == "Failed" else "success.ico"
-        root_path = os.path.dirname(os.path.realpath(__file__))
+
+        root_path = os.path.dirname(sys.argv[0])
+        icon_path = os.path.join(root_path, "notifications", icon)
+
+        if not os.path.isfile(icon_path):
+            root_path = os.path.dirname(os.path.realpath(__file__))
+            icon_path = os.path.join(root_path, "notifications", icon)  # dev path
+
         notification.notify(
             title=status,
             message=details,
-            app_icon=os.path.join(root_path, "notifications", icon),
-            timeout=15,
+            app_icon=icon_path,
+            timeout=15
         )
 
     def get_installation_history(self):
@@ -1119,13 +1136,21 @@ class Downloader:
         self.ctx.execute_query()
 
     @staticmethod
-    def subprocess_call(command, shell=False):
+    def subprocess_call(command, shell=False, popen=False):
         """
         Wrapper for subprocess call to handle non admin run or UAC issue
-        :param shell: call with shell mode or not
-        :param command: (str) command to run
-        :return: output (str), output of the command run
+
+        Args:
+            command: (str/list) command to run
+            shell: call with shell mode or not
+            popen: in case if you need output we need to use Popen. Pyinstaller compiles in -noconsole, need
+              to explicitly define stdout, in, err
+
+        Returns:
+            output (str), output of the command run
         """
+
+        output = ""
         try:
             if isinstance(command, list):
                 command_str = subprocess.list2cmdline(command)
@@ -1133,7 +1158,15 @@ class Downloader:
                 command_str = command
             logging.info(command_str)
 
-            output = subprocess.check_output(command, shell=shell).decode(sys.stdout.encoding)
+            if popen:
+                p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+
+                output = p.stdout.read().decode('utf-8')
+                p.communicate()
+            else:
+                subprocess.call(command, shell=shell)
+
             return output
         except OSError:
             raise SystemExit("Please run as administrator and disable Windows UAC")
@@ -1181,7 +1214,7 @@ def set_logger(logging_file):
 
     # add logging to console and log file
     # If you set the log level to INFO, it will include INFO, WARNING, ERROR, and CRITICAL messages
-    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.INFO,
+    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.NOTSET,
                         datefmt='%d.%m.%Y %H:%M:%S')
     logging.getLogger().addHandler(logging.StreamHandler())
 

@@ -12,7 +12,8 @@ function set_default_tooltips_main(){
         "Encrypted password will change anytime your SSO password changes.", true);
 
     set_tooltip("username",  "Ansys UserID");
-    set_tooltip("artifactory",  "Select a repository and double click to open in Browser");
+    set_tooltip("artifactory",  "Select a repository, once dropdown is collapsed right mouse click " +
+        "on menu to open in your default Browser");
 
     set_tooltip("version",  "Latest available certified build would be downloaded");
 
@@ -34,10 +35,11 @@ function set_default_tooltips_settings(){
         true);
 
     set_tooltip("replace_shortcut_label",
-        "Removes Savant, Emit, TB, SI shortucts and replaces them with single AEDT <version> shortcut", 
+        "Removes Savant, Emit, TB, SI shortcuts and replaces them with single AEDT <version> shortcut",
         true);
 
-    set_tooltip("wb-flags-table-div", "Select product flags. Note: Will install all if none selected");
+    set_tooltip("wb-flags-table-div", "Select product flags and click Save Flags button.\n" +
+        "Note: Will install all if none selected");
 
     set_tooltip("install_path",
         "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for Electronics Desktop\n" +

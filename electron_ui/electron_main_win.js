@@ -1,6 +1,8 @@
 const {app, BrowserWindow, Menu, dialog} = require('electron');
 const { autoUpdater } = require('electron-updater');
 const ipc = require('electron').ipcMain;
+const os_path = require('path');
+const fs = require('fs');
 
 const updateServer = 'http://ottbld02:1337';
 let arch = 'win64';
@@ -26,8 +28,10 @@ const about_options = {
         defaultId: 2,
         title: 'About',
         message: 'Ansys Beta Build Downloader v' + version,
-        detail: "Created by: Maksim Beliaev" +
-                "\nEmail: maksim.beliaev@ansys.com"
+        detail: 
+            "Contact: betadownloader@ansys.com" +
+            "\nCreated by: Maksim Beliaev" +
+            "\nEmail: maksim.beliaev@ansys.com"             
     };
 
 const usage_agreement = {
@@ -61,6 +65,12 @@ let submenu_list = [
         label:'Agreement',
         click(){
             dialog.showMessageBox(null, usage_agreement);
+        }
+    },
+    {
+        label:"What's New",
+        click(){
+            child.show();
         }
     },
     {
@@ -99,6 +109,21 @@ app.on('ready', () => {
         MainWindow.show()
     })
 
+    // create new child to show What's New section in separate window
+    child = new BrowserWindow({ 
+        parent: MainWindow, 
+        show: false, 
+        modal: true,
+        height: 550,
+        width: 650,
+        resizable: false,
+        frame: false,
+        webPreferences: {
+            nodeIntegration: true
+        }
+    });
+    child.loadURL('file://' + __dirname + '/whatsnew.html');
+
     // load main page only after we show starting logo
 	  setTimeout(function(){
         MainWindow.loadURL('file://' + __dirname + '/main.html');
@@ -128,6 +153,21 @@ app.on('ready', () => {
           autoUpdater.downloadUpdate()
     });
 
+    // event to open What's New window on signal from IPC
+    ipc.on('whatsnew_show', () => {
+        child.show()
+    });
+
+    ipc.on('whatsnew_hide', (event, not_show_again, settings) => {
+        if (not_show_again){
+            app_folder = os_path.join(app.getPath("appData"), "build_downloader")
+            whatisnew_path = os_path.join(app_folder, "whatisnew.json");
+    
+            let data = JSON.stringify(settings, null, 4);
+            fs.writeFileSync(whatisnew_path, data);
+        }
+        child.hide()
+    });
 
     const mainMenuTemplate =    [
         {

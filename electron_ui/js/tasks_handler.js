@@ -3,7 +3,6 @@ const { remote } = require('electron');
 const { app, dialog } = remote;
 const { exec, execSync} = require('child_process');
 var parser = require('fast-xml-parser');
-const { build } = require('electron-builder');
 
 if (app.isPackaged) {
       backend_exe = path.join(app.getAppPath() + ".unpacked", "python_build", "downloader_backend.exe"); // production
@@ -46,7 +45,8 @@ function get_active_tasks() {
       for(var i = 0; i < all_tasks.length; i++){
             if (all_tasks[i].includes("AnsysDownloader")){
                   task_data_dict = get_task_details(all_tasks[i]);
-                  task_data_dict["schedule_time"] = (task_data_dict["days"]).join(", ") + " at " + task_data_dict["time"];
+                  task_data_dict["schedule_time"] = (task_data_dict["days"]).join(", ") + " at " + 
+                        task_data_dict["time"];
                   ansys_tasks.push(task_data_dict);
             }
       }
@@ -82,10 +82,8 @@ function schedule_task(settings_file) {
 
 function install_once(settings_file) {
       command = `${backend_exe} -p "${settings_file}"`
-      setTimeout(() => {
-            // some issue with SharePoint. Better to put some timeout
-            exec(command);  // async
-        }, 6000);
+      // some issue with SharePoint. Better to put some timeout
+      exec(command);  // async
 }
 
 function get_sharepoint_builds() {
@@ -97,8 +95,9 @@ function get_sharepoint_builds() {
             execSync("powershell.exe Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted");
             execSync("powershell.exe Install-Module SharePointPnPPowerShellOnline");
       }
-      // execSync("powershell.exe Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin");
-      let command = 'powershell.exe Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin; ';
+
+      let command = 'powershell.exe ';
+      command += 'Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin; '; 
       command += 'Get-PnPListItem -List product_list -Fields Title; ';
 
       let builds_query = execSync(command).toString();
