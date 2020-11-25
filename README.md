@@ -44,18 +44,14 @@ All commands below you run from electron_ui folder (app folder)
 First create an executable from python using Pyinstaller.  
 You may need a fresh environment for the build (in order to exclude unused modules from Python)
 ~~~
+cd electron_ui
 python -m pip install --user pipenv
 python -m venv D:\build_env
 D:\build_env\Scripts\pip.exe install pyinstaller
 D:\build_env\Scripts\pyinstaller.exe ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile
 ~~~
 
-To package an electron use electron packager (can be used for quick debug before building, otherwise can be skipped):
-~~~
-electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite --ignore="^.*\.py" --ignore="__pycache__"
-~~~
-
-To generate build (executable) (see scripts section in package.json):
+To generate build (executable) [electron-builder](https://www.electron.build/) is used (see scripts section in package.json):
 ~~~
 npm run dist
 ~~~
@@ -103,6 +99,8 @@ builds from SP.
 We need to provide regular builds to SP. This is done via running _cron_ on CentOS machine. 
 Cron runs [sharepoint_uploader.py](server/sharepoint_uploader.py) multiple times per day and python code gets new 
 builds from Artifactory, uploads them SP and adds information about new build to SP List.
+
+Secret keys configuration you can find in  [Upload To SharePoint](docs/upload_to_SharePoint.md)
 
 To connect to SP system needs to know SP _client_id_ and _client_secret_. They are provided through environment 
 variables. Also for successful download TEMP variable is required. These variables are set through 

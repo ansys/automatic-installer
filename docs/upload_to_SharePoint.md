@@ -1,4 +1,4 @@
-[SharePoint App-Only flow][1] is utilized  (supported by [`Office365-REST-Python-Client` library][2]).  
+[SharePoint App-Only flow][1] is utilized  (supported by [Office365-REST-Python-Client][2]).  
 
 [Setting up an app-only principal with tenant permissions][3] section describes how to configure it, to summarize it 
 consist of two steps:
