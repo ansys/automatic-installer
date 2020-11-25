@@ -14,24 +14,24 @@ In order to work with project you need to
 1. Install [npm (node package manager)](https://nodejs.org/en/download/)
 2. Open PowerShell/CMD in project folder and run: 
     - Installation of Electron globally
-    ~~~ 
+        ~~~ 
         cd electron_ui
         npm install electron -g
-    ~~~ 
+        ~~~ 
     - Rest packages could be installed automatically from package.json
-    ~~~
+        ~~~
         npm install
         cd ..
-    ~~~
+        ~~~
 3. Install all required Python modules
     ~~~
-        python -m pip install -r requirements.txt
+    python -m pip install -r requirements.txt
     ~~~
 4. Compile python code to the executable (see [Test on your local machine](#Test-on-your-local-machine))
 5. Finally to launch Electron app (see package.json for command)
     ~~~
-       cd electron_ui     
-       electron .
+    cd electron_ui     
+    electron .
     ~~~ 
 
 # Build and Test
@@ -44,39 +44,96 @@ All commands below you run from electron_ui folder (app folder)
 First create an executable from python using Pyinstaller.  
 You may need a fresh environment for the build (in order to exclude unused modules from Python)
 ~~~
+cd electron_ui
 python -m pip install --user pipenv
 python -m venv D:\build_env
 D:\build_env\Scripts\pip.exe install pyinstaller
 D:\build_env\Scripts\pyinstaller.exe ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile
 ~~~
 
-To package an electron use electron packager (can be used for quick debug before building, otherwise can be skipped):
-~~~
-electron-packager  ./ --platform=win32 --arch=x64 --electron-version=8.2.3  --out=electron_build --overwrite --ignore="^.*\.py" --ignore="__pycache__"
-~~~
-
-To generate build (executable) (see scripts section in package.json):
+To generate build (executable) [electron-builder](https://www.electron.build/) is used (see scripts section in package.json):
 ~~~
 npm run dist
 ~~~
 
-# Distribution
+# Distribution/Server
 For distribution [Electron Release Server (ERS)](https://github.com/ArekSredzki/electron-release-server) is used.
 My fork of the server you can find in the same project in Azure [Electron Release Server Fork](https://dev.azure.com/EMEA-FES-E/AnsysSoftwareManagement/_git/Electron_Release_Server).
 
 To handle releases [PostgreSQL](https://www.postgresql.org/) database is used. See ERS docs how to configure it.
 
 In the app autoupdate is inbuilt for the purpose of distribution of patches and new versions to the existing users. On 
-start of the app it will connect to OTTBLD01:1337 machine and verify if new version of downloader exists. 
+start of the app it will connect to OTTBLD02:1337 machine and verify if new version of downloader exists. 
 
-To run the server install PM2 package
+First a new local user was created on ottbld02:
+~~~
+sudo adduser electron
+passwd electron
+sudo gpasswd -a electron wheel
+~~~
+
+Grant permissions to temp folder:
+~~~
+sudo chown -R 45004 /home/electron/release_server/.tmp
+~~~
+
+To run release server install PM2 package
 ~~~
 npm install pm2 -g
 ~~~
 Then to run the release server in production mode use following CMD snippet on server startup:
 ~~~
-pm2 start app.js  -x -- -prod
+pm2 start app.js  -x -- -prod --port=1337
 ~~~
+Save configuration and specify startup. This will reboot release server using save configuration
+~~~
+pm2 save
+pm2 startup
+~~~
+
+# SharePoint
+Due to high demand of downloading from SharePoint (SP) new method was introduced that allows users to download latest 
+builds from SP.
+
+### Server Side for SP
+We need to provide regular builds to SP. This is done via running _cron_ on CentOS machine. 
+Cron runs [sharepoint_uploader.py](server/sharepoint_uploader.py) multiple times per day and python code gets new 
+builds from Artifactory, uploads them SP and adds information about new build to SP List.
+
+Secret keys configuration you can find in  [Upload To SharePoint](docs/upload_to_SharePoint.md)
+
+To connect to SP system needs to know SP _client_id_ and _client_secret_. They are provided through environment 
+variables. Also for successful download TEMP variable is required. These variables are set through 
+_/home/electron/.bashrc_
+
+Login as _electron_ user. Install cron and start it as service:
+~~~
+sudo yum install cronie
+service crond start
+chkconfig crond on
+~~~
+
+Configure cron to run every 3 hours:
+~~~
+crontab -l > .cron_settings
+vim .cron_settings
+~~~
+
+In vim editor write:
+~~~
+0 */3 * * * . $HOME/.bash_profile; python3 /home/git/beta_downloader/server/sharepoint_uploader.py
+~~~
+
+Now activate cron to take this settings
+~~~
+crontab .cron_settings
+~~~
+
+To see emails from cron if something goes wrong:
+~~~
+vim /var/spool/mail/electron
+~~~
+
 
 # Statistics
 We collect statistics in two ways:
@@ -95,18 +152,6 @@ You can use following query to create a plot:
 SELECT sum("count") FROM "autogen"."downloads" WHERE $timeFilter GROUP BY time(1d), "tool"
 ~~~
 Note: do not forget to set **Null value: null as zero** for a plot
-
-# Auto startup
-### Electron release server
-Since ERS is launched through PM2 then we need to start through PM2 startup manager:
-1. we need to prepare PM2 environment (if not done before)
-~~~
-    pm2 start app.js  -x -- -prod
-    pm2 save
-    pm2 startup
-~~~
-and run command according to the instruction
-
 
 # Contribute
 Please go ahead and contribute in any way you can:

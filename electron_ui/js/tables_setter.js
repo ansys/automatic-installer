@@ -84,7 +84,7 @@ function add_hpc_files_rows() {
         $("td", row).eq(0).css("padding-left", '5px');
     }
 
-    const MAX_ROWS = 4;
+    const MAX_ROWS = 5;
     if (files_list.length < MAX_ROWS) {
         for (i = 0; i < MAX_ROWS - files_list.length; i++) {
             var row = hpc_table.row.add([""]).draw(false).node();

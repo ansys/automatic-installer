@@ -66,10 +66,15 @@ $(document).ready(function() {
         var settings_data = fs.readFileSync(settings_path);
         settings = JSON.parse(settings_data);
 
+        if (!("replace_shortcut" in settings)){
+            settings.replace_shortcut = true;  // for backwards compatibility
+        }
+
         $("#install_path").val(settings.install_path);
         $("#download_path").val(settings.download_path);
         $("#delete_zip").prop("checked", settings.delete_zip);
         $("#force_install").prop("checked", settings.force_install);
+        $("#replace_shortcut").prop("checked", settings.replace_shortcut);
         
         let flag_list = settings.wb_flags.split(" ");
         flags_table.$('input[type="checkbox"]').each(function(){
@@ -90,7 +95,7 @@ $(document).ready(function() {
      * Update table rows, see tables_setter.js
      */
     hpc_table = $('#hpc-options-table').DataTable( {
-        "scrollY": "132px",
+        "scrollY": "165px",
         "scrollCollapse": true,
         "paging": false,
         "filter": false,
@@ -104,7 +109,7 @@ var save_settings = function(){
     /** 
      * Save settings to the file on every UI change
     */
-    if (this.id == "force_install" || this.id == "delete_zip"){
+    if (this.id == "force_install" || this.id == "delete_zip" || this.id == "replace_shortcut"){
         settings[this.id] = this.checked;
     } else if (this.id == "save-button") {
         // settings are already modified on click
@@ -170,4 +175,4 @@ $('#save-button').on('click', function(){
     save_settings.call(this);
 });
 
-$("#install_path, #download_path, #password, #force_install, #delete_zip").bind("change", save_settings);
+$("#install_path, #download_path, #password, #force_install, #delete_zip, #replace_shortcut").bind("change", save_settings);

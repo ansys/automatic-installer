@@ -21,11 +21,13 @@ artifactory_dict = {
     'Pune': 'http://punvmartifact.win.ansys.com:8080/artifactory',
     'Sheffield': 'http://shfvmartifact.win.ansys.com:8080/artifactory',
     'SanJose': 'http://sjoartsrv01.ansys.com:8080/artifactory',
-    'Waterloo': 'http://watatsrv01.ansys.com:8080/artifactory'
+    'Waterloo': 'http://watatsrv01.ansys.com:8080/artifactory',
+    'SharePoint': 'https://ansys.sharepoint.com/sites/BetaDownloader'
 };
 
 app_folder = os_path.join(app.getPath("appData"), "build_downloader")
 settings_path = os_path.join(app_folder, "default_settings.json");
+whatisnew_path = os_path.join(app_folder, "whatisnew.json");
 all_days = ["mo", "tu", "we", "th", "fr", "sa", "su"]
 
 window.onload = function() {
@@ -38,11 +40,27 @@ window.onload = function() {
      * Runs function to set tooltips text
      */
 
+    if (!fs.existsSync(app_folder)) fs.mkdirSync(app_folder);
+
+    if (!fs.existsSync(whatisnew_path)) {
+        ipcRenderer.send('whatsnew_show');
+    } else {
+        let new_versions_data = fs.readFileSync(whatisnew_path);
+        let new_versions = JSON.parse(new_versions_data);
+        for (var key in whatsnew) {
+            // check if all versions were shown to user
+            if (!new_versions.shown.includes(key)) {
+                ipcRenderer.send('whatsnew_show');
+                break;
+            }
+        }
+    }
+
     if (!fs.existsSync(settings_path)) {
         settings = {
             "username": process.env.USERNAME,
             "install_path": get_previous_edt_path(),
-            "artifactory": "Otterfing",
+            "artifactory": "SharePoint",
             "password": {"Otterfing": ""},
             "delete_zip": true,
             "download_path": app.getPath("temp"),
@@ -55,7 +73,6 @@ window.onload = function() {
             "force_install": false
         }
 
-        if (!fs.existsSync(app_folder)) fs.mkdirSync(app_folder);
         let data = JSON.stringify(settings, null, 4);
         fs.writeFileSync(settings_path, data);
         dialog.showMessageBox(null, remote.getGlobal('agreement'));
@@ -65,9 +82,7 @@ window.onload = function() {
     }
 
     $("#username").val(settings.username);
-    change_password();
-
-
+    
     for (var i in all_days) {
         $(`#${all_days[i]}-checkbox`).prop("checked", settings.days.includes(all_days[i]));
     }
@@ -80,6 +95,7 @@ window.onload = function() {
     get_active_tasks();
     request_builds();
     set_default_tooltips_main();
+    change_password();
 }
 
 
@@ -164,16 +180,23 @@ var request_builds = function (){
      * Send request to the server using axios. Try to retrive info about 
      * available builds on artifactory
     */
-   $("#version").empty();
-   $("#version").append($('<option>', {value:1, text:"Loading data..."}))
+    $("#version").empty();
+    $("#version").append($('<option>', {value:1, text:"Loading data..."}))
 
     if (!settings.username) {
         error_tooltip.call($('#username'), "Provide your Ansys User ID");
         return;
     }
 
-    if (!settings.password[settings.artifactory]) {
-        error_tooltip.call($('#password'), "Provide Artifactory unique password");
+    if ($("#artifactory").val() != "SharePoint"){
+        if (!settings.password[settings.artifactory]) {
+            error_tooltip.call($('#password'), "Provide Artifactory unique password");
+            return;
+        }
+    } else {
+        setTimeout(() => {
+            get_sharepoint_builds();
+        }, 1000);
         return;
     }
 
@@ -214,7 +237,7 @@ var request_builds = function (){
 
 function get_builds(artifacts_list){
     /**
-     * Parses information from the server. If see EBU or Workbench build extract version and add to the list
+     * Parses information from artifactory server. If see EBU or Workbench build extract version and add to the list
      */
     let version_list = [];
     for (var i  in artifacts_list) {
@@ -233,6 +256,10 @@ function get_builds(artifacts_list){
             }
         }
     }
+    fill_versions(version_list);
+}
+
+function fill_versions(version_list){
     version_list.sort(function (a, b) {
         if (a.slice(1, 6) > b.slice(1, 6)) {return -1;}
         else if (b.slice(1, 6) > a.slice(1, 6)) {return 1;}
@@ -250,6 +277,9 @@ function get_builds(artifacts_list){
 
 
 function open_artifactory_site(){
+    /**
+     * When double click on artifactory dropdown menu
+     */
     url = artifactory_dict[$("#artifactory").val()]
     shell.openExternal(url);
 }
@@ -258,8 +288,16 @@ const change_password = function (){
     /**
      * Password is stored in settings in another dictionary (Object), extract it for selected artifactory
      */
-    password = (settings.password.hasOwnProperty(settings.artifactory)) ? settings.password[settings.artifactory] : "";
-    $("#password").val(password);
+    if ($("#artifactory").val() == "SharePoint"){
+        visible = 'hidden';
+    } else {
+        visible = 'visible';
+        password = (settings.password.hasOwnProperty(settings.artifactory)) ? settings.password[settings.artifactory] : "";
+        $("#password").val(password);
+    }
+
+    $("#password").css('visibility', visible);
+    $('label[for="password"]').css('visibility', visible);
 }
 
 $('.clockpicker').clockpicker({
@@ -272,7 +310,7 @@ $('.clockpicker').clockpicker({
 
 $("#artifactory, #username, #password, #time, #version, .days-checkbox").bind("change", save_settings);
 $("#artifactory").bind("change", change_password);
-$("#artifactory").bind("dblclick", open_artifactory_site);
+$("#artifactory").contextmenu(open_artifactory_site);
 $("#artifactory, #username, #password").bind("change", request_builds);
 
 $("#schedule-button").click(function (){
@@ -325,7 +363,10 @@ $("#install-once-button").click(function (){
         )
 
         if (answer == 0) {
-            location.href = 'file://' + __dirname + '/history.html', "_self";
+            setTimeout(() => {
+                // some issue with SharePoint. Better to put some timeout
+                location.href = 'file://' + __dirname + '/history.html', "_self";
+            }, 1700);
         }    
     } else {
         alert("Version does not exist on artifactory");

@@ -45,7 +45,8 @@ function get_active_tasks() {
       for(var i = 0; i < all_tasks.length; i++){
             if (all_tasks[i].includes("AnsysDownloader")){
                   task_data_dict = get_task_details(all_tasks[i]);
-                  task_data_dict["schedule_time"] = (task_data_dict["days"]).join(", ") + " at " + task_data_dict["time"];
+                  task_data_dict["schedule_time"] = (task_data_dict["days"]).join(", ") + " at " + 
+                        task_data_dict["time"];
                   ansys_tasks.push(task_data_dict);
             }
       }
@@ -81,5 +82,39 @@ function schedule_task(settings_file) {
 
 function install_once(settings_file) {
       command = `${backend_exe} -p "${settings_file}"`
+      // some issue with SharePoint. Better to put some timeout
       exec(command);  // async
+}
+
+function get_sharepoint_builds() {
+      let installed = execSync("powershell.exe Get-Module SharePointPnPPowerShellOnline -ListAvailable").toString();
+
+      if (installed == 0) {
+            // install module
+            execSync("powershell.exe Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force");
+            execSync("powershell.exe Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted");
+            execSync("powershell.exe Install-Module SharePointPnPPowerShellOnline");
+      }
+
+      let command = 'powershell.exe ';
+      command += 'Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin; '; 
+      command += 'Get-PnPListItem -List product_list -Fields Title; ';
+
+      let builds_query = execSync(command).toString();
+      builds_query = builds_query.split("\n").slice(3);
+      let builds = [];
+      for(var i = 0; i < builds_query.length; i++){
+            var new_build = builds_query[i].split(" ");
+            new_build = new_build.filter((item) => item != "" && item != "\r");
+            if (new_build.length == 2) {
+                  new_build = new_build[1];
+            } else {
+                  continue;
+            }
+
+            if (!builds.includes(new_build)){
+                  builds.push(new_build);
+            }
+      }
+      fill_versions(builds);
 }

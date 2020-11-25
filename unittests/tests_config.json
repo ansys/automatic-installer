@@ -1,5 +1,5 @@
 {
-  "settings_file": "D:\\GIT\\BETA_Downloader\\unittests\\input\\once_v211_ElectronicsDesktop.json",
+  "settings_file": "input\\settings_sharepoint_edt_v212.json",
   "target_unpack_dir": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp\\temp_build_v211_Workbench",
   "zip_file": "D:\\Temp\\1 2 a b c\\temp build v211_ElectronicsDesktop.zip",
   "build_url": "http://canartifactory.ansys.com:8080/artifactory/v211_EBU_Certified/20200515/Electronics_211_winx64.zip"
