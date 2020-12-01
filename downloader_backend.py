@@ -19,7 +19,7 @@ import requests
 from artifactory_du import artifactory_du
 from influxdb import InfluxDBClient
 from plyer import notification
-from requests.exceptions import ReadTimeout, ConnectionError
+from requests.exceptions import ReadTimeout, ConnectionError, ChunkedEncodingError
 from urllib3.exceptions import ReadTimeoutError, ProtocolError
 
 from office365.sharepoint.client_context import ClientContext
@@ -30,7 +30,7 @@ import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
@@ -95,9 +95,11 @@ def retry(exceptions, tries=4, delay=3, backoff=1, logger=None):
                     mtries -= 1
                     mdelay *= backoff
             else:
-                error = (f"Please verify that you are on VPN, your connection is stable " +
-                         f"and username and password for {self.settings.artifactory} are correct. " +
-                         f"Number of attempts: {tries}/{tries}")
+                error = f"Please verify that your connection is stable, avoid switching state of VPN during download."
+                if "SharePoint" not in self.settings.artifactory:
+                    error += " Verify that you are on VPN, "
+                    error += f"check username and password for {self.settings.artifactory} are correct. "
+                error += f"Number of attempts: {tries}/{tries}"
                 if logger:
                     raise SystemExit(error)
                 else:
@@ -144,6 +146,7 @@ class Downloader:
         self.connection_attempt (int): number of attempts to download
         self.hash (str): hash code used for this run of the program
         self.pid: pid (process ID of the current Python run, required to allow kill in UI)
+        self.ctx: context object to authorize in SharePoint using office365 module
         self.settings_folder (str): default folder where all configurations would be saved
         self.history_file (str): file where installation progress would be written (this file is tracked by UI)
         self.logging_file (str): file where detailed log for all runs is saved
@@ -161,8 +164,9 @@ class Downloader:
         self.remote_build_date = ""
 
         self.connection_attempt = 1
-
         self.pid = str(os.getpid())
+
+        self.ctx = None
 
         self.hash = generate_hash_str()
         if not settings_folder:
@@ -191,9 +195,6 @@ class Downloader:
         elif "Workbench" in self.settings.version:
             self.product_root_path = os.path.join(self.settings.install_path, "ANSYS Inc", self.settings.version[:4])
 
-        if self.settings.artifactory == "SharePoint":
-            self.ctx = self.authorize_sharepoint()
-
     def authorize_sharepoint(self):
         """
         Function that uses PnP to authorize user in SharePoint using Windows account and to get actual client_id and
@@ -209,14 +210,17 @@ class Downloader:
         out_str = self.subprocess_call(command, shell=True, popen=True)
 
         secret_list = []
-        for line in out_str.splitlines():
-            if "Title" in line:
-                secret_dict = {"Title": line.split()[1]}
-            elif "client_id" in line:
-                secret_dict["client_id"] = line.split()[1]
-            elif "client_secret" in line:
-                secret_dict["client_secret"] = line.split()[1]
-                secret_list.append(secret_dict)
+        try:
+            for line in out_str.splitlines():
+                if "Title" in line:
+                    secret_dict = {"Title": line.split()[1]}
+                elif "client_id" in line:
+                    secret_dict["client_id"] = line.split()[1]
+                elif "client_secret" in line:
+                    secret_dict["client_secret"] = line.split()[1]
+                    secret_list.append(secret_dict)
+        except NameError:
+            raise SystemExit("Cannot retrieve authentication tokens for SharePoint")
 
         secret_list.sort(key=lambda elem: elem['Title'], reverse=True)
 
@@ -236,13 +240,16 @@ class Downloader:
             set_logger(self.logging_file)
             logging.info(f"Settings path is set to {self.settings_path}")
 
+            if self.settings.artifactory == "SharePoint":
+                self.ctx = self.authorize_sharepoint()
+
             self.update_installation_history(status="In-Progress", details="Verifying configuration")
             self.check_and_make_directories(self.settings.install_path, self.settings.download_path)
             if "ElectronicsDesktop" in self.settings.version or "Workbench" in self.settings.version:
                 space_required = 15
             else:
                 space_required = 1
-            self.check_free_space(self.settings.download_path, space_required/2)
+            self.check_free_space(self.settings.download_path, space_required)
             self.check_free_space(self.settings.install_path, space_required)
 
             self.check_process_lock()
@@ -282,18 +289,23 @@ class Downloader:
                     os.makedirs(path)
                 except PermissionError:
                     raise SystemExit(f"{path} could not be created due to insufficient permissions")
+                except OSError as err:
+                    if "BitLocker" in str(err):
+                        raise SystemExit("Your drive is locked by BitLocker. Please unlock!")
+                    else:
+                        raise SystemExit(err)
 
     @staticmethod
     def check_free_space(path, required):
         """
         Verifies that enough disk space is available. Raises error if not enough space
         :param path: path where to check
-        :param required: value that should be available on drive to pass the check
+        :param required: value in GB that should be available on drive to pass the check
         :return:
         """
         free_space = shutil.disk_usage(path).free // (2 ** 30)
         if free_space < required:
-            raise SystemExit(f"Disk space in {path} is less than {required}Gb. This would not be enough to proceed")
+            raise SystemExit(f"Disk space in {path} is less than {required}GB. This would not be enough to proceed")
 
     def check_process_lock(self):
         """
@@ -493,6 +505,8 @@ class Downloader:
                     if "Electronics" in child["uri"] and "winx" in child["uri"]:
                         return latest
 
+    @retry((ReadTimeoutError, ReadTimeout, ConnectionError, ProtocolError,
+            ConnectionResetError, ChunkedEncodingError), 4, logger=logging)
     def download_file(self, recursion=False):
         """
         Downloads file in chunks and saves to the temp.zip file
@@ -577,6 +591,7 @@ class Downloader:
             logging.info(msg)
             self.update_installation_history(status="In-Progress", details=msg)
 
+        self.check_free_space(self.settings.download_path, file_size/1024/1024/1024)
         bytes_read = 0
         chunk_size = 100 * 1024 * 1024
         with open(self.zip_file, "wb") as zip_file:
@@ -1031,7 +1046,10 @@ class Downloader:
             json.dump(self.history, file, indent=4)
 
         if status == "Failed" or status == "Success":
-            self.toaster_notification(status, details)
+            try:
+                self.toaster_notification(status, details)
+            except:
+                logging.error("Toaster notification did not work")
 
     @staticmethod
     def toaster_notification(status, details):

@@ -1,4 +1,5 @@
 whatsnew = {
+    "v2.0.1": "Additional error catching",
     "v2.0.0": 
         "- Added support of SharePoint as build source. No VPN needed anymore!" +
         '<p style="color:rgb(255,0,0);">Note: First time configuration takes around 2 min. Please be patient!</p>' +
