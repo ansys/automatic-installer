@@ -24,7 +24,7 @@ app_principal = {
     'client_secret': os.environ["client_secret"]
 }
 
-__version__ = "v0.0.1"
+__version__ = "v1.0.0"
 
 
 def main():

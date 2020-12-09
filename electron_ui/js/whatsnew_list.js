@@ -1,4 +1,5 @@
 whatsnew = {
+    "v2.0.2": "Tooltip text fix",
     "v2.0.1": "Additional error catching",
     "v2.0.0": 
         "- Added support of SharePoint as build source. No VPN needed anymore!" +

@@ -3,9 +3,9 @@ function set_default_tooltips_main(){
      * Set tooltips on the main page
      */
     set_tooltip("password",  "Retrieval of Artifactory Encrypted Password Instructions:\n" +
-        "1. Double click on artifactory drop down menu\n" +
+        "1. Right click on REPOSITORY drop down menu\n" +
         "2. Log into Artifactory using SSO credentials\n" +
-        "\t2.1 Click on your userID (top right)\n" +
+        "\t2.1 Click on your UserID (top right)\n" +
         "\t2.2 Enter your password to Unlock Artifactory Encrypted Password\n" +
         "\t2.3 Copy over Artifactory Encrypted Password and press Enter\n" +
         "[Note] Artifactory Encrypted Password is not valid for other artifactories.\n" +

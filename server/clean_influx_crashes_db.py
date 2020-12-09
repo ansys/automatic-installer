@@ -1,4 +1,11 @@
+import os
+import sys
+
 from influxdb import InfluxDBClient
+
+root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(root_folder)
+
 from downloader_backend import STATISTICS_SERVER, STATISTICS_PORT
 
 
