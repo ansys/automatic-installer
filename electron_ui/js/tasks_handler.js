@@ -91,9 +91,12 @@ function get_sharepoint_builds() {
 
       if (installed == 0) {
             // install module
-            execSync("powershell.exe Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force");
-            execSync("powershell.exe Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted");
-            execSync("powershell.exe Install-Module SharePointPnPPowerShellOnline");
+            let command = 'powershell.exe ';
+            command += "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;";
+            command += "Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force;";
+            command += "Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted;";
+            command += "Install-Module SharePointPnPPowerShellOnline;";
+            execSync(command);
       }
 
       let command = 'powershell.exe ';
@@ -105,16 +108,13 @@ function get_sharepoint_builds() {
       let builds = [];
       for(var i = 0; i < builds_query.length; i++){
             var new_build = builds_query[i].split(" ");
-            new_build = new_build.filter((item) => item != "" && item != "\r");
-            if (new_build.length == 2) {
-                  new_build = new_build[1];
-            } else {
-                  continue;
-            }
-
-            if (!builds.includes(new_build)){
-                  builds.push(new_build);
-            }
+            new_build = new_build.filter((item) => item.includes("Electronics") || item.includes("Workbench"));
+            if (new_build.length == 1) {
+                  new_build = new_build[0];
+                  if (!builds.includes(new_build)){
+                        builds.push(new_build);
+                  }
+            } 
       }
       fill_versions(builds);
 }
