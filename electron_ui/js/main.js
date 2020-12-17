@@ -1,4 +1,4 @@
-var os_path = require('path');
+var path = require('path');
 var fs = require('fs');
 var axios = require('axios');
 const { shell } = require('electron');
@@ -25,9 +25,9 @@ artifactory_dict = {
     'SharePoint': 'https://ansys.sharepoint.com/sites/BetaDownloader'
 };
 
-app_folder = os_path.join(app.getPath("appData"), "build_downloader")
-settings_path = os_path.join(app_folder, "default_settings.json");
-whatisnew_path = os_path.join(app_folder, "whatisnew.json");
+app_folder = path.join(app.getPath("appData"), "build_downloader")
+settings_path = path.join(app_folder, "default_settings.json");
+whatisnew_path = path.join(app_folder, "whatisnew.json");
 all_days = ["mo", "tu", "we", "th", "fr", "sa", "su"]
 
 window.onload = function() {
@@ -327,7 +327,7 @@ $("#schedule-button").click(function (){
     }
 
     if(settings.version == $("#version")[0].value && settings.version){
-        var scheduled_settings = os_path.join(app_folder, settings.version + ".json");
+        var scheduled_settings = path.join(app_folder, settings.version + ".json");
         fs.copyFileSync(settings_path, scheduled_settings, (err) => {
             if (err) throw err;
         });
@@ -350,7 +350,7 @@ $("#install-once-button").click(function (){
      * Make copy of settings file to another file for installing once
      */
     if(settings.version == $("#version")[0].value && settings.version){
-        var install_once_settings = os_path.join(app_folder, "once_" + settings.version + ".json");
+        var install_once_settings = path.join(app_folder, "once_" + settings.version + ".json");
         fs.copyFileSync(settings_path, install_once_settings, (err) => {
             if (err) throw err;
         });

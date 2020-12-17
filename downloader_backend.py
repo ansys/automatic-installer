@@ -264,7 +264,7 @@ class Downloader:
                 try:
                     self.send_statistics()
                 except:
-                    self.warnings_list.append("Statistics transfer failed")
+                    self.warnings_list.append("Connection to product improvement server failed")
                 self.update_installation_history(status="Success", details="Normal completion")
             else:
                 raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
@@ -1054,7 +1054,7 @@ class Downloader:
 
         if status == "Failed" or status == "Success":
             if self.warnings_list:
-                details += "\nSome warning occurred during process:\n" + "\n".join(self.warnings_list)
+                details += "\nSome warnings occurred during process:\n" + "\n".join(self.warnings_list)
 
         self.history[self.hash] = [
             status, self.settings.version, time_now, shorten_path, details, self.pid
@@ -1126,7 +1126,8 @@ class Downloader:
                     "username": self.settings.username,
                     "version": version,
                     "tool": tool,
-                    "artifactory": self.settings.artifactory
+                    "artifactory": self.settings.artifactory,
+                    "downloader_ver": __version__
                 },
                 "time": time_now,
                 "fields": {
@@ -1158,8 +1159,10 @@ class Downloader:
             "Date": str(time_now),
             "tool": tool,
             "version": version,
-            "in_influx": False
+            "in_influx": False,
+            "downloader_ver": __version__
         }
+
         if error:
             error = error.replace('\n', '#N').replace('\r', '')
             item["error"] = error

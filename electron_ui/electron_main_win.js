@@ -1,7 +1,7 @@
 const {app, BrowserWindow, Menu, dialog} = require('electron');
 const { autoUpdater } = require('electron-updater');
 const ipc = require('electron').ipcMain;
-const os_path = require('path');
+const path = require('path');
 const fs = require('fs');
 
 const updateServer = 'http://ottbld02:1337';
@@ -160,8 +160,8 @@ app.on('ready', () => {
 
     ipc.on('whatsnew_hide', (event, not_show_again, settings) => {
         if (not_show_again){
-            app_folder = os_path.join(app.getPath("appData"), "build_downloader")
-            whatisnew_path = os_path.join(app_folder, "whatisnew.json");
+            app_folder = path.join(app.getPath("appData"), "build_downloader")
+            whatisnew_path = path.join(app_folder, "whatisnew.json");
     
             let data = JSON.stringify(settings, null, 4);
             fs.writeFileSync(whatisnew_path, data);

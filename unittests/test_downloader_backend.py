@@ -17,6 +17,8 @@ class InstallUninstallTest(unittest.TestCase):
 
         with mock.patch('sys.argv', ["__file__", r'-p', settings_file]):
             self.downloader = downloader_backend.Downloader(version="Test")
+            if self.downloader.settings.artifactory == "SharePoint":
+                self.downloader.ctx = self.downloader.authorize_sharepoint()
 
     def test_01_download_file(self):
         """
