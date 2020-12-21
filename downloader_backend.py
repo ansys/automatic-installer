@@ -30,7 +30,7 @@ import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "2.0.1"
+__version__ = "2.0.3"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
@@ -166,6 +166,8 @@ class Downloader:
         self.connection_attempt = 1
         self.pid = str(os.getpid())
 
+        self.warnings_list = []
+
         self.ctx = None
 
         self.hash = generate_hash_str()
@@ -262,12 +264,13 @@ class Downloader:
                 try:
                     self.send_statistics()
                 except:
-                    # do not really care about stats
-                    pass
+                    self.warnings_list.append("Connection to product improvement server failed")
+                self.update_installation_history(status="Success", details="Normal completion")
             else:
                 raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
             return
         except SystemExit as e:
+            # all caught errors are here
             logging.error(e)
             self.update_installation_history(status="Failed", details=str(e))
         except Exception:
@@ -634,8 +637,6 @@ class Downloader:
         self.update_installation_history(status="In-Progress", details=f"Clean temp directory")
         self.clean_temp()
 
-        self.update_installation_history(status="Success", details="Normal completion")
-
     def install_edt(self):
         """
         Install Electronics Desktop. Make verification that the same version is not yet installed and makes
@@ -708,8 +709,7 @@ class Downloader:
         else:
             logging.info("Version is not installed, skip uninstallation")
 
-    @staticmethod
-    def check_result_code(log_file, installation=True):
+    def check_result_code(self, log_file, installation=True):
         """
         Verify result code of the InstallShield log file
         :param log_file: installation log file
@@ -727,7 +727,9 @@ class Downloader:
                     logging.info(success)
                     break
             else:
-                raise SystemExit(fail)
+                msg = "Official uninstaller failed, make hard remove"
+                logging.error(msg)
+                self.warnings_list.append(msg)
 
     @staticmethod
     def get_edt_build_date(product_info_file):
@@ -922,10 +924,13 @@ class Downloader:
             try:
                 shutil.rmtree(path)
             except PermissionError:
-                logging.warning("Permission error. Try CMD")
+                logging.warning("Permission error. Switch to CMD force mode")
                 hard_remove()
-            except FileNotFoundError:
+                self.warnings_list.append("Clean remove failed due to Permissions Error")
+            except (FileNotFoundError, OSError, Exception):
                 hard_remove()
+                self.warnings_list.append("Clean remove failed due to Not Found or OS Error")
+
         elif os.path.isfile(path):
             os.remove(path)
 
@@ -1032,6 +1037,14 @@ class Downloader:
         :param details: Message for details field
         :return:
         """
+        if status == "Failed" or status == "Success":
+            try:
+                self.toaster_notification(status, details)
+            except:
+                msg = "Toaster notification did not work"
+                logging.error(msg)
+                self.warnings_list.append(msg)
+
         self.get_installation_history()  # in case if file was deleted during run of installation
         time_now = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
         try:
@@ -1039,17 +1052,15 @@ class Downloader:
         except KeyError:
             shorten_path = self.settings_path
 
+        if status == "Failed" or status == "Success":
+            if self.warnings_list:
+                details += "\nSome warnings occurred during process:\n" + "\n".join(self.warnings_list)
+
         self.history[self.hash] = [
             status, self.settings.version, time_now, shorten_path, details, self.pid
         ]
         with open(self.history_file, "w") as file:
             json.dump(self.history, file, indent=4)
-
-        if status == "Failed" or status == "Success":
-            try:
-                self.toaster_notification(status, details)
-            except:
-                logging.error("Toaster notification did not work")
 
     @staticmethod
     def toaster_notification(status, details):
@@ -1115,7 +1126,8 @@ class Downloader:
                     "username": self.settings.username,
                     "version": version,
                     "tool": tool,
-                    "artifactory": self.settings.artifactory
+                    "artifactory": self.settings.artifactory,
+                    "downloader_ver": __version__
                 },
                 "time": time_now,
                 "fields": {
@@ -1133,7 +1145,10 @@ class Downloader:
         """
         Send statistics to SharePoint list
         Args:
-            error:
+            time_now: time
+            tool: product that is installed
+            version: version
+            error: error if some crash occurred
         Returns:
         """
         list_name = "statistics" if not error else "crashes"
@@ -1144,8 +1159,10 @@ class Downloader:
             "Date": str(time_now),
             "tool": tool,
             "version": version,
-            "in_influx": False
+            "in_influx": False,
+            "downloader_ver": __version__
         }
+
         if error:
             error = error.replace('\n', '#N').replace('\r', '')
             item["error"] = error

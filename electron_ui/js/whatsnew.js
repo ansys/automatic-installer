@@ -1,7 +1,9 @@
-const { ipcRenderer } = require('electron');
+var { ipcRenderer } = require('electron');
+var fs = require('fs');
+var path = require("path");
 
-
-// see whatnew_list.js for the list of updates
+var whatsnew_data = fs.readFileSync(path.resolve(__dirname, "js", "whats_new.json"));
+whatsnew = JSON.parse(whatsnew_data);
 
 $("#whatsnew-ok-button").click(function (){
     let settings = {};
@@ -18,8 +20,13 @@ window.onload = function() {
      * On window load generate list of new features from the dictionary
     */
     Object.keys(whatsnew).forEach(function(key) {
-        $('#whatsnew-div').append('<div class="whats-version">' + key + '</div>').append(
-            '<div class="whats-text">' + whatsnew[key].split("\n").join("<br>") + '</div>'
+        if (Array.isArray(whatsnew[key])) {
+            var val = whatsnew[key].join("");
+        } else {
+            var val = whatsnew[key]
+        }
+        $('#whatsnew-div').append('<div class="whats-version">' + 'v' + key + '</div>').append(
+            '<div class="whats-text">' + val + '</div>'
         );
     });
     
