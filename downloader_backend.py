@@ -1114,8 +1114,20 @@ class Downloader:
         time_now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         if self.settings.artifactory == "SharePoint":
             self.send_statistics_to_sharepoint(version, tool, time_now, error)
-            return
+        else:
+            self.send_statistics_to_influx(tool, version, time_now, error)
 
+    def send_statistics_to_influx(self, tool, version, time_now, error):
+        """
+        Send statistics to InfluxDB
+        Args:
+            tool: product that is installed
+            version: version
+            time_now: time
+            error: error if some crash occurred
+        Returns:
+            None
+        """
         client = InfluxDBClient(host=STATISTICS_SERVER, port=STATISTICS_PORT)
         db_name = "downloads" if not error else "crashes"
         client.switch_database(db_name)
@@ -1150,6 +1162,7 @@ class Downloader:
             version: version
             error: error if some crash occurred
         Returns:
+            None
         """
         list_name = "statistics" if not error else "crashes"
         target_list = self.ctx.web.lists.get_by_title(list_name)
