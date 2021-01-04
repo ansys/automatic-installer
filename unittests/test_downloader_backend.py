@@ -121,6 +121,7 @@ class InstallUninstallTest(unittest.TestCase):
         :return:
         """
         self.downloader.send_statistics()
+        self.downloader.send_statistics(error="test\nline 121")
 
     def test_11_full_run(self):
         self.downloader.run()
