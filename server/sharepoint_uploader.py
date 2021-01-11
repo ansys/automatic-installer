@@ -53,7 +53,7 @@ def upload_to_sharepoint(settings_file):
     all_items = sp.get_list_items()
     for item in all_items:
         if item.properties['Title'] == sp.settings.version and item.properties['build_date'] == build_date:
-            print("Build is up to date")
+            logging.info("Build is up to date")
             return
 
     sp.download_file()
@@ -111,7 +111,7 @@ class SharepointUpload(Downloader):
         if abs(file_size - remote_size) > 0.05 * file_size:
             raise UploaderError("File size difference is more than 5%")
 
-        print('File {0} has been uploaded successfully'.format(result_file.serverRelativeUrl))
+        logging.info('File {0} has been uploaded successfully'.format(result_file.serverRelativeUrl))
         return folder_url
 
     @retry(Exception, 4)

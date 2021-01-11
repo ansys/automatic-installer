@@ -613,8 +613,8 @@ class Downloader:
         if not self.zip_file:
             raise DownloaderError("ZIP download failed")
 
-        if abs(os.path.getsize(self.zip_file) - file_size) > 0.05*file_size:
-            raise DownloaderError("File size difference is more than 5%")
+        if abs(os.path.getsize(self.zip_file) - file_size) > 0.15*file_size:
+            raise DownloaderError("File size difference is more than 15%")
 
         logging.info(f"File is downloaded to: {self.zip_file}")
 
