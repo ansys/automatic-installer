@@ -3,7 +3,6 @@ var fs = require('fs');
 var axios = require('axios');
 const { shell } = require('electron');
 
-
 artifactory_dict = {
     'Austin': 'http://ausatsrv01.ansys.com:8080/artifactory',
     'Boulder': 'http://bouatsrv01:8080/artifactory',
@@ -29,6 +28,16 @@ app_folder = path.join(app.getPath("appData"), "build_downloader")
 settings_path = path.join(app_folder, "default_settings.json");
 whatisnew_path = path.join(app_folder, "whatisnew.json");
 all_days = ["mo", "tu", "we", "th", "fr", "sa", "su"]
+products_dict = {"last_refreshed": 72001};
+
+ipcRenderer.on('products', (event, products) => {
+    products_dict = products;
+    if (products_dict.last_refreshed > 72000) {
+        request_builds();
+    } else {
+        fill_versions(products_dict.versions);
+    }
+});
 
 window.onload = function() {
     /**
@@ -93,7 +102,10 @@ window.onload = function() {
     set_selector("artifactory", Object.keys(artifactory_dict), settings.artifactory);
 
     get_active_tasks();
-    request_builds();
+
+    // get product and continue getting them every 120s
+    ipcRenderer.send('get-products');
+    window.setInterval(() => {ipcRenderer.send('get-products')}, 12000);
     set_default_tooltips_main();
     change_password();
 }
@@ -256,10 +268,17 @@ function get_builds(artifacts_list){
             }
         }
     }
+    products_dict.last_refreshed = 0;
     fill_versions(version_list);
 }
 
 function fill_versions(version_list){
+    /**
+     * Fills drop down menu with AEDT and WB versions
+     */
+    products_dict.versions =  version_list;
+    ipcRenderer.send('set-products', products_dict);
+
     version_list.sort(function (a, b) {
         if (a.slice(1, 6) > b.slice(1, 6)) {return -1;}
         else if (b.slice(1, 6) > a.slice(1, 6)) {return 1;}

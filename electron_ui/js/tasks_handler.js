@@ -116,5 +116,6 @@ function get_sharepoint_builds() {
                   }
             } 
       }
+      products_dict.last_refreshed = 0;
       fill_versions(builds);
 }
