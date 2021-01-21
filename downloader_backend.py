@@ -1037,6 +1037,9 @@ class Downloader:
         update_registry_exe = os.path.join(self.product_root_path, "UpdateRegistry.exe")
         productlist_file = os.path.join(self.product_root_path, "config", "ProductList.txt")
 
+        if not os.path.isfile(productlist_file):
+            raise DownloaderError("Cannot update registry. Probably Electronics Desktop installation failed")
+
         with open(productlist_file) as file:
             product_version = next(file).rstrip()  # get first line
 
