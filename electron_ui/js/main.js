@@ -317,6 +317,9 @@ const change_password = function (){
 
     $("#password").css('visibility', visible);
     $('label[for="password"]').css('visibility', visible);
+
+    $("#username").css('visibility', visible);
+    $('label[for="username"]').css('visibility', visible);
 }
 
 $('.clockpicker').clockpicker({
