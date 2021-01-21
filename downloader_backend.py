@@ -730,15 +730,25 @@ class Downloader:
         if not os.path.isfile(log_file):
             raise DownloaderError(f"{fail}. Check that UAC disabled or confirm UAC question manually")
 
+        msg = fail
+        regex = "ResultCode=(.*)"
         with open(log_file) as file:
             for line in file:
-                if "ResultCode=0" in line:
-                    logging.info(success)
-                    break
+                code = re.findall(regex, line)
+                if code:
+                    if code[0] == "0":
+                        logging.info(success)
+                        break
+                    elif code[0] == "-3" and installation:
+                        msg += " Electronics Desktop cannot coexist in another location. Change installation path"
+                        raise DownloaderError(msg)
             else:
-                msg = "Official uninstaller failed, make hard remove"
-                logging.error(msg)
-                self.warnings_list.append(msg)
+                if not installation:
+                    msg = "Official uninstaller failed, make hard remove"
+                    logging.error(msg)
+                    self.warnings_list.append(msg)
+                else:
+                    raise DownloaderError(msg)
 
     @staticmethod
     def get_edt_build_date(product_info_file):
