@@ -1134,6 +1134,8 @@ class Downloader:
 
         version, tool = self.settings.version.split("_")
         time_now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+        self.settings.username = os.getenv("username", self.settings.username)
+
         if self.settings.artifactory == "SharePoint":
             self.send_statistics_to_sharepoint(version, tool, time_now, error)
         else:
