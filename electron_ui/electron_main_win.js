@@ -128,7 +128,7 @@ app.on('ready', () => {
 	  setTimeout(function(){
         MainWindow.loadURL('file://' + __dirname + '/main.html');
         autoUpdater.checkForUpdatesAndNotify();
-    }, 3700);
+    }, 1500);
 
     MainWindow.loadURL('file://' + __dirname + '/starter.html');
 
@@ -167,6 +167,16 @@ app.on('ready', () => {
             fs.writeFileSync(whatisnew_path, data);
         }
         child.hide()
+    });
+
+    var products_dict = {"last_refreshed": 72001};
+    ipc.on("get-products", () => {
+        products_dict.last_refreshed += 120;
+        MainWindow.webContents.send("products", products_dict);
+    });
+
+    ipc.on("set-products", (event, products) => {
+        products_dict = products;
     });
 
     const mainMenuTemplate =    [

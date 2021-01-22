@@ -11,6 +11,7 @@ import sys
 import time
 import traceback
 import zipfile
+import zlib
 from collections import namedtuple, OrderedDict
 from functools import wraps
 
@@ -30,7 +31,7 @@ import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "2.0.3"
+__version__ = "2.1.0"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
@@ -58,6 +59,10 @@ artifactory_dict = OrderedDict([
 ])
 
 sharepoint_site_url = r"https://ansys.sharepoint.com/sites/BetaDownloader"
+
+
+class DownloaderError(Exception):
+    pass
 
 
 def retry(exceptions, tries=4, delay=3, backoff=1, logger=None):
@@ -101,7 +106,7 @@ def retry(exceptions, tries=4, delay=3, backoff=1, logger=None):
                     error += f"check username and password for {self.settings.artifactory} are correct. "
                 error += f"Number of attempts: {tries}/{tries}"
                 if logger:
-                    raise SystemExit(error)
+                    raise DownloaderError(error)
                 else:
                     print(error)
         return f_retry  # true decorator
@@ -222,7 +227,7 @@ class Downloader:
                     secret_dict["client_secret"] = line.split()[1]
                     secret_list.append(secret_dict)
         except NameError:
-            raise SystemExit("Cannot retrieve authentication tokens for SharePoint")
+            raise DownloaderError("Cannot retrieve authentication tokens for SharePoint")
 
         secret_list.sort(key=lambda elem: elem['Title'], reverse=True)
 
@@ -267,9 +272,9 @@ class Downloader:
                     self.warnings_list.append("Connection to product improvement server failed")
                 self.update_installation_history(status="Success", details="Normal completion")
             else:
-                raise SystemExit("Versions are up to date. If issue occurred please use force install flag")
+                raise DownloaderError("Versions are up to date. If issue occurred please use force install flag")
             return
-        except SystemExit as e:
+        except DownloaderError as e:
             # all caught errors are here
             logging.error(e)
             self.update_installation_history(status="Failed", details=str(e))
@@ -291,12 +296,12 @@ class Downloader:
                 try:
                     os.makedirs(path)
                 except PermissionError:
-                    raise SystemExit(f"{path} could not be created due to insufficient permissions")
+                    raise DownloaderError(f"{path} could not be created due to insufficient permissions")
                 except OSError as err:
                     if "BitLocker" in str(err):
-                        raise SystemExit("Your drive is locked by BitLocker. Please unlock!")
+                        raise DownloaderError("Your drive is locked by BitLocker. Please unlock!")
                     else:
-                        raise SystemExit(err)
+                        raise DownloaderError(err)
 
     @staticmethod
     def check_free_space(path, required):
@@ -308,7 +313,7 @@ class Downloader:
         """
         free_space = shutil.disk_usage(path).free // (2 ** 30)
         if free_space < required:
-            raise SystemExit(f"Disk space in {path} is less than {required}GB. This would not be enough to proceed")
+            raise DownloaderError(f"Disk space in {path} is less than {required}GB. This would not be enough to proceed")
 
     def check_process_lock(self):
         """
@@ -326,8 +331,8 @@ class Downloader:
 
         if process_list:
             process_list.sort(key=len)  # to fit into UI
-            raise SystemExit("Following processes are running from installation directory: " +
-                             f"{', '.join(set(process_list))}. Please stop all processes and try again")
+            raise DownloaderError("Following processes are running from installation directory: " +
+                                  f"{', '.join(set(process_list))}. Please stop all processes and try again")
 
     def versions_identical(self):
         """
@@ -396,7 +401,7 @@ class Downloader:
         password = getattr(self.settings.password, self.settings.artifactory)
 
         if not self.settings.username or not password:
-            raise SystemExit("Please provide username and artifactory password")
+            raise DownloaderError("Please provide username and artifactory password")
 
         server = artifactory_dict[self.settings.artifactory]
 
@@ -407,10 +412,10 @@ class Downloader:
         # catch 401 for bad credentials or similar
         if url_request.status_code != 200:
             if url_request.status_code == 401:
-                raise SystemExit("Bad credentials, please verify your username and password for {}".format(
+                raise DownloaderError("Bad credentials, please verify your username and password for {}".format(
                     self.settings.artifactory))
             else:
-                raise SystemExit(artifacts_list["errors"][0]["message"])
+                raise DownloaderError(artifacts_list["errors"][0]["message"])
 
         # fill the dictionary with Electronics Desktop and Workbench keys since builds could be different
         # still parse the list because of different names on servers
@@ -429,7 +434,7 @@ class Downloader:
         try:
             repo = artifacts_dict[self.settings.version]
         except KeyError:
-            raise SystemExit(f"Version {self.settings.version} that you have specified " +
+            raise DownloaderError(f"Version {self.settings.version} that you have specified " +
                              f"does not exist on {self.settings.artifactory}")
 
         if "ElectronicsDesktop" in self.settings.version:
@@ -448,7 +453,7 @@ class Downloader:
 
             latest_build = self.verify_remote_build_existence(server, repo, password, sorted(builds_dates))
             if not latest_build:
-                raise SystemExit("Artifact does not exist")
+                raise DownloaderError("Artifact does not exist")
 
             version_number = self.settings.version.split('_')[0][1:]
             self.build_url = f"{server}/{repo}/{latest_build}/Electronics_{version_number}_winx64.zip"
@@ -456,7 +461,7 @@ class Downloader:
             self.build_url = f"{server}/api/archive/download/{repo}-cache/winx64?archiveType=zip"
 
         if not self.build_url:
-            raise SystemExit("Cannot receive URL")
+            raise DownloaderError("Cannot receive URL")
 
     def get_sharepoint_build_info(self):
         """
@@ -485,7 +490,7 @@ class Downloader:
 
         build_dict = build_list[0] if build_list else {}
         if not build_dict:
-            raise SystemExit(f"No version of {self.settings.version} is available on SharePoint")
+            raise DownloaderError(f"No version of {self.settings.version} is available on SharePoint")
 
         self.build_url = build_dict["relative_url"]
         self.remote_build_date = build_dict["build_date"]
@@ -534,9 +539,11 @@ class Downloader:
                 return
 
             logging.info(f"Start download file from {url} to {self.zip_file}")
+            self.update_installation_history(status="In-Progress",
+                                             details=f"Downloading file from {self.settings.artifactory}")
 
             if url_request.status_code != 200:
-                raise SystemExit(f"Cannot download file. Server returned status code: {url_request.status_code}")
+                raise DownloaderError(f"Cannot download file. Server returned status code: {url_request.status_code}")
 
             try:
                 file_size = int(url_request.headers['Content-Length'])
@@ -578,6 +585,7 @@ class Downloader:
         response.raise_for_status()
         self.download_response(response, file_size)
 
+    @retry(DownloaderError, 2, logger=logging)
     def download_response(self, response, file_size):
         """
         General function to download from server URL response
@@ -597,15 +605,21 @@ class Downloader:
         self.check_free_space(self.settings.download_path, file_size/1024/1024/1024)
         bytes_read = 0
         chunk_size = 100 * 1024 * 1024
+        real_chunk = 0
         with open(self.zip_file, "wb") as zip_file:
             for chunk in response.iter_content(chunk_size=chunk_size):
-                bytes_read += len(chunk)
-                if callable(print_download_progress):
+                real_chunk += len(chunk)
+                if real_chunk - chunk_size >= 0:
+                    bytes_read += real_chunk
+                    real_chunk = 0
                     print_download_progress(bytes_read, file_size)
                 zip_file.write(chunk)
 
         if not self.zip_file:
-            raise SystemExit("ZIP download failed")
+            raise DownloaderError("ZIP download failed")
+
+        if abs(os.path.getsize(self.zip_file) - file_size) > 0.15*file_size:
+            raise DownloaderError("File size difference is more than 15%")
 
         logging.info(f"File is downloaded to: {self.zip_file}")
 
@@ -621,9 +635,9 @@ class Downloader:
             with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
                 zip_ref.extractall(self.target_unpack_dir)
         except OSError:
-            raise SystemExit("No disk space available in download folder!")
-        except zipfile.BadZipFile:
-            raise SystemExit("Zip file is broken. Please try again later or use another artifactory.")
+            raise DownloaderError("No disk space available in download folder!")
+        except (zipfile.BadZipFile, zlib.error):
+            raise DownloaderError("Zip file is broken. Please try again later or use another repository.")
 
         logging.info(f"File is unpacked to {self.target_unpack_dir}")
 
@@ -688,7 +702,7 @@ class Downloader:
         :return: None
         """
         if not os.path.isfile(self.setup_exe):
-            raise SystemExit("setup.exe does not exist")
+            raise DownloaderError("setup.exe does not exist")
 
         if os.path.isfile(self.installed_product_info):
             uninstall_iss_file = os.path.join(self.target_unpack_dir, "uninstall.iss")
@@ -719,17 +733,27 @@ class Downloader:
         success = "New build was successfully installed" if installation else "Previous build was uninstalled"
         fail = "Installation went wrong" if installation else "Uninstallation went wrong"
         if not os.path.isfile(log_file):
-            raise SystemExit(f"{fail}. Check that UAC disabled or confirm UAC question manually")
+            raise DownloaderError(f"{fail}. Check that UAC disabled or confirm UAC question manually")
 
+        msg = fail
+        regex = "ResultCode=(.*)"
         with open(log_file) as file:
             for line in file:
-                if "ResultCode=0" in line:
-                    logging.info(success)
-                    break
+                code = re.findall(regex, line)
+                if code:
+                    if code[0] == "0":
+                        logging.info(success)
+                        break
+                    elif code[0] == "-3" and installation:
+                        msg += " Electronics Desktop cannot coexist in another location. Change installation path"
+                        raise DownloaderError(msg)
             else:
-                msg = "Official uninstaller failed, make hard remove"
-                logging.error(msg)
-                self.warnings_list.append(msg)
+                if not installation:
+                    msg = "Official uninstaller failed, make hard remove"
+                    logging.error(msg)
+                    self.warnings_list.append(msg)
+                else:
+                    raise DownloaderError(msg)
 
     @staticmethod
     def get_edt_build_date(product_info_file):
@@ -772,7 +796,7 @@ class Downloader:
                     break
 
         if not default_iss_file:
-            raise SystemExit("SilentInstallationTemplate.iss does not exist")
+            raise DownloaderError("SilentInstallationTemplate.iss does not exist")
 
         with open(default_iss_file, "r") as iss_file:
             for line in iss_file:
@@ -786,7 +810,7 @@ class Downloader:
             self.product_id = product_id_match[0]
             logging.info(f"Product ID is {self.product_id}")
         else:
-            raise SystemExit("Unable to extract product ID")
+            raise DownloaderError("Unable to extract product ID")
 
     def install_license_manager(self):
         """
@@ -797,7 +821,7 @@ class Downloader:
         if os.path.isfile(self.setup_exe):
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
             if not os.path.isfile(self.settings.license_file):
-                raise SystemExit(f"No license file was detected under {self.settings.license_file}")
+                raise DownloaderError(f"No license file was detected under {self.settings.license_file}")
 
             command = [self.setup_exe, '-silent', '-LM', '-install_dir', install_path, "-lang", "en",
                        "-licfilepath", self.settings.license_file]
@@ -810,9 +834,9 @@ class Downloader:
             if all([package_build, installed_build]) and package_build == installed_build:
                 self.update_installation_history(status="Success", details=f"Normal completion")
             else:
-                raise SystemExit("License Manager was not installed")
+                raise DownloaderError("License Manager was not installed")
         else:
-            raise SystemExit("No LicenseManager setup.exe file detected")
+            raise DownloaderError("No LicenseManager setup.exe file detected")
 
     def parse_lm_installer_builddate(self):
         """
@@ -828,7 +852,7 @@ class Downloader:
                             lm_build_date = int(lm_build_date)
                             return lm_build_date
                         except TypeError:
-                            raise SystemExit("Cannot extract build date of installation package")
+                            raise DownloaderError("Cannot extract build date of installation package")
         else:
             logging.warning("builddate.txt was not found in installation package")
 
@@ -843,7 +867,7 @@ class Downloader:
                 lm_build_date = int(lm_build_date)
                 return lm_build_date
             except TypeError:
-                raise SystemExit("Cannot extract build date of installed License Manager")
+                raise DownloaderError("Cannot extract build date of installed License Manager")
 
     def install_wb(self, local_lang=False):
         """
@@ -877,10 +901,10 @@ class Downloader:
             if os.path.isfile(uninstall_exe):
                 logging.info("New build was installed")
             else:
-                raise SystemExit("Workbench installation failed. " +
-                                 f"If you see this error message by mistake please report to {__email__}")
+                raise DownloaderError("Workbench installation failed. " +
+                                      f"If you see this error message by mistake please report to {__email__}")
         else:
-            raise SystemExit("No Workbench setup.exe file detected")
+            raise DownloaderError("No Workbench setup.exe file detected")
 
     def uninstall_wb(self):
         """
@@ -1018,6 +1042,9 @@ class Downloader:
         update_registry_exe = os.path.join(self.product_root_path, "UpdateRegistry.exe")
         productlist_file = os.path.join(self.product_root_path, "config", "ProductList.txt")
 
+        if not os.path.isfile(productlist_file):
+            raise DownloaderError("Cannot update registry. Probably Electronics Desktop installation failed")
+
         with open(productlist_file) as file:
             product_version = next(file).rstrip()  # get first line
 
@@ -1112,6 +1139,8 @@ class Downloader:
 
         version, tool = self.settings.version.split("_")
         time_now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+        self.settings.username = os.getenv("username", self.settings.username)
+
         if self.settings.artifactory == "SharePoint":
             self.send_statistics_to_sharepoint(version, tool, time_now, error)
         else:
@@ -1217,7 +1246,7 @@ class Downloader:
 
             return output
         except OSError:
-            raise SystemExit("Please run as administrator and disable Windows UAC")
+            raise DownloaderError("Please run as administrator and disable Windows UAC")
     
     @staticmethod
     def parse_args(version):
@@ -1234,11 +1263,11 @@ class Downloader:
         if args.path:
             settings_path = args.path
             if not os.path.isfile(settings_path):
-                raise SystemExit("Settings file does not exist")
+                raise DownloaderError("Settings file does not exist")
 
             return settings_path
         else:
-            raise SystemExit("Please provide --path argument")
+            raise DownloaderError("Please provide --path argument")
 
 
 def generate_hash_str():
@@ -1262,7 +1291,7 @@ def set_logger(logging_file):
 
     # add logging to console and log file
     # If you set the log level to INFO, it will include INFO, WARNING, ERROR, and CRITICAL messages
-    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.NOTSET,
+    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.INFO,
                         datefmt='%d.%m.%Y %H:%M:%S')
     logging.getLogger().addHandler(logging.StreamHandler())
 

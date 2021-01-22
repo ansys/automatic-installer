@@ -9,6 +9,9 @@ import logging
 import os
 import sys
 
+from office365.runtime.http.request_options import RequestOptions
+from pid import PidFile, PidFileError
+
 root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_folder)
 
@@ -26,16 +29,18 @@ app_principal = {
 
 __version__ = "v1.0.0"
 
+class UploaderError(Exception):
+    pass
 
 def main():
     settings_folder = r"/home/downloader_settings"
     set_logger(os.path.join(settings_folder, "uploader.log"))
-
-    for file in os.listdir(settings_folder):
-        settings_file = os.path.join(settings_folder, file)
-        _, file_extension = os.path.splitext(settings_file)
-        if file_extension == ".json" and "installation_history.json" not in settings_file:
-            upload_to_sharepoint(settings_file)
+    with PidFile():
+        for file in os.listdir(settings_folder):
+            settings_file = os.path.join(settings_folder, file)
+            _, file_extension = os.path.splitext(settings_file)
+            if file_extension == ".json" and "installation_history.json" not in settings_file:
+                upload_to_sharepoint(settings_file)
 
 
 @retry(Exception, 4)
@@ -48,7 +53,7 @@ def upload_to_sharepoint(settings_file):
     all_items = sp.get_list_items()
     for item in all_items:
         if item.properties['Title'] == sp.settings.version and item.properties['build_date'] == build_date:
-            print("Build is up to date")
+            logging.info("Build is up to date")
             return
 
     sp.download_file()
@@ -96,7 +101,17 @@ class SharepointUpload(Downloader):
             name = os.path.basename(file_path)
             result_file = target_folder.upload_file(name, file_content)
         self.ctx.execute_query()
-        print('File {0} has been uploaded successfully'.format(result_file.serverRelativeUrl))
+
+        request = RequestOptions(
+            r"{0}web/getFileByServerRelativeUrl('{1}')/\$value".format(self.ctx.service_root_url(),
+                                                                       result_file.serverRelativeUrl))
+        request.stream = True
+        response = self.ctx.execute_request_direct(request)
+        remote_size = int(response.headers['Content-Length'])
+        if abs(file_size - remote_size) > 0.05 * file_size:
+            raise UploaderError("File size difference is more than 5%")
+
+        logging.info('File {0} has been uploaded successfully'.format(result_file.serverRelativeUrl))
         return folder_url
 
     @retry(Exception, 4)
@@ -124,4 +139,7 @@ class SharepointUpload(Downloader):
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except PidFileError:
+        logging.info("Process is already running")

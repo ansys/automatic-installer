@@ -1,4 +1,10 @@
 {
+    "2.1.0": ["- Available versions are not refreshed each time you switch between windows<br>",
+        "- Username is no more required for SharePoint download<br>",
+        "- Allow to install app for all users on machine<br>",
+        "- App name (shortcuts and start menu) was changed to Ansys Pre-Release Installer<br>",
+        "- Catch error when user tries install AEDT of the same version (eg 212) in parallel to the different location"
+    ],
     "2.0.3": ["- SharePoint product list loading hang issue (caused by TLS) is fixed<br>",
         "- New force clean up method for installation folder<br>",
         "- Show warnings in the status"],
