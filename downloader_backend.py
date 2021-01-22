@@ -31,7 +31,7 @@ import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "2.0.4"
+__version__ = "2.1.0"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
