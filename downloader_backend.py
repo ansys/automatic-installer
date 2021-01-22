@@ -539,6 +539,8 @@ class Downloader:
                 return
 
             logging.info(f"Start download file from {url} to {self.zip_file}")
+            self.update_installation_history(status="In-Progress",
+                                             details=f"Downloading file from {self.settings.artifactory}")
 
             if url_request.status_code != 200:
                 raise DownloaderError(f"Cannot download file. Server returned status code: {url_request.status_code}")
@@ -603,10 +605,13 @@ class Downloader:
         self.check_free_space(self.settings.download_path, file_size/1024/1024/1024)
         bytes_read = 0
         chunk_size = 100 * 1024 * 1024
+        real_chunk = 0
         with open(self.zip_file, "wb") as zip_file:
             for chunk in response.iter_content(chunk_size=chunk_size):
-                bytes_read += len(chunk)
-                if callable(print_download_progress):
+                real_chunk += len(chunk)
+                if real_chunk - chunk_size >= 0:
+                    bytes_read += real_chunk
+                    real_chunk = 0
                     print_download_progress(bytes_read, file_size)
                 zip_file.write(chunk)
 
