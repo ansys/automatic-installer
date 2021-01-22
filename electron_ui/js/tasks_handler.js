@@ -81,7 +81,7 @@ function schedule_task(settings_file) {
 }
 
 function install_once(settings_file) {
-      command = `${backend_exe} -p "${settings_file}"`
+      command = `"${backend_exe}" -p "${settings_file}"`
       // some issue with SharePoint. Better to put some timeout
       exec(command);  // async
 }
