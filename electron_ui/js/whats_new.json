@@ -1,4 +1,5 @@
 {
+    "2.1.1": "Minor fixes",
     "2.1.0": ["- Available versions are not refreshed each time you switch between windows<br>",
         "- Username is no more required for SharePoint download<br>",
         "- Allow to install app for all users on machine<br>",

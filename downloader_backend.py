@@ -31,7 +31,7 @@ import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "2.1.0"
+__version__ = "2.1.1"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
@@ -1139,7 +1139,7 @@ class Downloader:
 
         version, tool = self.settings.version.split("_")
         time_now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-        self.settings.username = os.getenv("username", self.settings.username)
+        self.settings._replace(username=os.getenv("username", self.settings.username))
 
         if self.settings.artifactory == "SharePoint":
             self.send_statistics_to_sharepoint(version, tool, time_now, error)
