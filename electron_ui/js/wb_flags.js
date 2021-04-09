@@ -1,3 +1,10 @@
+var os_path = require('path');
+var fs = require('fs');
+var { remote, ipcRenderer } = require('electron');
+const { app } = remote;
+
+settings_path = os_path.join(app.getPath("appData"), "build_downloader", "default_settings.json");
+
 let flags_data = [
     ['-additive', 'ANSYS Additive', '-additive'],
     ['-aqwa', 'ANSYS Aqwa', '-aqwa'],
@@ -60,7 +67,7 @@ $(document).ready(function() {
      * Remove sorting class for first column with checkboxes
      */
     flags_table = $('#wb-flags-table').DataTable( {
-        "scrollY": "225px",
+        "scrollY": "325px",
         "scrollCollapse": true,
         "paging": false,
         "filter": false,
@@ -78,4 +85,52 @@ $(document).ready(function() {
         }]
     } );
     $(".check-column").removeClass("sorting_asc");
+
+    if (fs.existsSync(settings_path)) {
+        var settings_data = fs.readFileSync(settings_path);
+        settings = JSON.parse(settings_data);
+
+        if (!("custom_flags" in settings)){
+            settings.custom_flags = "";  // for backwards compatibility
+        }
+
+        $("#custom-flags").val(settings.custom_flags);
+        
+        let flag_list = settings.wb_flags.split(" ");
+        flags_table.$('input[type="checkbox"]').each(function(){
+            if(flag_list.includes(this.value)){
+               this.checked = true;
+            }
+        });
+    }
+
+    set_default_tooltips_wb_flags();
 } );
+
+
+$('#save-button').on('click', function(){
+    /**
+     * when click on save button go through all rows and those that are selected add to the list and update settings
+     */
+    let active_flags = [];
+
+    flags_table.$('input[type="checkbox"]').each(function(){
+        if(this.checked){
+            active_flags.push(this.value);
+        }     
+    });
+    settings.wb_flags = active_flags.join(' ');
+
+    settings.custom_flags = $("#custom-flags").val();
+
+    let data = JSON.stringify(settings, null, 4);
+    fs.writeFileSync(settings_path, data);
+    ipcRenderer.send('wb_flags_hide');
+});
+
+$('#cancel-button').on('click', function(){
+    /**
+     * when click on save button go through all rows and those that are selected add to the list and update settings
+     */
+     ipcRenderer.send('wb_flags_hide');
+});

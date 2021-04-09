@@ -1,6 +1,6 @@
 var os_path = require('path');
 var fs = require('fs');
-const { remote } = require('electron');
+var { remote, ipcRenderer } = require('electron');
 const { app, dialog } = remote;
 
 settings_path = os_path.join(app.getPath("appData"), "build_downloader", "default_settings.json");
@@ -75,13 +75,6 @@ $(document).ready(function() {
         $("#delete_zip").prop("checked", settings.delete_zip);
         $("#force_install").prop("checked", settings.force_install);
         $("#replace_shortcut").prop("checked", settings.replace_shortcut);
-        
-        let flag_list = settings.wb_flags.split(" ");
-        flags_table.$('input[type="checkbox"]').each(function(){
-            if(flag_list.includes(this.value)){
-               this.checked = true;
-            }     
-      });
     }
 
     set_default_tooltips_settings();
@@ -111,8 +104,6 @@ var save_settings = function(){
     */
     if (this.id == "force_install" || this.id == "delete_zip" || this.id == "replace_shortcut"){
         settings[this.id] = this.checked;
-    } else if (this.id == "save-button") {
-        // settings are already modified on click
     } else {
         settings[this.id] = this.value;
     }
@@ -160,19 +151,14 @@ $('#select-all-checkbox').on('click', function(){
     $('input[type="checkbox"]', rows).prop('checked', this.checked);
 });
 
-$('#save-button').on('click', function(){
+
+
+$('#wb-flags-button').on('click', function(){
     /**
      * when click on save button go through all rows and those that are selected add to the list and update settings
      */
-    let active_flags = [];
-
-    flags_table.$('input[type="checkbox"]').each(function(){
-        if(this.checked){
-            active_flags.push(this.value);
-        }     
-    });
-    settings.wb_flags = active_flags.join(' ');
-    save_settings.call(this);
+     ipcRenderer.send('wb_flags_show');
 });
+
 
 $("#install_path, #download_path, #password, #force_install, #delete_zip, #replace_shortcut").bind("change", save_settings);

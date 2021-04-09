@@ -90,6 +90,15 @@ function get_sharepoint_builds() {
       let installed = execSync("powershell.exe Get-Module SharePointPnPPowerShellOnline -ListAvailable").toString();
 
       if (installed == 0) {
+            dialog.showMessageBox(null, {
+                  type: 'info',
+                  buttons: ['OK'],
+                  defaultId: 2,
+                  title: 'First time configuration',
+                  detail: "First time configuration. Installing required modules, this may take up to 5 min. " +
+                  "Interface will be blocked. Wait until Version and Product list will be filled with data"
+            });
+
             // install module
             let command = 'powershell.exe ';
             command += "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;";
@@ -116,6 +125,6 @@ function get_sharepoint_builds() {
                   }
             } 
       }
-      products_dict.last_refreshed = 0;
       fill_versions(builds);
+      update_ipc_products(builds);
 }

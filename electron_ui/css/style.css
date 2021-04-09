@@ -100,6 +100,7 @@
 }
 
 #wb-flags-table-div {
+  margin-top: 10px;
   margin-bottom: 20px;
 }
 
@@ -322,6 +323,36 @@ table.dataTable tbody td{
 .w-checkbox-input--inputType-custom.w--redirected-focus {
   box-shadow: 0px 0px 3px 1px #3898ec;
 }
+
+/* Main page */
+.password-field {
+  width: calc(100% - 4px);
+  margin-right: 0;
+  padding: 0;
+}
+
+.token-img {
+  width: 38px;
+  background-color: rgb(255, 255, 255);
+  border-color: rgb(204, 204, 204);
+  border-width: 1px;
+}
+
+#sso-password-window {
+  position: fixed;
+  z-index:1000;
+  top: 60px;
+  left: 330px;
+  width: 350px;
+  height: 200px;
+  padding: 20px;
+  border-radius: 5px;
+  background-color: #000;
+  border-color: #fff;
+  border: 2px solid;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+}
+/* env of main page */ 
 
 body {
   font-family: Montserrat, sans-serif;
@@ -577,6 +608,10 @@ label {
   background-color: #ffb71b;
   color: #1d1d1f;
   text-align: center;
+}
+
+.button-left {
+  left: 10%;
 }
 
 .grid {

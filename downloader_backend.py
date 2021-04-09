@@ -20,8 +20,8 @@ import requests
 from artifactory_du import artifactory_du
 from influxdb import InfluxDBClient
 from plyer import notification
-from requests.exceptions import ReadTimeout, ConnectionError, ChunkedEncodingError
-from urllib3.exceptions import ReadTimeoutError, ProtocolError
+from requests.exceptions import RequestException
+from urllib3.exceptions import HTTPError
 
 from office365.sharepoint.client_context import ClientContext
 from office365.runtime.auth.authentication_context import AuthenticationContext
@@ -31,7 +31,7 @@ import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "2.1.1"
+__version__ = "2.2.0"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
@@ -39,23 +39,20 @@ STATISTICS_PORT = 8086
 TIMEOUT = 90
 
 artifactory_dict = OrderedDict([
+    ('Azure', r'http://azwec7artsrv01.ansys.com:8080/artifactory'),
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
-    ('Boulder', r'http://bouatsrv01:8080/artifactory'),
     ('Canonsburg', r'http://canartifactory.ansys.com:8080/artifactory'),
     ('Concord', r'http://convmartifact.win.ansys.com:8080/artifactory'),
     ('Darmstadt', r'http://darvmartifact.win.ansys.com:8080/artifactory'),
     ('Evanston', r'http://evavmartifact:8080/artifactory'),
-    ('Gothenburg', r'http://gotvmartifact1:8080/artifactory'),
     ('Hannover', r'http://hanartifact1.ansys.com:8080/artifactory'),
     ('Horsham', r'http://horvmartifact1.ansys.com:8080/artifactory'),
     ('Lebanon', r'http://lebartifactory.win.ansys.com:8080/artifactory'),
     ('Lyon', r'http://lyovmartifact.win.ansys.com:8080/artifactory'),
-    ('MiltonPark', r'http://milvmartifact.win.ansys.com:8080/artifactory'),
     ('Otterfing', r'http://ottvmartifact.win.ansys.com:8080/artifactory'),
     ('Pune', r'http://punvmartifact.win.ansys.com:8080/artifactory'),
     ('Sheffield', r'http://shfvmartifact.win.ansys.com:8080/artifactory'),
     ('SanJose', r'http://sjoartsrv01.ansys.com:8080/artifactory'),
-    ('Waterloo', r'http://watatsrv01.ansys.com:8080/artifactory')
 ])
 
 sharepoint_site_url = r"https://ansys.sharepoint.com/sites/BetaDownloader"
@@ -195,8 +192,13 @@ class Downloader:
 
         if "ElectronicsDesktop" in self.settings.version:
             self.product_version = self.settings.version[1:4]
-            self.product_root_path = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
-                                                  self.product_version[:2] + "." + self.product_version[2:], "Win64")
+            if float(self.product_version) >= 221:
+                self.product_root_path = os.path.join(self.settings.install_path, "AnsysEM", f"v{self.product_version}",
+                                                      "Win64")
+            else:
+                self.product_root_path = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
+                                                      self.product_version[:2] + "." + self.product_version[2:],
+                                                      "Win64")
 
             self.installed_product_info = os.path.join(self.product_root_path, "product.info")
         elif "Workbench" in self.settings.version:
@@ -385,7 +387,7 @@ class Downloader:
         logging.info(f"Version on artifactory/SP is {new_product_version}")
         return new_product_version
 
-    @retry((ReadTimeoutError, ReadTimeout, ConnectionError, ProtocolError), 4, logger=logging)
+    @retry((HTTPError, RequestException, ConnectionError, ConnectionResetError), 4, logger=logging)
     def get_build_link(self):
         """
         Function that sends HTTP request to JFrog and get the list of folders with builds for Electronics Desktop and
@@ -435,7 +437,7 @@ class Downloader:
             repo = artifacts_dict[self.settings.version]
         except KeyError:
             raise DownloaderError(f"Version {self.settings.version} that you have specified " +
-                             f"does not exist on {self.settings.artifactory}")
+                                  f"does not exist on {self.settings.artifactory}")
 
         if "ElectronicsDesktop" in self.settings.version:
             url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
@@ -513,8 +515,7 @@ class Downloader:
                     if "Electronics" in child["uri"] and "winx" in child["uri"]:
                         return latest
 
-    @retry((ReadTimeoutError, ReadTimeout, ConnectionError, ProtocolError,
-            ConnectionResetError, ChunkedEncodingError), 4, logger=logging)
+    @retry((HTTPError, RequestException, ConnectionError, ConnectionResetError), 4, logger=logging)
     def download_file(self, recursion=False):
         """
         Downloads file in chunks and saves to the temp.zip file
@@ -894,6 +895,10 @@ class Downloader:
                 command += ['-licserverinfo', '2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1']
                 logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
 
+            # convert command to string to easy append custom flags
+            command = subprocess.list2cmdline(command)
+            command += " " + self.settings.custom_flags
+
             self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation")
             self.subprocess_call(command)
@@ -999,11 +1004,11 @@ class Downloader:
         """
         try:
             if os.path.isfile(self.zip_file) and self.settings.delete_zip:
-                os.remove(self.zip_file)
+                self.remove_path(self.zip_file)
                 logging.info("ZIP deleted")
 
             if os.path.isdir(self.target_unpack_dir):
-                shutil.rmtree(self.target_unpack_dir)
+                self.remove_path(self.target_unpack_dir)
                 logging.info("Unpacked directory removed")
         except PermissionError:
             logging.error("Temp files could not be removed due to permission error")

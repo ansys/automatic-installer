@@ -4,23 +4,20 @@ var axios = require('axios');
 const { shell } = require('electron');
 
 artifactory_dict = {
+    'Azure': 'http://azwec7artsrv01.ansys.com:8080/artifactory',
     'Austin': 'http://ausatsrv01.ansys.com:8080/artifactory',
-    'Boulder': 'http://bouatsrv01:8080/artifactory',
     'Canonsburg': 'http://canartifactory.ansys.com:8080/artifactory',
     'Concord': 'http://convmartifact.win.ansys.com:8080/artifactory',
     'Darmstadt': 'http://darvmartifact.win.ansys.com:8080/artifactory',
     'Evanston': 'http://evavmartifact:8080/artifactory',
-    'Gothenburg': 'http://gotvmartifact1:8080/artifactory',
     'Hannover': 'http://hanartifact1.ansys.com:8080/artifactory',
     'Horsham': 'http://horvmartifact1.ansys.com:8080/artifactory',
     'Lebanon': 'http://lebartifactory.win.ansys.com:8080/artifactory',
     'Lyon': 'http://lyovmartifact.win.ansys.com:8080/artifactory',
-    'MiltonPark': 'http://milvmartifact.win.ansys.com:8080/artifactory',
     'Otterfing': 'http://ottvmartifact.win.ansys.com:8080/artifactory',
     'Pune': 'http://punvmartifact.win.ansys.com:8080/artifactory',
     'Sheffield': 'http://shfvmartifact.win.ansys.com:8080/artifactory',
     'SanJose': 'http://sjoartsrv01.ansys.com:8080/artifactory',
-    'Waterloo': 'http://watatsrv01.ansys.com:8080/artifactory',
     'SharePoint': 'https://ansys.sharepoint.com/sites/BetaDownloader'
 };
 
@@ -28,11 +25,20 @@ app_folder = path.join(app.getPath("appData"), "build_downloader")
 settings_path = path.join(app_folder, "default_settings.json");
 whatisnew_path = path.join(app_folder, "whatisnew.json");
 all_days = ["mo", "tu", "we", "th", "fr", "sa", "su"]
-products_dict = {"last_refreshed": 72001};
+products_dict = {};
+
+
+function seconds_since_epoch() {
+    return Math.round(Date.now() / 1000);
+}
+
 
 ipcRenderer.on('products', (event, products) => {
     products_dict = products;
-    if (products_dict.last_refreshed > 72000) {
+    let time_passed = seconds_since_epoch() - products_dict.last_refreshed;
+
+    if (!products_dict || !products_dict.versions || time_passed > 43200) {
+        // request new builds list only once per 12h
         request_builds();
     } else {
         fill_versions(products_dict.versions);
@@ -84,7 +90,7 @@ window.onload = function() {
 
         let data = JSON.stringify(settings, null, 4);
         fs.writeFileSync(settings_path, data);
-        dialog.showMessageBox(null, remote.getGlobal('agreement'));
+        ipcRenderer.send('agreement_show');
     } else {
         var settings_data = fs.readFileSync(settings_path);
         settings = JSON.parse(settings_data);
@@ -105,7 +111,7 @@ window.onload = function() {
 
     // get product and continue getting them every 120s
     ipcRenderer.send('get-products');
-    window.setInterval(() => {ipcRenderer.send('get-products')}, 12000);
+    window.setInterval(() => {ipcRenderer.send('get-products')}, 120000);
     set_default_tooltips_main();
     change_password();
 }
@@ -187,13 +193,14 @@ var save_settings = function () {
 }
 
 
-var request_builds = function (){
+function request_builds() {
     /**
      * Send request to the server using axios. Try to retrive info about 
      * available builds on artifactory
     */
     $("#version").empty();
     $("#version").append($('<option>', {value:1, text:"Loading data..."}))
+    clean_products_list();
 
     if (!settings.username) {
         error_tooltip.call($('#username'), "Provide your Ansys User ID");
@@ -212,38 +219,81 @@ var request_builds = function (){
         return;
     }
 
+    artifactory_request('/api/repositories').then((response)=>{
+        if (response && response.status == 200){
+            get_builds(response.data);
+        } 
+    })
+}
+
+
+async function artifactory_request(url, sso_pass="", req_type="get") {
     // // uncomment this snippet (and comment below) to test any status code
     // axios.get('https://httpstat.us/500', {
     //     timeout: 30000
     //   })
 
-    axios.get(artifactory_dict[settings.artifactory] + '/api/repositories', {
+    password = sso_pass;
+    if (!sso_pass) {
+        password = settings.password[settings.artifactory];
+    }
+
+    let config = {
+        url: url,
+        baseURL: artifactory_dict[settings.artifactory],
+        method: req_type,
         auth: {
-          username: settings.username,
-          password: settings.password[settings.artifactory]
+            username: settings.username,
+            password: password
         },
-        timeout: 30000
+        timeout: 6000
+    }
+
+    try {
+        const response = await axios.request(config);
+        return response
+
+    } catch (err) {
+        console.log(err.response);
+        if (!err.response && !err.code) {
+            error_tooltip.call($('#artifactory'), "Check that you are on VPN and retry in 10s (F5)");
+        } else if (err.code === 'ECONNABORTED'){
+            error_tooltip.call($('#username'), "Timeout on connection, check Ansys User ID");
+            error_tooltip.call($('#password'), "Timeout on connection, check Password or/and retry (F5)");
+        } else if (err.response.status == 401){
+            error_tooltip.call($('#username'), "Bad credentials, check Ansys User ID");
+            error_tooltip.call($('#password'), "Bad credentials, check Artifactory unique password");
+        } else if (err.response.status == 500){
+            error_tooltip.call($('#artifactory'), "Internal Server Error, try another artifactory");
+        } else if (err.response.status != 200){
+            error_tooltip.call($('#artifactory'), err.response.statusText);
+        }
+    }
+}
+
+
+function send_get_api_request(sso_password) {
+    artifactory_request('/api/security/apiKey', sso_password, "get").then((response)=>{
+        // first get current key
+        if (response && response.status == 200){
+            if (response.data.hasOwnProperty("apiKey")) {
+                // key already exist, refresh key
+                var req_type = "put";
+            } else {
+                // key does not exist, generate key
+                var req_type = "post";
+            }
+            
+            artifactory_request('/api/security/apiKey', sso_password, req_type).then((response)=>{
+                if (response && response.status == 200){
+                    $("#password").val(response.data["apiKey"]);
+                    $("#password").trigger("change");
+                } 
+            })
+        } else {
+            console.log("Cannot get keys");
+        }
     })
-        .then((response) => {
-            if (response.status == 200) {
-            get_builds(response.data);
-            }
-        })
-        .catch((err) => {
-            if (!err.response && !err.code) {
-                error_tooltip.call($('#artifactory'), "Check that you are on VPN and retry in 10s (F5)");
-            } else if (err.code === 'ECONNABORTED'){
-                error_tooltip.call($('#username'), "Timeout on connection, check Ansys User ID");
-                error_tooltip.call($('#password'), "Timeout on connection, check Password or/and retry (F5)");
-            } else if (err.response.status == 401){
-                error_tooltip.call($('#username'), "Bad credentials, check Ansys User ID");
-                error_tooltip.call($('#password'), "Bad credentials, check Artifactory unique password");
-            } else if (err.response.status == 500){
-                error_tooltip.call($('#artifactory'), "Internal Server Error, try another artifactory");
-            } else if (err.response.status != 200){
-                error_tooltip.call($('#artifactory'), err.response.statusText);
-            }
-        });
 }
 
 
@@ -268,16 +318,26 @@ function get_builds(artifacts_list){
             }
         }
     }
-    products_dict.last_refreshed = 0;
+
     fill_versions(version_list);
+    update_ipc_products(version_list);
+}
+
+function update_ipc_products(version_list) { 
+    // send newly received versions to main process
+    products_dict.versions =  version_list;
+    products_dict.last_refreshed = seconds_since_epoch();
+    ipcRenderer.send('set-products', products_dict);
 }
 
 function fill_versions(version_list){
     /**
      * Fills drop down menu with AEDT and WB versions
      */
-    products_dict.versions =  version_list;
-    ipcRenderer.send('set-products', products_dict);
+    
+    if (!version_list) {
+        return;
+    }
 
     version_list.sort(function (a, b) {
         if (a.slice(1, 6) > b.slice(1, 6)) {return -1;}
@@ -303,10 +363,24 @@ function open_artifactory_site(){
     shell.openExternal(url);
 }
 
-const change_password = function (){
+
+function clean_products_list() {
+    /** 
+     * Clean versions array in browser windows and main win, otherwise it will be filled
+     */
+    
+    if (products_dict) {
+        products_dict.versions = [];  
+        ipcRenderer.send('set-products', products_dict.versions);
+    }
+}
+
+
+function change_password() {
     /**
      * Password is stored in settings in another dictionary (Object), extract it for selected artifactory
      */
+
     if ($("#artifactory").val() == "SharePoint"){
         visible = 'hidden';
     } else {
@@ -317,6 +391,8 @@ const change_password = function (){
 
     $("#password").css('visibility', visible);
     $('label[for="password"]').css('visibility', visible);
+
+    $("#get-token-button").css('visibility', visible);
 
     $("#username").css('visibility', visible);
     $('label[for="username"]').css('visibility', visible);
@@ -394,3 +470,46 @@ $("#install-once-button").click(function (){
         alert("Version does not exist on artifactory");
     }
 })
+
+
+const sso_window = document.getElementById('sso-password-window');
+
+
+$("#get-token-button").click(function(){
+    /**
+     * Show get API key dialog
+     */
+
+    sso_window.classList.remove('hidden');
+    return false;
+});
+
+function closeGetApiWindow() {
+    $("#sso-password").val("");
+    sso_window.classList.add('hidden');
+}
+
+function getApiKey() {
+    /**
+     * Send request to artifactory to get or refresh API token
+     */
+
+    let sso_password = $("#sso-password").val();
+    $("#password").val("");
+    $("#version").empty();
+    $("#version").append($('<option>', {value:1, text:"Requesting API key..."}))
+
+    send_get_api_request(sso_password);
+
+    var looper = setInterval(function(){ 
+        // need to repeat get key, otherwise does not work from the first time
+        if (!$("#password").val()) {
+            send_get_api_request(sso_password);
+        }
+        
+        clearInterval(looper);
+    }, 7000);
+
+    $("#sso-password").val("");
+    sso_window.classList.add('hidden');
+}

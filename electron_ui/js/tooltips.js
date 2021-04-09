@@ -2,14 +2,8 @@ function set_default_tooltips_main(){
     /**
      * Set tooltips on the main page
      */
-    set_tooltip("password",  "Retrieval of Artifactory Encrypted Password Instructions:\n" +
-        "1. Right click on REPOSITORY drop down menu\n" +
-        "2. Log into Artifactory using SSO credentials\n" +
-        "\t2.1 Click on your UserID (top right)\n" +
-        "\t2.2 Enter your password to Unlock Artifactory Encrypted Password\n" +
-        "\t2.3 Copy over Artifactory Encrypted Password and press Enter\n" +
-        "[Note] Artifactory Encrypted Password is not valid for other artifactories.\n" +
-        "Encrypted password will change anytime your SSO password changes.", true);
+    set_tooltip("password", "Click on the 'Key' button right to this field to get a new key\n" +
+        "[Note] Artifactory API key is not valid for other artifactories.\n", true);
 
     set_tooltip("username",  "Ansys UserID");
     set_tooltip("artifactory",  "Select a repository, once dropdown is collapsed right mouse click " +
@@ -23,6 +17,8 @@ function set_default_tooltips_main(){
     set_tooltip("schedule-table-div",  "Click on a row to unschedule specific task");
     set_tooltip("schedule-button",  "Makes copy of current settings (including advanced) and schedules installation");
 
+    set_tooltip("get-token-button", "Click on the button to receive a new API key");
+    set_tooltip("sso-password", "Provide your SSO password to request API key, password is not stored");
 }
 
 function set_default_tooltips_settings(){
@@ -38,9 +34,6 @@ function set_default_tooltips_settings(){
         "Removes Savant, Emit, TB, SI shortcuts and replaces them with single AEDT <version> shortcut",
         true);
 
-    set_tooltip("wb-flags-table-div", "Select product flags and click Save Flags button.\n" +
-        "Note: Will install all if none selected");
-
     set_tooltip("install_path",
         "Root path would be appended by:\n\\AnsysEM\\AnsysEMXX.X for Electronics Desktop\n" +
         "or \n\\ANSYS Inc\\vXXX for Workbench");
@@ -48,6 +41,20 @@ function set_default_tooltips_settings(){
     set_tooltip("hpc-options-table-div", "HPC files are exported from Electronics Desktop -> HPC and " + 
                     "analysis options. \nTo update Registry see example in the help: UpdateRegistry File Format" + 
                     "\nClick on a row to remove options file", true)
+}
+
+function set_default_tooltips_wb_flags(){
+    /**
+     * Set tooltips on the WB flags page
+     */
+
+    set_tooltip("custom-flags",
+        "Here you can provide custom WB flags (space separated) if not in the list above. " +
+        'For example, -speoscreo4 -speoscreo4path "C:\\Program Files\\creo"',
+        true);
+
+    set_tooltip("wb-flags-table-div", "Select flags for products you would like to install.\n" +
+        "Note: Will install all if none selected");
 }
 
 function set_default_tooltips_history(){

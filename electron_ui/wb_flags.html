@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Workbench products and flags</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="css/jquery.dataTables.min.css" rel="stylesheet" type="text/css">
+    <link href="css/style.css" rel="stylesheet" type="text/css">
+</head>
+
+<body class="body whasnew-body">
+
+    <div class="w-row">
+        <div class="w-col">
+            <label class="field-label whatsnew-label">Workbench Silent Installation Flags</label>
+        </div>
+    </div>
+    <div id="wb-flags-table-div">
+        <table id="wb-flags-table" class="tg">
+            <thead>
+                <tr>
+                    <th class="tg-4wcp th-8vvg check-column no-sort">
+                        <input name="select_all" value="1" id="select-all-checkbox" type="checkbox" />
+                    </th>
+                    <th class="tg-4wcp th-8vvg description-column">Description</th>
+                    <th class="tg-4wcp th-8vvg flag-column">Flag</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    
+    <div class="w-row">
+        <div class="w-col w-col-12">
+            <div class="w-form">
+                <form>
+                    <label class=".field-label" for="custom-flags">Custom flags</label>
+                    <input type="text" class="text-field-2 w-input" id="custom-flags" required="">
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-row">
+        <div class="w-col w-col-6">
+            <a id="save-button" href="#" class="button-2 w-button">Save and Close</a>
+        </div>
+        <div class="w-col w-col-6">
+            <a id="cancel-button" href="#" class="button-2 w-button">Cancel</a>
+        </div>
+    </div>
+
+    <script src="js/jquery-3.js" type="text/javascript"></script>
+    <script src="js/jquery-3.5.0.min.js" type="text/javascript"></script>
+    <script src="js/bootstrap.min.js" type="text/javascript"></script>
+
+    <script src="js/jquery.dataTables.min.js" type="text/javascript"></script>
+
+    <script src="js/tooltips.js" type="text/javascript"></script>
+    <script src="js/wb_flags.js" type="text/javascript"></script>
+
+</body>
+</html>

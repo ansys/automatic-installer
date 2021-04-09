@@ -4,11 +4,6 @@ const ipc = require('electron').ipcMain;
 const path = require('path');
 const fs = require('fs');
 
-const updateServer = 'http://ottbld02:1337';
-let arch = 'win64';
-
-const feed = `${updateServer}/update/${arch}`;
-autoUpdater.setFeedURL(feed);
 autoUpdater.autoDownload = false;
 
 setInterval(() => {
@@ -34,7 +29,17 @@ const about_options = {
             "\nEmail: maksim.beliaev@ansys.com"             
     };
 
-const usage_agreement = {
+
+
+function show_agreement() {
+    /**
+     * Show always on top, so user cannot miss it
+     */
+    dialog.showMessageBox(new BrowserWindow({
+        show: false,
+        alwaysOnTop: true
+      }),
+      {
         type: 'info',
         buttons: ['OK'],
         defaultId: 2,
@@ -42,9 +47,8 @@ const usage_agreement = {
         message: 'Ansys Beta Build Downloader Usage Agreement',
         detail: "This software collects information to support quality improvement, including user ID, version, " +
                 "downloaded software, time and status of the installation."
-    };
-
-global.agreement = usage_agreement;
+    });
+}
 
 // Each object (dictionary) in a list is a dropdown item
 let submenu_list = [
@@ -64,13 +68,13 @@ let submenu_list = [
     {
         label:'Agreement',
         click(){
-            dialog.showMessageBox(null, usage_agreement);
+            show_agreement();
         }
     },
     {
         label:"What's New",
         click(){
-            child.show();
+            whats_new_window.show();
         }
     },
     {
@@ -82,24 +86,24 @@ let submenu_list = [
     }
 ]
 
-if (app.isPackaged) {
-        var app_width = 1000;    // production
-} else {
-        var app_width = 2*1000;;    // develop
+if (!app.isPackaged || app.commandLine.hasSwitch("debug")) {
+    var app_width = 2*1000;    // debug flag is sent or exe not built
         submenu_list.push({
             label:'Developer Tools',
             accelerator:process.platform == 'darwin' ? 'Command+R' : 'Ctrl+Shift+I',
             role: "toggleDevTools"
         })
+} else {
+        var app_width = 1000;
 }
 
 app.on('ready', () => {
     MainWindow = new BrowserWindow({
-              show: false,    // disable show from the beginning to avoid white screen, see ready-to-show
-                    webPreferences: {
-                            nodeIntegration: true,
-                            enableRemoteModule: true  // starting from V9
-                    },
+        show: false,    // disable show from the beginning to avoid white screen, see ready-to-show
+        webPreferences: {
+            nodeIntegration: true,
+            enableRemoteModule: true  // starting from V9
+        },
         height: 650,
         width: app_width,
         resizable: false
@@ -110,7 +114,7 @@ app.on('ready', () => {
     })
 
     // create new child to show What's New section in separate window
-    child = new BrowserWindow({ 
+    whats_new_window = new BrowserWindow({ 
         parent: MainWindow, 
         show: false, 
         modal: true,
@@ -122,7 +126,7 @@ app.on('ready', () => {
             nodeIntegration: true
         }
     });
-    child.loadURL('file://' + __dirname + '/whatsnew.html');
+    whats_new_window.loadURL('file://' + __dirname + '/whatsnew.html');
 
     // load main page only after we show starting logo
 	  setTimeout(function(){
@@ -155,7 +159,7 @@ app.on('ready', () => {
 
     // event to open What's New window on signal from IPC
     ipc.on('whatsnew_show', () => {
-        child.show()
+        whats_new_window.show()
     });
 
     ipc.on('whatsnew_hide', (event, not_show_again, settings) => {
@@ -166,16 +170,46 @@ app.on('ready', () => {
             let data = JSON.stringify(settings, null, 4);
             fs.writeFileSync(whatisnew_path, data);
         }
-        child.hide()
+        whats_new_window.hide()
     });
 
-    var products_dict = {"last_refreshed": 72001};
+    // signals for WB flags window
+    ipc.on('wb_flags_show', () => {
+        // create separate window for WB installation flags
+        wb_flags_window = new BrowserWindow({ 
+            parent: MainWindow, 
+            show: false, 
+            modal: true,
+            height: 600,
+            width: 800,
+            resizable: false,
+            frame: false,
+            webPreferences: {
+                nodeIntegration: true,
+                enableRemoteModule: true
+            }
+        });
+        wb_flags_window.loadURL('file://' + __dirname + '/wb_flags.html');
+        wb_flags_window.show()
+    });
+
+    ipc.on('wb_flags_hide', () => {
+        wb_flags_window.close()
+    });
+
+    ipc.on('agreement_show', () => {
+        // signals to show usage agreement
+        show_agreement();
+    });
+
+    var products_dict = {};
     ipc.on("get-products", () => {
-        products_dict.last_refreshed += 120;
+        // event that requests to send products dictionary to browser window
         MainWindow.webContents.send("products", products_dict);
     });
 
     ipc.on("set-products", (event, products) => {
+        // event that receives from browser window updated dict with products and stores in main process
         products_dict = products;
     });
 

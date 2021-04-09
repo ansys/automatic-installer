@@ -139,18 +139,7 @@ class InstallUninstallTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # unittest.main()
     suite = unittest.TestSuite()
-    # suite.addTest(InstallUninstallTest("download_file"))
-    # suite.addTest(InstallUninstallTest("install_edt"))
-    # suite.addTest(InstallUninstallTest("uninstall_edt"))
-    # suite.addTest(InstallUninstallTest("update_registry"))
-    # suite.addTest(InstallUninstallTest("clean_temp"))
-    # suite.addTest(InstallUninstallTest("uninstall_wb"))
-    # suite.addTest(InstallUninstallTest("install_wb"))
-    # suite.addTest(InstallUninstallTest("install_all"))
-    # suite.addTest(InstallUninstallTest("write_history"))
-    # suite.addTest(InstallUninstallTest("statistics"))
     suite.addTest(InstallUninstallTest("full_run"))
     runner = unittest.TextTestRunner()
     runner.run(suite)
