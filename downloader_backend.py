@@ -41,6 +41,7 @@ TIMEOUT = 90
 artifactory_dict = OrderedDict([
     ('Azure', r'http://azwec7artsrv01.ansys.com:8080/artifactory'),
     ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
+    ('Boulder', r'https://bouartifact.ansys.com:8443/artifactory'),
     ('Canonsburg', r'http://canartifactory.ansys.com:8080/artifactory'),
     ('Concord', r'http://convmartifact.win.ansys.com:8080/artifactory'),
     ('Darmstadt', r'http://darvmartifact.win.ansys.com:8080/artifactory'),
@@ -53,6 +54,7 @@ artifactory_dict = OrderedDict([
     ('Pune', r'http://punvmartifact.win.ansys.com:8080/artifactory'),
     ('Sheffield', r'http://shfvmartifact.win.ansys.com:8080/artifactory'),
     ('SanJose', r'http://sjoartsrv01.ansys.com:8080/artifactory'),
+    ('Waterloo', r'https://watartifactory.win.ansys.com:8443/artifactory')
 ])
 
 sharepoint_site_url = r"https://ansys.sharepoint.com/sites/BetaDownloader"
@@ -897,7 +899,10 @@ class Downloader:
 
             # convert command to string to easy append custom flags
             command = subprocess.list2cmdline(command)
-            command += " " + self.settings.custom_flags
+
+            if hasattr(self.settings, "custom_flags"):
+                # old Downloader version settings file did not have this flag
+                command += " " + self.settings.custom_flags
 
             self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation")

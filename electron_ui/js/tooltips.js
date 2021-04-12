@@ -3,7 +3,13 @@ function set_default_tooltips_main(){
      * Set tooltips on the main page
      */
     set_tooltip("password", "Click on the 'Key' button right to this field to get a new key\n" +
-        "[Note] Artifactory API key is not valid for other artifactories.\n", true);
+        "[Note] Artifactory API key is not valid for other artifactories.\n\n" +
+        "If that did not work, then use Sharepoint or get key manually:\n" +
+        "1. Right click on REPOSITORY drop down menu\n" +
+        "2. Log into Artifactory using SSO credentials\n" +
+        "\t2.1 Click on your UserID (top right)\n" +
+        "\t2.2 Enter your password and click on 'Gear' to generate new API key\n" +
+        "\t2.3 Copy over Artifactory API key and click outside of the field\n", true);
 
     set_tooltip("username",  "Ansys UserID");
     set_tooltip("artifactory",  "Select a repository, once dropdown is collapsed right mouse click " +
@@ -50,8 +56,9 @@ function set_default_tooltips_wb_flags(){
 
     set_tooltip("custom-flags",
         "Here you can provide custom WB flags (space separated) if not in the list above. " +
-        'For example, -speoscreo4 -speoscreo4path "C:\\Program Files\\creo"',
-        true);
+        'For example, \n-speosnx12 -speosnx12path "C:\\Program Files\\Siemens\\NX 12.0\\UGII"\n' + 
+        '-speoscreo4 -speoscreo4path "C:\\Program Files\\PTC\\Creo 4.0\\M120\\Parametric\\bin"',
+        true, place="top");
 
     set_tooltip("wb-flags-table-div", "Select flags for products you would like to install.\n" +
         "Note: Will install all if none selected");

@@ -6,6 +6,7 @@ const { shell } = require('electron');
 artifactory_dict = {
     'Azure': 'http://azwec7artsrv01.ansys.com:8080/artifactory',
     'Austin': 'http://ausatsrv01.ansys.com:8080/artifactory',
+    'Boulder': 'https://bouartifact.ansys.com:8443/artifactory',
     'Canonsburg': 'http://canartifactory.ansys.com:8080/artifactory',
     'Concord': 'http://convmartifact.win.ansys.com:8080/artifactory',
     'Darmstadt': 'http://darvmartifact.win.ansys.com:8080/artifactory',
@@ -18,6 +19,7 @@ artifactory_dict = {
     'Pune': 'http://punvmartifact.win.ansys.com:8080/artifactory',
     'Sheffield': 'http://shfvmartifact.win.ansys.com:8080/artifactory',
     'SanJose': 'http://sjoartsrv01.ansys.com:8080/artifactory',
+    'Waterloo': 'https://watartifactory.win.ansys.com:8443/artifactory',
     'SharePoint': 'https://ansys.sharepoint.com/sites/BetaDownloader'
 };
 

@@ -1,10 +1,11 @@
 {
     "2.2.0": ["- Added possibility to add custom WB flags in addition to products list<br>",
-        "- Now you can request Artifactory API key directly from main page<br>",
+        "- Now you can request Artifactory API key directly from the main page<br>",
         "- Release server will be moved to GitHub to avoid VPN dependence during app auto-update<br>",
         "- Added 'First time configuration' message during first run for the most impatient users :)<br>",
-        "- Release of AEDT 2022R1 is using different installation path, adopted to this change<br>",
-        "- Added Azure Artifactory to the list of repositories, removed Boulder, Gothenburg, Milton P., Waterloo<br>",
+        "- Release of AEDT 2022R1 uses different installation path, adopted to this change<br>",
+        "- Added Azure Artifactory to the list of repositories, removed Gothenburg, Milton Park, ",
+        "updated URL for Boulder, Waterloo<br>",
         "- Minor UI and backend bug fixes"
     ],
     "2.1.1": "Minor fixes",
