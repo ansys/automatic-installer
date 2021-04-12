@@ -129,10 +129,14 @@ app.on('ready', () => {
     whats_new_window.loadURL('file://' + __dirname + '/whatsnew.html');
 
     // load main page only after we show starting logo
-	  setTimeout(function(){
+    setTimeout(function(){
         MainWindow.loadURL('file://' + __dirname + '/main.html');
-        autoUpdater.checkForUpdatesAndNotify();
     }, 1500);
+
+    setTimeout(function(){
+        autoUpdater.checkForUpdatesAndNotify();
+    }, 7000);
+
 
     MainWindow.loadURL('file://' + __dirname + '/starter.html');
 

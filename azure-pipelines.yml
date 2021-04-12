@@ -27,9 +27,10 @@ steps:
   displayName: 'Install NodeJS Dependencies'
 
 - script: |
+   set GH_TOKEN=$(gh_token)
    cd electron_ui
-   npm run dist
-  displayName: 'Build Electron'
+   npm run deploy
+  displayName: 'Build and Deploy Electron App to GitHub'
 
 - script: |
     python "server\\upload_build_to_server.py" --channel="stable" --platform="windows_64"  --base-url="http://ottbld02:1337" --username="admin" --password="$(password)" --path="%CD%\\electron_ui\\dist"

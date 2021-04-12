@@ -53,42 +53,15 @@ D:\build_env\Scripts\pyinstaller.exe ..\downloader_backend.py --distpath python_
 
 To generate build (executable) [electron-builder](https://www.electron.build/) is used (see scripts section in package.json):
 ~~~
-npm run dist
+npm run build
 ~~~
 
-# Distribution/Server
-For distribution [Electron Release Server (ERS)](https://github.com/ArekSredzki/electron-release-server) is used.
-My fork of the server you can find in the same project in Azure [Electron Release Server Fork](https://dev.azure.com/EMEA-FES-E/AnsysSoftwareManagement/_git/Electron_Release_Server).
-
-To handle releases [PostgreSQL](https://www.postgresql.org/) database is used. See ERS docs how to configure it.
-
-In the app autoupdate is inbuilt for the purpose of distribution of patches and new versions to the existing users. On 
-start of the app it will connect to OTTBLD02:1337 machine and verify if new version of downloader exists. 
-
-First a new local user was created on ottbld02:
+# Distribution
+Releases of the tool are published on [GitHub](https://github.com/beliaev-maksim/beta_build_downloader/releases).
+In order to publish a release you will need a Personal Access Token to GitHub set as `GH_TOKEN` environment variable 
+and then just run
 ~~~
-sudo adduser electron
-passwd electron
-sudo gpasswd -a electron wheel
-~~~
-
-Grant permissions to temp folder:
-~~~
-sudo chown -R 45004 /home/electron/release_server/.tmp
-~~~
-
-To run release server install PM2 package
-~~~
-npm install pm2 -g
-~~~
-Then to run the release server in production mode use following CMD snippet on server startup:
-~~~
-pm2 start app.js  -x -- -prod --port=1337
-~~~
-Save configuration and specify startup. This will reboot release server using save configuration
-~~~
-pm2 save
-pm2 startup
+npm run deploy
 ~~~
 
 # SharePoint

@@ -5,7 +5,8 @@
   "description": "Application to download or schedule autoupdate of Ansys internal beta builds",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder build --win --x64"
+    "build": "electron-builder build --win --x64 --publish never",
+    "deploy": "electron-builder build --win --x64 --publish always"
   },
   "author": {
     "name": "Maksim Beliaev",
@@ -13,7 +14,7 @@
   },
   "dependencies": {
     "axios": "^0.19.2",
-    "electron-updater": "^4.3.1",
+    "electron-updater": "^4.3.8",
     "fast-xml-parser": "^3.17.3",
     "ps-node": "^0.1.6"
   },

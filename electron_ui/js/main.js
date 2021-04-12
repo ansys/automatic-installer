@@ -83,6 +83,7 @@ window.onload = function() {
             "download_path": app.getPath("temp"),
             "version": "",
             "wb_flags": "",
+            "custom_flags": "",
             "days": [
                 "tu", "th", "sa"
             ],
