@@ -154,7 +154,7 @@ app.on('ready', () => {
     });
 
     ipc.on('restart_app', () => {
-          autoUpdater.quitAndInstall();
+          autoUpdater.quitAndInstall(isSilent=true, forceRunAfter=true);
     });
 
     ipc.on('download_update', () => {

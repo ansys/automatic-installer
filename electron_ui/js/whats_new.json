@@ -1,4 +1,6 @@
 {
+    "2.2.1": ["- From next version of BetaDownloader auto-update won't require to click finish after app restart<br>",
+        "- Boulder artifactory new URL<br>"],
     "2.2.0": ["- Added possibility to add custom WB flags in addition to products list<br>",
         "- Now you can request Artifactory API key directly from the main page<br>",
         "- Release server will be moved to GitHub to avoid VPN dependence during app auto-update<br>",

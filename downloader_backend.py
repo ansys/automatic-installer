@@ -12,7 +12,7 @@ import time
 import traceback
 import zipfile
 import zlib
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from functools import wraps
 
 import psutil
@@ -31,31 +31,31 @@ import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "2.2.0"
+__version__ = "2.2.1"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
 
 TIMEOUT = 90
 
-artifactory_dict = OrderedDict([
-    ('Azure', r'http://azwec7artsrv01.ansys.com:8080/artifactory'),
-    ('Austin', r'http://ausatsrv01.ansys.com:8080/artifactory'),
-    ('Boulder', r'https://bouartifact.ansys.com:8443/artifactory'),
-    ('Canonsburg', r'http://canartifactory.ansys.com:8080/artifactory'),
-    ('Concord', r'http://convmartifact.win.ansys.com:8080/artifactory'),
-    ('Darmstadt', r'http://darvmartifact.win.ansys.com:8080/artifactory'),
-    ('Evanston', r'http://evavmartifact:8080/artifactory'),
-    ('Hannover', r'http://hanartifact1.ansys.com:8080/artifactory'),
-    ('Horsham', r'http://horvmartifact1.ansys.com:8080/artifactory'),
-    ('Lebanon', r'http://lebartifactory.win.ansys.com:8080/artifactory'),
-    ('Lyon', r'http://lyovmartifact.win.ansys.com:8080/artifactory'),
-    ('Otterfing', r'http://ottvmartifact.win.ansys.com:8080/artifactory'),
-    ('Pune', r'http://punvmartifact.win.ansys.com:8080/artifactory'),
-    ('Sheffield', r'http://shfvmartifact.win.ansys.com:8080/artifactory'),
-    ('SanJose', r'http://sjoartsrv01.ansys.com:8080/artifactory'),
-    ('Waterloo', r'https://watartifactory.win.ansys.com:8443/artifactory')
-])
+artifactory_dict = {
+    'Azure': 'http://azwec7artsrv01.ansys.com:8080/artifactory',
+    'Austin': 'http://ausatsrv01.ansys.com:8080/artifactory',
+    'Boulder': 'http://bouartifact.ansys.com:8080/artifactory',
+    'Canonsburg': 'http://canartifactory.ansys.com:8080/artifactory',
+    'Concord': 'http://convmartifact.win.ansys.com:8080/artifactory',
+    'Darmstadt': 'http://darvmartifact.win.ansys.com:8080/artifactory',
+    'Evanston': 'http://evavmartifact:8080/artifactory',
+    'Hannover': 'http://hanartifact1.ansys.com:8080/artifactory',
+    'Horsham': 'http://horvmartifact1.ansys.com:8080/artifactory',
+    'Lebanon': 'http://lebartifactory.win.ansys.com:8080/artifactory',
+    'Lyon': 'http://lyovmartifact.win.ansys.com:8080/artifactory',
+    'Otterfing': 'http://ottvmartifact.win.ansys.com:8080/artifactory',
+    'Pune': 'http://punvmartifact.win.ansys.com:8080/artifactory',
+    'Sheffield': 'http://shfvmartifact.win.ansys.com:8080/artifactory',
+    'SanJose': 'http://sjoartsrv01.ansys.com:8080/artifactory',
+    'Waterloo': 'https://watartifactory.win.ansys.com:8443/artifactory'
+}
 
 sharepoint_site_url = r"https://ansys.sharepoint.com/sites/BetaDownloader"
 
@@ -153,6 +153,7 @@ class Downloader:
         self.ctx: context object to authorize in SharePoint using office365 module
         self.settings_folder (str): default folder where all configurations would be saved
         self.history_file (str): file where installation progress would be written (this file is tracked by UI)
+        self.history (dict): dict with history of installation processes
         self.logging_file (str): file where detailed log for all runs is saved
 
         """
@@ -182,7 +183,7 @@ class Downloader:
 
         self.check_and_make_directories(self.settings_folder)
 
-        self.history = OrderedDict()
+        self.history = {}
         self.history_file = os.path.join(self.settings_folder, "installation_history.json")
         self.get_installation_history()
 
@@ -1127,16 +1128,16 @@ class Downloader:
         """
         Read a file with installation history
         create a file if does not exist
-        :return: OrderedDict with history or empty in case if file was deleted during run of installation
+        :return: dict with history or empty in case if file was deleted during run of installation
         """
         if os.path.isfile(self.history_file):
             try:
                 with open(self.history_file) as file:
-                    self.history = json.load(file, object_pairs_hook=OrderedDict)
+                    self.history = json.load(file)
             except json.decoder.JSONDecodeError:
                 return
         else:
-            self.history = OrderedDict()
+            self.history = {}
 
     def send_statistics(self, error=None):
         """
