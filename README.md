@@ -1,147 +1,64 @@
-# Introduction 
-Current project is created to help in creation of automated flow of Ansys Internal build download.
+# Description 
+Current project surves to help in automation of Ansys Internal build download and installation processes.
 This software is going to replace manual operations required by engineers to download and install Beta Version of 
-Ansys Electronics Desktop and of Ansys Workbench.  
+Ansys Electronics Desktop, Ansys Workbench and Ansys License Manager. 
+
 Two modes are possible: 
-1. half automatic and user installs build only once by button click
-2. scheduled autoupdate at specific days and time
+1. half automatic: user installs build by clicking Install Now button
+2. fully automated: scheduled autoupdate at specific days and time without any user interaction
 
-# Getting Started
-Current software is build on [Electron framework](https://www.electronjs.org/)  
-Python is used as backend to download the software (compiled to .exe to avoid Python dependency)
+User can install builds either from one of available Ansys Artifactories (requires VPN or Ansys Network) or 
+from Ansys Sharepoint (no VPN)
 
-In order to work with project you need to 
-1. Install [npm (node package manager)](https://nodejs.org/en/download/)
-2. Open PowerShell/CMD in project folder and run: 
-    - Installation of Electron globally
-        ~~~ 
-        cd electron_ui
-        npm install electron -g
-        ~~~ 
-    - Rest packages could be installed automatically from package.json
-        ~~~
-        npm install
-        cd ..
-        ~~~
-3. Install all required Python modules
-    ~~~
-    python -m pip install -r requirements.txt
-    ~~~
-4. Compile python code to the executable (see [Test on your local machine](#Test-on-your-local-machine))
-5. Finally to launch Electron app (see package.json for command)
-    ~~~
-    cd electron_ui     
-    electron .
-    ~~~ 
+# Ansys Build Downloader Installation
+You can download latest version of Ansys Beta Build Installer from 
+[GitHub](https://github.com/beliaev-maksim/beta_build_downloader/releases).
+If you have any version of Ansys Build Downloader already installed it will be [autoupdated](#tool-autoupdate) on next 
+launch.
+![img](docs/images/ui.jpg)
 
-# Build and Test
-### Auto build via Azure Pipeline
-Generally builds would be created during branch merge via Azure Pipeline (see configuration in azure-pipelines.yml)  
+# How to use
+Almost every menu item is supplied with Tooltips to help with navigation.
 
-### Test on your local machine 
-All commands below you run from electron_ui folder (app folder)  
+There are two options as source for beta build that you can select under Repository menu:
+1. SharePoint (default): no VPN connection required
+2. Ansys Artifactory (recommended for Workstations and in office machines)
 
-First create an executable from python using Pyinstaller.  
-You may need a fresh environment for the build (in order to exclude unused modules from Python)
-~~~
-cd electron_ui
-python -m pip install --user pipenv
-python -m venv D:\build_env
-D:\build_env\Scripts\pip.exe install pyinstaller
-D:\build_env\Scripts\pyinstaller.exe ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile
-~~~
+To download from Artifactory you have to be on VPN and get API key. 
+Click on Key button and provide your Ansys SSO password to request Artifactory API key
 
-To generate build (executable) [electron-builder](https://www.electron.build/) is used (see scripts section in package.json):
-~~~
-npm run build
-~~~
+Once you decide with repository source, you can install software on demand by clicking _"Install Now"_ button or 
+schedule installation on weekly basis by clicking _Schedule Installation_. Tool is running non-graphically. 
+Once you click _Install Now_ or _Schedule Installation_ you can close the window.
 
-# Distribution
-Releases of the tool are published on [GitHub](https://github.com/beliaev-maksim/beta_build_downloader/releases).
-In order to publish a release you will need a Personal Access Token to GitHub set as `GH_TOKEN` environment variable 
-and then just run
-~~~
-npm run deploy
-~~~
-
-# SharePoint
-Due to high demand of downloading from SharePoint (SP) new method was introduced that allows users to download latest 
-builds from SP.
-
-### Server Side for SP
-We need to provide regular builds to SP. This is done via running _cron_ on CentOS machine. 
-Cron runs [sharepoint_uploader.py](server/sharepoint_uploader.py) multiple times per day and python code gets new 
-builds from Artifactory, uploads them SP and adds information about new build to SP List.
-
-Secret keys configuration you can find in  [Upload To SharePoint](docs/upload_to_SharePoint.md)
-
-To connect to SP system needs to know SP _client_id_ and _client_secret_. They are provided through environment 
-variables. Also for successful download TEMP variable is required. These variables are set through 
-_/home/electron/.bashrc_
-
-Login as _electron_ user. Install cron and start it as service:
-~~~
-sudo yum install cronie
-service crond start
-chkconfig crond on
-~~~
-
-Configure cron to run every 3 hours:
-~~~
-crontab -l > .cron_settings
-vim .cron_settings
-~~~
-
-In vim editor write:
-~~~
-0 */3 * * * . $HOME/.bash_profile; python3 /home/git/beta_downloader/server/sharepoint_uploader.py
-~~~
-
-Now activate cron to take this settings
-~~~
-crontab .cron_settings
-~~~
-
-To see emails from cron if something goes wrong:
-~~~
-vim /var/spool/mail/electron
-~~~
+If you want, you can set advanced settings:
+1. Installation, Download path
+2. HPC or Registry options files for Electronics Desktop
+3. Select only specific products from Workbench to be installed
+4. Decide to keep or delete installation package after installation
 
 
-# Statistics
-We collect statistics in two ways:
-1. Download count for each version via ERS. To see stats you may open either _PostgreSQL_ database directly or 
-download [pgAdmin](https://www.pgadmin.org/) that will connect to database and you will be able to see tables in UI.
-After it is opened in web browser connect to database using admin password.  
-Navigate in the menu to:  Servers -> PostgreSQL 9.5 -> Databases -> electron_release_server -> Schemas -> Public -> 
-Tables -> RMB on Asset -> View/Edit Data -> All Rows
-2. Downloads count sent from user machine. See send_statistics() function in backend. This will send data to the 
-[InfluxDB](https://www.influxdata.com/). To run the server just download official installation package and 
-use config file from our [InfluxDB](https://dev.azure.com/EMEA-FES-E/AnsysSoftwareManagement/_git/InfluxDB) repo. 
-To postprocess data [Grafana](https://grafana.com/) is used. To open Grafana use in web browser http://ottbld02:3000 and
-connect to the datasource of InfluxDB.
-You can use following query to create a plot:
-~~~
-SELECT sum("count") FROM "autogen"."downloads" WHERE $timeFilter GROUP BY time(1d), "tool"
-~~~
-Note: do not forget to set **Null value: null as zero** for a plot
+User can always monitor download and installation progress on _Installation History_ panel_.
+If you want to abort the process you can do it from the same page just by clicking on the row with running process.
 
-# Contribute
-Please go ahead and contribute in any way you can:
-1. Submit your code changes
-2. Open a defect
-3. Open user story (feature)
+# FAQ and features
+1. if you run Ansys software (the same BETA version eg 2022R1), then download and installation would be skipped. 
+This is done to prevent corruption of the build since during software run some files might be locked and thus can 
+cause damaged package. 
+2. Software will be downloaded and installed only if newer version exists in selected repository
+3. You cannot download partial installation package of Workbench, but this should not influence much since you can 
+schedule installation outside of your working hours
+4. Right now tool supports only Windows OS and should be run as elevated user (admin)
+
+ 
+## Tool autoupdate
+ App will be autoupdated on the start of the UI
+![img](docs/images/autoupdate.png)
+
+# Contribution
+If you would like to contribute to the current project please do it in a way you can:
+1. Submit your code changes, see [CONTRIBUTE.md](docs/CONTRIBUTE.md)
+2. Open an issue (defect) on GitHub issues
+3. Open user story (feature suggestion) on GitHub issues
 
 You can always write your suggestion directly to: [Maksim Beliaev](mailto:maksim.beliaev@ansys.com)
-
-# Testing
-For testing you can use python _unittest_ module.  
-Use _test_downloader_backend.py_ script from _unittests_ folder and _input_ folder to mock up input parameters.  
-At this moment you can mock up input for the downloader and test following features:
-- Download test: download specified version
-- History test: verify that installation history is written
-- Installation test: uninstall version if exists and install new one
-- Uninstallation test: only uninstallation
-- Updating of Electronics Desktop registry
-- Cleaning temp folder after installation
-- Full test including: get recent build, download, unpack, uninstall, install, update registry, update of history

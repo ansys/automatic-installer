@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ansys Downloader</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css">
+
+    <link href="css/jquery-clockpicker.min.css" rel="stylesheet">
+    <link href="css/bootstrap-clockpicker.min.css" rel="stylesheet">
+
+    <link href="css/style.css" rel="stylesheet" type="text/css">
+
+</head>
+<body class="body">
+    <div data-collapse="medium" data-animation="default" data-duration="400" class="navigation w-nav">
+        <div class="navigation-wrap">
+            <a href="main.html" aria-current="page" class="logo-link w-nav-brand w--current">
+                <img src="images/ansys_logo.png" alt="" class="logo-image" width="160">
+            </a>
+            <div class="menu">
+                <nav role="navigation" class="navigation-items w-nav-menu">
+                    <a href="main.html" aria-current="page"
+                       class="navigation-item w-nav-link w--current">Downloader</a>
+                    <a href="settings.html" class="navigation-item w-nav-link">Advanced Settings</a>
+                    <a href="history.html" class="navigation-item w-nav-link">Installation History</a>
+                </nav>
+                <div class="menu-button w-nav-button"></div>
+            </div>
+        </div>
+        <div class="w-nav-overlay" data-wf-ignore=""></div>
+    </div>
+    <div class="w-row">
+        <div class="w-col w-col-6">
+            <div class="w-form" onkeydown="return event.key != 'Enter';">
+                <form>
+                    <label for="artifactory">Repository</label>
+                    <select class="select-field w-select" id="artifactory"></select>
+
+                    <label for="username">username</label>
+                    <input type="text" class="text-field-2 w-input" maxlength="256" id="username" required="">
+
+                    <label for="password">artifactory API key</label>
+                    <div class="w-row">
+                        <div class="w-col w-col-11">
+                            <input type="password" class="text-field-3 w-input password-field" maxlength="256" id="password" required="">
+                        </div>
+                        <div class="w-col w-col-1">
+                            <input id="get-token-button" type="image" class="token-img" src="images/get_key.png"/>
+                        </div>
+                    </div>
+
+                    <label for="version">Version and product</label>
+                    <select id="version" class="select-field-2 w-select">
+                        <option value="None" selected="selected">Loading data...</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+        <div class="w-col w-col-6">
+            <div>
+                <div class="w-form">
+                        <label for="days">update days</label>
+                        <div id="days" class="w-layout-grid grid">
+                            <label class="w-checkbox">
+                                <input type="checkbox" id="mo-checkbox" class="days-checkbox">
+                                <span class="w-form-label">mo</span>
+                            </label>
+
+                            <label id="w-node-6337aa21f6aa-cefa8fca" class="w-checkbox">
+                                <input type="checkbox" id="tu-checkbox" class="days-checkbox">
+                                <span class="w-form-label">tu</span>
+                            </label>
+
+                            <label class="w-checkbox">
+                                <input type="checkbox" id="we-checkbox" class="days-checkbox">
+                                <span class="w-form-label">we</span>
+                            </label>
+
+                            <label id="w-node-0e1ca3779406-cefa8fca" class="w-checkbox">
+                                <input type="checkbox" id="th-checkbox" class="days-checkbox">
+                                <span class="w-form-label">th</span>
+                            </label>
+
+                            <label id="w-node-4c83d058a673-cefa8fca" class="w-checkbox">
+                                <input type="checkbox" id="fr-checkbox" class="days-checkbox">
+                                <span class="w-form-label">fr</span>
+                            </label>
+
+                            <label class="w-checkbox">
+                                <input type="checkbox" id="sa-checkbox" class="days-checkbox">
+                                <span class="w-form-label">sa</span>
+                            </label>
+
+                            <label class="w-checkbox">
+                                <input type="checkbox" id="su-checkbox" class="days-checkbox">
+                                <span class="w-form-label">su</span>
+                            </label>
+                        </div>
+
+                        <label for="time">update time</label>
+                        <div  class="input-group clockpicker">
+                            <input id="time" type="text" class="form-control">
+                            <span class="input-group-addon">
+                                <span class="glyphicon glyphicon-time"></span>
+                            </span>
+                        </div>
+
+                </div>
+            </div>
+
+            <label for="schedule-table-div" class="table-label">timetable</label>
+            <div id="schedule-table-div">
+                <table id="schedule-table" class="tg">
+                  <thead>
+                    <tr>
+                        <th class="tg-4wcp product-column">Product</th>
+                        <th class="tg-4wcp version-column">Version</th>
+                        <th class="tg-4wcp schedule-column">Schedule</th>
+                    </tr>
+                  </thead>
+                <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="w-row">
+        <div class="w-col w-col-6">
+            <a id="install-once-button" href="#" class="button-2 w-button">Install Now</a>
+        </div>
+        <div class="w-col w-col-5">
+            <a id="schedule-button" href="#" class="button-2 w-button">Schedule Installation</a>
+        </div>
+    </div>
+
+    <div id="notification" class="hidden">
+      <p id="message"></p>
+      <button id="close-button" onClick="closeNotification()">
+        Close
+      </button>
+      <button id="restart-button" onClick="restartApp()" class="hidden">
+        Restart
+      </button>
+    </div>
+
+    <div id="sso-password-window" class="hidden">
+        <label for="sso-password">SSO Password</label>
+        <input type="password" class="text-field-3 w-input" maxlength="256" id="sso-password" required="">
+
+        <div class="w-row">
+            <label class="w-checkbox api-checkbox">
+                <input type="checkbox" id="api-token-checkbox">
+                <span class="w-form-label">Refresh API token</span>
+            </label>
+        </div>
+
+        <div class="w-row">
+            <div class="w-col w-col-6">
+                <button id="close-pass-button" onClick="closeGetApiWindow()">Close</button>
+            </div>
+            <div class="w-col w-col-6">
+                <button id="get-key-button" onClick="getApiKey()">Get API Key</button>
+            </div>  
+        </div>
+    </div>
+
+    <script src="js/jquery-3.js" type="text/javascript"></script>
+    <script src="js/jquery-3.5.0.min.js" type="text/javascript"></script>
+    <script src="js/bootstrap.min.js" type="text/javascript"></script>
+
+    <script src="js/bootstrap-clockpicker.min.js" type="text/javascript"></script>
+    <script src="js/jquery-clockpicker.min.js" type="text/javascript"></script>
+
+    <script src="js/autoupdate.js" type="text/javascript"></script>
+    <script src="js/commands_handler.js" type="text/javascript"></script>
+    <script src="js/tooltips.js" type="text/javascript"></script>
+    <script src="js/tables_setter.js" type="text/javascript"></script>
+    <script src="js/whatsnew.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+
+    <div class="_jw-tpk-container _jw-tpk-dark" style="z-index: 1010; display: none;">
+    <div class="_jw-tpk-header">
+        <div class="_jw-tpk-hour">Hour</div>
+        <div class="_jw-tpk-minute">Minute</div>
+    </div>
+    <div class="_jw-tpk-body">
+        <div id="hour_list_id" class="_jw-tpk-hour">
+            <ol>
+                <li><a data-hour="0">0</a></li>
+                <li><a data-hour="1">1</a></li>
+                <li><a data-hour="2">2</a></li>
+                <li><a data-hour="3">3</a></li>
+                <li><a data-hour="4">4</a></li>
+                <li><a data-hour="5">5</a></li>
+            </ol>
+            <ol>
+                <li><a data-hour="6">6</a></li>
+                <li><a data-hour="7">7</a></li>
+                <li><a data-hour="8">8</a></li>
+                <li><a data-hour="9">9</a></li>
+                <li><a data-hour="10">10</a></li>
+                <li><a data-hour="11">11</a></li>
+            </ol>
+            <ol>
+                <li><a data-hour="12">12</a></li>
+                <li><a data-hour="13">13</a></li>
+                <li><a data-hour="14">14</a></li>
+                <li><a data-hour="15">15</a></li>
+                <li><a data-hour="16">16</a></li>
+                <li><a data-hour="17">17</a></li>
+            </ol>
+            <ol>
+                <li><a data-hour="18">18</a></li>
+                <li><a data-hour="19">19</a></li>
+                <li><a data-hour="20">20</a></li>
+                <li><a data-hour="21">21</a></li>
+                <li><a data-hour="22">22</a></li>
+                <li><a data-hour="23">23</a></li>
+            </ol>
+        </div>
+        <div id="minute_list_id" class="_jw-tpk-minute">
+            <ol>
+                <li><a data-minute="00">00</a></li>
+                <li><a data-minute="05">05</a></li>
+                <li><a data-minute="10">10</a></li>
+            </ol>
+            <ol>
+                <li><a data-minute="15">15</a></li>
+                <li><a data-minute="20">20</a></li>
+                <li><a data-minute="25">25</a></li>
+            </ol>
+            <ol>
+                <li><a data-minute="30">30</a></li>
+                <li><a data-minute="35">35</a></li>
+                <li><a data-minute="40">40</a></li>
+            </ol>
+            <ol>
+                <li><a data-minute="45">45</a></li>
+                <li><a data-minute="50">50</a></li>
+                <li><a data-minute="55">55</a></li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

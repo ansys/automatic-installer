@@ -1,0 +1,26 @@
+steps:
+  - script: |
+    pushd ..\
+    if exist py_venv (
+      call py_venv\Scripts\deactivate.bat
+      del /f /s /q py_venv >nul
+      rmdir /q /s py_venv >nul
+    )
+
+    if exist py_venv_dev (
+      call py_venv_dev\Scripts\deactivate.bat
+      del /f /s /q py_venv >nul
+      rmdir /q /s py_venv >nul
+    )
+
+    if exist electron_ui\python_build (
+      del /f /s /q electron_ui\python_build >nul
+      rmdir /q /s electron_ui\python_build >nul
+    )
+
+    if exist electron_ui\dist (
+      del /f /s /q electron_ui\dist >nul
+      rmdir /q /s electron_ui\dist >nul
+    )
+    popd
+  displayName: 'Clean environment'

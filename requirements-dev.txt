@@ -1,0 +1,4 @@
+-r requirements.txt
+black==21.8b
+coverage==5.5
+PyYAML==5.4.1

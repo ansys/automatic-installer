@@ -97,6 +97,23 @@ if (!app.isPackaged || app.commandLine.hasSwitch("debug")) {
         var app_width = 1000;
 }
 
+function create_settings_window() {
+    let settings_window = new BrowserWindow({ 
+        parent: MainWindow, 
+        show: false, 
+        modal: true,
+        height: 600,
+        width: 800,
+        resizable: false,
+        frame: false,
+        webPreferences: {
+            nodeIntegration: true,
+            enableRemoteModule: true
+        }
+    });
+    return settings_window;
+}
+
 app.on('ready', () => {
     MainWindow = new BrowserWindow({
         show: false,    // disable show from the beginning to avoid white screen, see ready-to-show
@@ -126,11 +143,11 @@ app.on('ready', () => {
             nodeIntegration: true
         }
     });
-    whats_new_window.loadURL('file://' + __dirname + '/whatsnew.html');
+    whats_new_window.loadURL('file://' + __dirname + '/web_pages/whatsnew.html');
 
     // load main page only after we show starting logo
     setTimeout(function(){
-        MainWindow.loadURL('file://' + __dirname + '/main.html');
+        MainWindow.loadURL('file://' + __dirname + '/web_pages/main.html');
     }, 1500);
 
     setTimeout(function(){
@@ -138,7 +155,7 @@ app.on('ready', () => {
     }, 7000);
 
 
-    MainWindow.loadURL('file://' + __dirname + '/starter.html');
+    MainWindow.loadURL('file://' + __dirname + '/web_pages/starter.html');
 
 
     MainWindow.on('closed', () => {
@@ -180,25 +197,24 @@ app.on('ready', () => {
     // signals for WB flags window
     ipc.on('wb_flags_show', () => {
         // create separate window for WB installation flags
-        wb_flags_window = new BrowserWindow({ 
-            parent: MainWindow, 
-            show: false, 
-            modal: true,
-            height: 600,
-            width: 800,
-            resizable: false,
-            frame: false,
-            webPreferences: {
-                nodeIntegration: true,
-                enableRemoteModule: true
-            }
-        });
-        wb_flags_window.loadURL('file://' + __dirname + '/wb_flags.html');
+        wb_flags_window = create_settings_window();
+        wb_flags_window.loadURL('file://' + __dirname + '/web_pages/wb_flags.html');
         wb_flags_window.show()
     });
 
     ipc.on('wb_flags_hide', () => {
         wb_flags_window.close()
+    });
+
+    // signals for AEDT HPC/registry window
+    ipc.on('aedt_registry_show', () => {
+        aedt_registry_window = create_settings_window();
+        aedt_registry_window.loadURL('file://' + __dirname + '/web_pages/aedt_registry.html');
+        aedt_registry_window.show()
+    });
+
+    ipc.on('aedt_registry_hide', () => {
+        aedt_registry_window.close()
     });
 
     ipc.on('agreement_show', () => {

@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import errno
 import json
 import logging
 import os
@@ -12,77 +13,76 @@ import time
 import traceback
 import zipfile
 import zlib
-from collections import namedtuple
 from functools import wraps
+from types import SimpleNamespace
 
 import psutil
+import py7zr
 import requests
+from artifactory import ArtifactoryPath, md5sum
 from artifactory_du import artifactory_du
 from influxdb import InfluxDBClient
+from office365.runtime.auth.authentication_context import AuthenticationContext
+from office365.runtime.client_request_exception import ClientRequestException
+from office365.sharepoint.client_context import ClientContext
 from plyer import notification
 from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
-
-from office365.sharepoint.client_context import ClientContext
-from office365.runtime.auth.authentication_context import AuthenticationContext
-from office365.runtime.http.request_options import RequestOptions
 
 import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "2.2.1"
+__version__ = "3.0.0"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
 
 TIMEOUT = 90
 
-artifactory_dict = {
-    'Azure': 'http://azwec7artsrv01.ansys.com:8080/artifactory',
-    'Austin': 'http://ausatsrv01.ansys.com:8080/artifactory',
-    'Boulder': 'http://bouartifact.ansys.com:8080/artifactory',
-    'Canonsburg': 'http://canartifactory.ansys.com:8080/artifactory',
-    'Concord': 'http://convmartifact.win.ansys.com:8080/artifactory',
-    'Darmstadt': 'http://darvmartifact.win.ansys.com:8080/artifactory',
-    'Evanston': 'http://evavmartifact:8080/artifactory',
-    'Hannover': 'http://hanartifact1.ansys.com:8080/artifactory',
-    'Horsham': 'http://horvmartifact1.ansys.com:8080/artifactory',
-    'Lebanon': 'http://lebartifactory.win.ansys.com:8080/artifactory',
-    'Lyon': 'http://lyovmartifact.win.ansys.com:8080/artifactory',
-    'Otterfing': 'http://ottvmartifact.win.ansys.com:8080/artifactory',
-    'Pune': 'http://punvmartifact.win.ansys.com:8080/artifactory',
-    'Sheffield': 'http://shfvmartifact.win.ansys.com:8080/artifactory',
-    'SanJose': 'http://sjoartsrv01.ansys.com:8080/artifactory',
-    'Waterloo': 'https://watartifactory.win.ansys.com:8443/artifactory'
+ARTIFACTORY_DICT = {
+    "Azure": "http://azwec7artsrv01.ansys.com:8080/artifactory",
+    "Austin": "http://ausatsrv01.ansys.com:8080/artifactory",
+    "Boulder": "http://bouartifact.ansys.com:8080/artifactory",
+    "Canonsburg": "http://canartifactory.ansys.com:8080/artifactory",
+    "Concord": "http://convmartifact.win.ansys.com:8080/artifactory",
+    "Darmstadt": "http://darvmartifact.win.ansys.com:8080/artifactory",
+    "Evanston": "http://evavmartifact:8080/artifactory",
+    "Hannover": "http://hanartifact1.ansys.com:8080/artifactory",
+    "Horsham": "http://horvmartifact1.ansys.com:8080/artifactory",
+    "Lebanon": "http://lebartifactory.win.ansys.com:8080/artifactory",
+    "Lyon": "http://lyovmartifact.win.ansys.com:8080/artifactory",
+    "Otterfing": "http://ottvmartifact.win.ansys.com:8080/artifactory",
+    "Pune": "http://punvmartifact.win.ansys.com:8080/artifactory",
+    "Sheffield": "http://shfvmartifact.win.ansys.com:8080/artifactory",
+    "SanJose": "http://sjoartsrv01.ansys.com:8080/artifactory",
+    "Waterloo": "https://watartifactory.win.ansys.com:8443/artifactory",
 }
 
-sharepoint_site_url = r"https://ansys.sharepoint.com/sites/BetaDownloader"
+SHAREPOINT_SITE_URL = r"https://ansys.sharepoint.com/sites/BetaDownloader"
 
 
 class DownloaderError(Exception):
     pass
 
 
-def retry(exceptions, tries=4, delay=3, backoff=1, logger=None):
+def retry(exceptions, tries=4, delay=3, backoff=1, logger=None, proc_lock=False):
     """
-    Retry calling the decorated function using an exponential backoff.
+        Retry calling the decorated function using an exponential backoff.
 
-        :param exceptions: the exception to check. may be a tuple of
-            exceptions to check
-        :type exceptions: Exception or tuple
-        :param tries: number of times to try (not retry) before giving up
-        :type tries: int
-        :param delay: initial delay between retries in seconds
-        :type delay: int
-        :param backoff: backoff multiplier e.g. value of 2 will double the delay
-            each retry
-        :type backoff: int
-        :param logger: logger to use. If None, print
-        :type logger: logging.Logger instance
+    Args:
+        exceptions (Exception or tuple): the exception to check. may be a tuple of exceptions to check
+        tries (int): number of times to try (not retry) before giving up
+        delay (int): initial delay between retries in seconds
+        backoff (int): backoff multiplier e.g. value of 2 will double the delay each retry
+        logger (logging): logger to use. If None, print
+        proc_lock (bool): if retry is applied to proc lock function
+
+    Returns: decorator
+
     """
+
     def deco_retry(func):
-
         @wraps(func)
         def f_retry(self, *args, **kwargs):
             mtries, mdelay = tries, delay
@@ -91,6 +91,17 @@ def retry(exceptions, tries=4, delay=3, backoff=1, logger=None):
                     return func(self, *args, **kwargs)
                 except exceptions as e:
                     msg = f"{e}. Error occurred, attempt: {tries - mtries + 1}/{tries}"
+
+                    if proc_lock:
+                        # only applied for process lock
+                        err = "Stop all processes running from installation folder. "
+                        err += f"Attempt: {tries - mtries + 1}/{tries}"
+                        if mtries > 1:
+                            err += " Autoretry in 60sec."
+                            Downloader.toaster_notification("Failed", err)
+                        else:
+                            raise DownloaderError(msg)
+
                     if logger:
                         logger.warning(msg)
                     else:
@@ -99,55 +110,56 @@ def retry(exceptions, tries=4, delay=3, backoff=1, logger=None):
                     mtries -= 1
                     mdelay *= backoff
             else:
-                error = f"Please verify that your connection is stable, avoid switching state of VPN during download."
-                if "SharePoint" not in self.settings.artifactory:
-                    error += " Verify that you are on VPN, "
-                    error += f"check username and password for {self.settings.artifactory} are correct. "
-                error += f"Number of attempts: {tries}/{tries}"
+                error = (
+                    "Please verify that your connection is stable, avoid switching state of VPN during download. "
+                    "For artifactory you have to be on VPN. "
+                    f"Number of attempts: {tries}/{tries}"
+                )
+
                 if logger:
                     raise DownloaderError(error)
                 else:
                     print(error)
+
         return f_retry  # true decorator
+
     return deco_retry
 
 
 class Downloader:
     """
-        Main class that operates the download and installation process:
-        1. enables logs
-        2. parses arguments to get settings file
-        3. loads JSON to named tuple
-        4. gets URL for selected version based on server
-        5. downloads zip archive with BETA build
-        6. unpacks it to download folder
-        7. depending on the choice proceeds to installation of EDT or WB
-        8. uninstalls previous build if one exists
-        9. updates registry of EDT
-        10. sends statistics to the server
+    Main class that operates the download and installation process:
+    1. enables logs
+    2. parses arguments to get settings file
+    3. loads JSON to named tuple
+    4. gets URL for selected version based on server
+    5. downloads zip archive with BETA build
+    6. unpacks it to download folder
+    7. depending on the choice proceeds to installation of EDT or WB
+    8. uninstalls previous build if one exists
+    9. updates registry of EDT
+    10. sends statistics to the server
 
-        Performs checks:
-        1. if the same build date is already installed, then do not proceed to download
-        2. if some process is running from installation folder it will abort download
+    Performs checks:
+    1. if the same build date is already installed, then do not proceed to download
+    2. if some process is running from installation folder it will abort download
 
-        Notes:
-        Software attempts to download 4 times, if connection is still bad will abort
+    Notes:
+    Software attempts to download 4 times, if connection is still bad will abort
     """
+
     def __init__(self, version, settings_folder="", settings_path=""):
         """
         :parameter: version: version of the file, used if invoke file with argument -V to get version
 
-        self.build_url (str): URL to the latest build that will be used to download .zip archive
+        self.build_artifactory_path (ArtifactoryPath): URL to the latest build that will be used to download archive
         self.zip_file (str): path to the zip file on the PC
         self.target_unpack_dir (str): path where to unpack .zip
-        self.product_id (str): product GUID extracted from iss template
-        self.installshield_version (str): version of the InstallShield
         self.installed_product_info (str): path to the product.info of the installed build
         self.product_root_path (str): root path of Ansys Electronics Desktop/ Workbench installation
         self.product_version (str): version to use in env variables eg 202
         self.setup_exe (str): path to the setup.exe from downloaded and unpacked zip
         self.remote_build_date (str): build date that receive from SharePoint
-        self.connection_attempt (int): number of attempts to download
         self.hash (str): hash code used for this run of the program
         self.pid: pid (process ID of the current Python run, required to allow kill in UI)
         self.ctx: context object to authorize in SharePoint using office365 module
@@ -157,23 +169,18 @@ class Downloader:
         self.logging_file (str): file where detailed log for all runs is saved
 
         """
-        self.build_url = ""
+        self.build_artifactory_path = ArtifactoryPath()
         self.zip_file = ""
         self.target_unpack_dir = ""
-        self.product_id = ""
-        self.installshield_version = ""
         self.installed_product_info = ""
         self.product_root_path = ""
         self.product_version = ""
         self.setup_exe = ""
         self.remote_build_date = ""
 
-        self.connection_attempt = 1
         self.pid = str(os.getpid())
-
-        self.warnings_list = []
-
         self.ctx = None
+        self.warnings_list = []
 
         self.hash = generate_hash_str()
         if not settings_folder:
@@ -191,21 +198,46 @@ class Downloader:
 
         self.settings_path = settings_path if settings_path else self.parse_args(version)
         with open(self.settings_path, "r") as file:
-            self.settings = json.load(file, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+            self.settings = json.load(file, object_hook=lambda d: SimpleNamespace(**d))
+
+        # this part of the code creates attributes that were added. Required for compatibility
+        if not hasattr(self.settings, "replace_shortcut"):
+            # v2.0.0
+            self.settings.replace_shortcut = True
+
+        if not hasattr(self.settings, "custom_flags"):
+            # v2.2.0
+            self.settings.custom_flags = ""
+
+        if not hasattr(self.settings, "license_file"):
+            # v3.0.0
+            self.settings.license_file = ""
+
+        if not hasattr(self.settings, "wb_assoc"):
+            # v3.0.0
+            self.settings.wb_assoc = ""
 
         if "ElectronicsDesktop" in self.settings.version:
             self.product_version = self.settings.version[1:4]
             if float(self.product_version) >= 221:
-                self.product_root_path = os.path.join(self.settings.install_path, "AnsysEM", f"v{self.product_version}",
-                                                      "Win64")
+                self.product_root_path = os.path.join(
+                    self.settings.install_path, "AnsysEM", f"v{self.product_version}", "Win64"
+                )
             else:
-                self.product_root_path = os.path.join(self.settings.install_path, "AnsysEM", "AnsysEM" +
-                                                      self.product_version[:2] + "." + self.product_version[2:],
-                                                      "Win64")
+                self.product_root_path = os.path.join(
+                    self.settings.install_path,
+                    "AnsysEM",
+                    "AnsysEM" + self.product_version[:2] + "." + self.product_version[2:],
+                    "Win64",
+                )
 
             self.installed_product_info = os.path.join(self.product_root_path, "product.info")
         elif "Workbench" in self.settings.version:
             self.product_root_path = os.path.join(self.settings.install_path, "ANSYS Inc", self.settings.version[:4])
+        elif "LicenseManager" in self.settings.version:
+            self.product_root_path = os.path.join(
+                self.settings.install_path, "ANSYS Inc", "Shared Files", "Licensing", "tools", "lmcenter"
+            )
 
     def authorize_sharepoint(self):
         """
@@ -216,8 +248,8 @@ class Downloader:
         """
         self.update_installation_history(status="In-Progress", details="Authorizing in SharePoint")
 
-        command = 'powershell.exe '
-        command += 'Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin;'
+        command = "powershell.exe "
+        command += "Connect-PnPOnline -Url https://ansys.sharepoint.com/sites/BetaDownloader -UseWebLogin;"
         command += '(Get-PnPListItem -List secret_list -Fields "Title","client_id","client_secret").FieldValues'
         out_str = self.subprocess_call(command, shell=True, popen=True)
 
@@ -234,13 +266,14 @@ class Downloader:
         except NameError:
             raise DownloaderError("Cannot retrieve authentication tokens for SharePoint")
 
-        secret_list.sort(key=lambda elem: elem['Title'], reverse=True)
+        secret_list.sort(key=lambda elem: elem["Title"], reverse=True)
 
-        context_auth = AuthenticationContext(url=sharepoint_site_url)
-        context_auth.acquire_token_for_app(client_id=secret_list[0]['client_id'],
-                                           client_secret=secret_list[0]['client_secret'])
+        context_auth = AuthenticationContext(url=SHAREPOINT_SITE_URL)
+        context_auth.acquire_token_for_app(
+            client_id=secret_list[0]["client_id"], client_secret=secret_list[0]["client_secret"]
+        )
 
-        ctx = ClientContext(sharepoint_site_url, context_auth)
+        ctx = ClientContext(SHAREPOINT_SITE_URL, context_auth)
         return ctx
 
     def run(self):
@@ -259,17 +292,27 @@ class Downloader:
             self.check_and_make_directories(self.settings.install_path, self.settings.download_path)
             if "ElectronicsDesktop" in self.settings.version or "Workbench" in self.settings.version:
                 space_required = 15
+
+                # License Manager can be updated even if running
+                self.check_process_lock()
             else:
+                if not self.settings.license_file:
+                    raise DownloaderError(f"No license file defined. Please select it in Advanced Settings")
+
+                if not os.path.isfile(self.settings.license_file):
+                    raise DownloaderError(f"No license file was detected under {self.settings.license_file}")
+
                 space_required = 1
+
             self.check_free_space(self.settings.download_path, space_required)
             self.check_free_space(self.settings.install_path, space_required)
 
-            self.check_process_lock()
-
             self.get_build_link()
-            if self.settings.force_install or not self.versions_identical():
+            if self.settings.force_install or self.newer_version_exists:
                 self.download_file()
-                self.check_process_lock()  # download can take time, better to recheck again
+
+                if "ElectronicsDesktop" in self.settings.version or "Workbench" in self.settings.version:
+                    self.check_process_lock()  # download can take time, better to recheck again
                 self.install()
                 try:
                     self.send_statistics()
@@ -318,8 +361,10 @@ class Downloader:
         """
         free_space = shutil.disk_usage(path).free // (2 ** 30)
         if free_space < required:
-            raise DownloaderError(f"Disk space in {path} is less than {required}GB. This would not be enough to proceed")
+            err = f"Disk space in {path} is less than {required}GB. This would not be enough to proceed"
+            raise DownloaderError(err)
 
+    @retry((DownloaderError,), tries=3, delay=60, logger=logging, proc_lock=True)
     def check_process_lock(self):
         """
         Verify if some executable is running from installation folder
@@ -336,48 +381,63 @@ class Downloader:
 
         if process_list:
             process_list.sort(key=len)  # to fit into UI
-            raise DownloaderError("Following processes are running from installation directory: " +
-                                  f"{', '.join(set(process_list))}. Please stop all processes and try again")
+            raise DownloaderError(
+                "Following processes are running from installation directory: "
+                + f"{', '.join(set(process_list))}. Please stop all processes."
+            )
 
-    def versions_identical(self):
+    @property
+    def newer_version_exists(self):
         """
-        verify if version on the server is the same as installed one
-        :return: (bool): False if versions are different or no version installed, True if identical
+        verify if version on the server is newer compared to installed
+        Returns:
+            (bool) True if remote is newer or no version is installed, False if remote is the same or older
         """
         if "Workbench" in self.settings.version:
             product_installed = os.path.join(self.product_root_path, "package.id")
+        elif "LicenseManager" in self.settings.version:
+            # always update LM
+            return True
         else:
             product_installed = self.installed_product_info
 
         if os.path.isfile(product_installed):
             if "Workbench" in self.settings.version:
                 with open(product_installed) as file:
-                    product_version = next(file).rstrip().split()[-1]  # get first line
+                    installed_product_version = next(file).rstrip().split()[-1]  # get first line
                     try:
-                        product_version = int(product_version.split("P")[0])
+                        installed_product_version = int(installed_product_version.split("P")[0])
                     except ValueError:
-                        return False
+                        installed_product_version = 0
             else:
-                product_version = self.get_edt_build_date(product_installed)
+                installed_product_version = self.get_edt_build_date(product_installed)
 
-            logging.info(f"Installed version of {self.settings.version} is {product_version}")
+            logging.info(f"Installed version of {self.settings.version} is {installed_product_version}")
             new_product_version = self.get_new_build_date()
 
-            if all([new_product_version, product_version]) and new_product_version <= product_version:
+            if not all([new_product_version, installed_product_version]):
+                # some of the versions could not be parsed, need installation
                 return True
-        return False
 
-    def get_new_build_date(self):
+            if new_product_version <= installed_product_version:
+                return False
+        return True
+
+    def get_new_build_date(self, distribution="winx64"):
         """
         Create URL for new build extraction or extract version from self.remote_build_date for SharePoint download
-        Returns: new_product_version (str) version of the product on the server
+        Returns:
+            new_product_version (int) version of the product on the server
         """
         if self.settings.artifactory != "SharePoint":
             if "Workbench" in self.settings.version:
-                url = self.build_url.replace(r"/api/archive/download", "").replace(r"?archiveType=zip", "")
-                url += "/package.id"
+                url = self.build_artifactory_path.joinpath("package.id")
+            elif "ElectronicsDesktop" in self.settings.version:
+                system = "windows" if distribution == "winx64" else "linux"
+                url = self.build_artifactory_path.parent.joinpath(f"product_{system}.info")
             else:
-                url = self.build_url.split("/Electronics")[0] + "/product_windows.info"
+                # todo add license manager handling
+                return 0
 
             logging.info(f"Request info about new package: {url}")
             new_product_version = self.get_build_info_file_from_artifactory(url)
@@ -385,88 +445,105 @@ class Downloader:
             try:
                 new_product_version = int(self.remote_build_date)
             except ValueError:
-                return False
+                return 0
 
         logging.info(f"Version on artifactory/SP is {new_product_version}")
         return new_product_version
 
     @retry((HTTPError, RequestException, ConnectionError, ConnectionResetError), 4, logger=logging)
-    def get_build_link(self):
+    def get_build_link(self, distribution="winx64"):
         """
         Function that sends HTTP request to JFrog and get the list of folders with builds for Electronics Desktop and
         checks user password
         If use SharePoint then readdress to SP list
-        :modify: (str) self.build_url: URL link to the latest build that will be used to download .zip archive
+        :modify: (str) self.build_artifactory_path: URL link to the latest build that will be used to download archive
         """
         self.update_installation_history(status="In-Progress", details=f"Search latest build URL")
         if self.settings.artifactory == "SharePoint":
             self.get_sharepoint_build_info()
             return
 
+        if not hasattr(self.settings.password, self.settings.artifactory):
+            raise DownloaderError(f"Please provide password for {self.settings.artifactory}")
+
         password = getattr(self.settings.password, self.settings.artifactory)
 
         if not self.settings.username or not password:
             raise DownloaderError("Please provide username and artifactory password")
 
-        server = artifactory_dict[self.settings.artifactory]
+        server = ARTIFACTORY_DICT[self.settings.artifactory]
 
-        with requests.get(server + "/api/repositories", auth=(self.settings.username, password),
-                          timeout=TIMEOUT) as url_request:
-            artifacts_list = json.loads(url_request.text)
-
-        # catch 401 for bad credentials or similar
-        if url_request.status_code != 200:
-            if url_request.status_code == 401:
-                raise DownloaderError("Bad credentials, please verify your username and password for {}".format(
-                    self.settings.artifactory))
+        art_path = ArtifactoryPath(server, auth=(self.settings.username, password), timeout=TIMEOUT)
+        try:
+            repos_list = art_path.get_repositories()
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code in [401, 403]:
+                raise DownloaderError(
+                    "Bad credentials, please verify your username and password for {}".format(self.settings.artifactory)
+                )
             else:
-                raise DownloaderError(artifacts_list["errors"][0]["message"])
+                raise DownloaderError(f"Cannot retrieve repositories. Error: {err}")
 
         # fill the dictionary with Electronics Desktop and Workbench keys since builds could be different
         # still parse the list because of different names on servers
         artifacts_dict = {}
-        for artifact in artifacts_list:
-            repo = artifact["key"]
-            if "EBU_Certified" in repo:
-                version = repo.split("_")[0] + "_ElectronicsDesktop"
-                if version not in artifacts_dict:
-                    artifacts_dict[version] = repo
-            elif "Certified" in repo and "Licensing" not in repo:
-                version = repo.split("_")[0] + "_Workbench"
-                if version not in artifacts_dict:
-                    artifacts_dict[version] = repo
+        for repo in repos_list:
+            repo_name = repo.name
+            if "EBU_Certified" in repo_name:
+                version = repo_name.split("_")[0] + "_ElectronicsDesktop"
+            elif "Certified" in repo_name and "Licensing" not in repo_name:
+                version = repo_name.split("_")[0] + "_Workbench"
+            elif "Certified" in repo_name and "Licensing" in repo_name:
+                version = repo_name.split("_")[0] + "_LicenseManager"
+            else:
+                continue
+
+            if version not in artifacts_dict:
+                if "cache" in repo.description:
+                    repo_name += "-cache"
+
+                artifacts_dict[version] = repo_name
 
         try:
             repo = artifacts_dict[self.settings.version]
         except KeyError:
-            raise DownloaderError(f"Version {self.settings.version} that you have specified " +
-                                  f"does not exist on {self.settings.artifactory}")
+            raise DownloaderError(
+                f"Version {self.settings.version} that you have specified "
+                + f"does not exist on {self.settings.artifactory}"
+            )
 
+        path = ""
+        art_path = art_path.joinpath(str(repo))
         if "ElectronicsDesktop" in self.settings.version:
-            url = server + "/api/storage/" + repo + "?list&deep=0&listFolders=1"
-
-            with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
-                folder_dict_list = json.loads(url_request.text)['files']
-
+            archive = "winx64.zip" if distribution == "winx64" else "linx64.tgz"
             builds_dates = []
-            for folder_dict in folder_dict_list:
-                folder_name = folder_dict['uri'][1:]
+            for relative_p in art_path:
                 try:
-                    builds_dates.append(int(folder_name))
+                    archive_exists = list(relative_p.glob(f"Electronics*{archive}"))
+                    if archive_exists:
+                        builds_dates.append(int(relative_p.name))
                 except ValueError:
                     pass
 
-            latest_build = self.verify_remote_build_existence(server, repo, password, sorted(builds_dates))
-            if not latest_build:
+            if not builds_dates:
                 raise DownloaderError("Artifact does not exist")
 
-            version_number = self.settings.version.split('_')[0][1:]
-            self.build_url = f"{server}/{repo}/{latest_build}/Electronics_{version_number}_winx64.zip"
-        elif "Workbench" in self.settings.version:
-            self.build_url = f"{server}/api/archive/download/{repo}-cache/winx64?archiveType=zip"
+            latest_build = sorted(builds_dates)[-1]
 
-        if not self.build_url:
+            art_path = art_path.joinpath(str(latest_build))
+            for path in art_path:
+                if archive in path.name:
+                    break
+            else:
+                raise DownloaderError(f"Cannot find {distribution} archive file")
+
+        elif "Workbench" in self.settings.version or "LicenseManager" in self.settings.version:
+            path = art_path.joinpath(distribution)
+
+        if not path:
             raise DownloaderError("Cannot receive URL")
+
+        self.build_artifactory_path = path
 
     def get_sharepoint_build_info(self):
         """
@@ -487,145 +564,162 @@ class Downloader:
             build_dict = {
                 "Title": title,
                 "build_date": item.properties["build_date"],
-                "relative_url": item.properties["relative_url"]
+                "relative_url": item.properties["relative_url"],
             }
             build_list.append(build_dict)
 
-        build_list.sort(key=lambda elem: elem['build_date'], reverse=True)
+        build_list.sort(key=lambda elem: elem["build_date"], reverse=True)
 
         build_dict = build_list[0] if build_list else {}
         if not build_dict:
             raise DownloaderError(f"No version of {self.settings.version} is available on SharePoint")
 
-        self.build_url = build_dict["relative_url"]
+        self.build_artifactory_path = build_dict["relative_url"]
         self.remote_build_date = build_dict["build_date"]
 
-    def verify_remote_build_existence(self, server, repo, password, builds_list):
-        """
-        Check that folder with Electronics Desktop is not just empty (the case if artifact is not yet uploaded)
-        :param server: server URL
-        :param repo: repo name
-        :param password: user password
-        :param builds_list: list of folders with Electronics Desktop builds
-        :return: latest availble folder where .zip is present
-        """
-        while builds_list:
-            latest = builds_list.pop()
-            url = f"{server}/api/storage/{repo}/{latest}"
-            with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT) as url_request:
-                all_files = json.loads(url_request.text)["children"]
-                for child in all_files:
-                    if "Electronics" in child["uri"] and "winx" in child["uri"]:
-                        return latest
-
-    @retry((HTTPError, RequestException, ConnectionError, ConnectionResetError), 4, logger=logging)
-    def download_file(self, recursion=False):
+    def download_file(self):
         """
         Downloads file in chunks and saves to the temp.zip file
         Uses url to the zip archive or special JFrog API to download Workbench folder
-        :param (bool) recursion: Some artifactories do not have cached folders with Workbench  and we need recursively
-        run the same function but with new_url, however to prevent infinity loop we need this arg
         :modify: (str) zip_file: link to the zip file
         """
+        if self.settings.artifactory == "SharePoint" or "win" in self.build_artifactory_path.name:
+            archive_type = "zip"
+        else:
+            archive_type = "tgz"
 
-        self.zip_file = os.path.join(self.settings.download_path, f"temp_build_{self.settings.version}.zip")
+        self.zip_file = os.path.join(self.settings.download_path, f"{self.settings.version}.{archive_type}")
+        chunk_size = 50 * 1024 * 1024
         if self.settings.artifactory == "SharePoint":
-            self.download_from_sharepoint()
-            return
+            self.download_from_sharepoint(chunk_size=chunk_size)
+        else:
+            self.download_from_artifactory(archive_type, chunk_size=chunk_size)
 
-        password = getattr(self.settings.password, self.settings.artifactory)
-        url = self.build_url.replace("-cache", "") if recursion else self.build_url
+        logging.info(f"File is downloaded to {self.zip_file}")
 
-        with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT, stream=True) as url_request:
-            if url_request.status_code == 404 and not recursion:
-                # in HQ cached build does not exist and will return 404. Recursively start download with new url
-                self.download_file(recursion=True)
-                return
+    @retry((HTTPError, RequestException, ConnectionError, ConnectionResetError), 4, logger=logging)
+    def download_from_artifactory(self, archive_type, chunk_size):
+        """
+        Download file from Artifactory
+        Args:
+            archive_type: type of the archive, zip or tgz
+            chunk_size: (int) chunk size in bytes when download
 
-            logging.info(f"Start download file from {url} to {self.zip_file}")
-            self.update_installation_history(status="In-Progress",
-                                             details=f"Downloading file from {self.settings.artifactory}")
+        Returns: None
+        """
+        if not self.build_artifactory_path.replication_status["status"] in ["ok", "never_run"]:
+            raise DownloaderError("Currently Artifactory repository is replicating, please try later")
 
-            if url_request.status_code != 200:
-                raise DownloaderError(f"Cannot download file. Server returned status code: {url_request.status_code}")
+        logging.info(f"Start download file from {self.build_artifactory_path} to {self.zip_file}")
+        self.update_installation_history(
+            status="In-Progress", details=f"Downloading file from {self.settings.artifactory}"
+        )
+        if "ElectronicsDesktop" in self.settings.version:
+            file_stats = self.build_artifactory_path.stat()
+            arti_file_md5 = file_stats.md5
+            logging.info(f"Artifactory hash: {arti_file_md5}")
 
             try:
-                file_size = int(url_request.headers['Content-Length'])
-            except TypeError:
-                file_size = 7e+9
-            except KeyError:
-                # Workbench has not content-length
-                regex = re.match("(.*)/api/archive/download/(.*)/winx64", url)
-                try:
-                    aql_query_dict, max_depth_print = artifactory_du.prepare_aql(file="/winx64", max_depth=0,
-                                                                                 repository=regex[2],
-                                                                                 without_downloads="", older_than="")
+                self.build_artifactory_path.writeto(
+                    out=self.zip_file, chunk_size=chunk_size, progress_func=self.print_download_progress
+                )
+            except RuntimeError as err:
+                raise DownloaderError(f"Cannot download file. Server returned status code: {err}")
 
-                    artifacts = artifactory_du.artifactory_aql(artifactory_url=regex[1], aql_query_dict=aql_query_dict,
-                                                               username=self.settings.username, password=password)
+            local_md5_hash = md5sum(self.zip_file)
+            logging.info(f"Local file hash: {local_md5_hash}")
+            if local_md5_hash != arti_file_md5:
+                raise DownloaderError("Downloaded file MD5 hash is different")
 
-                    file_size = artifactory_du.out_as_du(artifacts, max_depth_print, human_readable=False)
-                    file_size = int(file_size.strip("/"))
-                    logging.info(f"Workbench real file size is {file_size}")
-                except TypeError:
-                    file_size = 11e+9
-                except ValueError:
-                    file_size = 11e+9
+        elif "Workbench" in self.settings.version or "LicenseManager" in self.settings.version:
+            try:
+                file_size = self.get_artifactory_folder_size()
+                logging.info(f"Workbench/License Manager real file size is {file_size}")
+            except (TypeError, ValueError):
+                file_size = 14e9
 
-            self.download_response(url_request, file_size)
+            archive_url = self.build_artifactory_path.archive(archive_type=archive_type)
+            archive_url.writeto(
+                out=self.zip_file,
+                chunk_size=chunk_size,
+                progress_func=lambda x, y: self.print_download_progress(x, file_size),
+            )
 
-    def download_from_sharepoint(self):
+    def get_artifactory_folder_size(self):
+        aql_query_dict, max_depth_print = artifactory_du.prepare_aql(
+            file=f"/{self.build_artifactory_path.name}",
+            max_depth=0,
+            repository=self.build_artifactory_path.repo,
+            without_downloads="",
+            older_than="",
+        )
+        artifacts = artifactory_du.artifactory_aql(
+            artifactory_url=str(self.build_artifactory_path.drive),
+            aql_query_dict=aql_query_dict,
+            username=self.build_artifactory_path.auth[0],
+            password=self.build_artifactory_path.auth[1],
+            kerberos=False,
+            verify=False,
+        )
+        file_size = artifactory_du.out_as_du(artifacts, max_depth_print, human_readable=False)
+        file_size = int(file_size.strip("/"))
+        return file_size
+
+    @retry(
+        (HTTPError, RequestException, ConnectionError, ConnectionResetError, ClientRequestException),
+        tries=4,
+        logger=logging,
+    )
+    def download_from_sharepoint(self, chunk_size):
         """
-        Will download file from Sharepoint using PnP
-        Returns:
+        Downloads file from Sharepoint
+        Args:
+            chunk_size: (int) chunk size in bytes when download
+        Returns: None
         """
         self.update_installation_history(status="In-Progress", details=f"Downloading file from SharePoint")
-        request = RequestOptions(
-            r"{0}web/getFileByServerRelativeUrl('{1}')/\$value".format(self.ctx.service_root_url(),
-                                                                       f"/sites/BetaDownloader/{self.build_url}"))
-        request.stream = True
-        response = self.ctx.execute_request_direct(request)
-        file_size = int(response.headers['Content-Length'])
-        response.raise_for_status()
-        self.download_response(response, file_size)
+        remote_file = self.ctx.web.get_file_by_server_relative_url(
+            f"/sites/BetaDownloader/{self.build_artifactory_path}"
+        )
+        remote_file.get()
+        try:
+            self.ctx.execute_query()
+        except ClientRequestException as err:
+            logging.error(str(err))
+            raise DownloaderError(
+                "URL on SharePoint is broken. Report an issue to betadownloader@ansys.com. "
+                "In meantime please switch to any other repository."
+            )
 
-    @retry(DownloaderError, 2, logger=logging)
-    def download_response(self, response, file_size):
-        """
-        General function to download from server URL response
-        Args:
-            response: response object
-            file_size (int): file size
-        Returns:
+        file_size = remote_file.length
+        self.check_free_space(self.settings.download_path, file_size / 1024 / 1024 / 1024)
 
-        """
-        def print_download_progress(offset, total_size):
-            msg = "Downloaded {}/{}MB...[{}%]".format(int(offset/1024/1024),
-                                                      int(total_size/1024/1024),
-                                                      round(offset/total_size * 100, 2))
-            logging.info(msg)
-            self.update_installation_history(status="In-Progress", details=msg)
-
-        self.check_free_space(self.settings.download_path, file_size/1024/1024/1024)
-        bytes_read = 0
-        chunk_size = 100 * 1024 * 1024
-        real_chunk = 0
         with open(self.zip_file, "wb") as zip_file:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                real_chunk += len(chunk)
-                if real_chunk - chunk_size >= 0:
-                    bytes_read += real_chunk
-                    real_chunk = 0
-                    print_download_progress(bytes_read, file_size)
-                zip_file.write(chunk)
+            try:
+                remote_file.download_session(
+                    zip_file,
+                    lambda offset: self.print_download_progress(offset, total_size=file_size),
+                    chunk_size=chunk_size,
+                )
+                self.ctx.execute_query()
+            except OSError as err:
+                if err.errno == errno.ENOSPC:
+                    raise DownloaderError("No disk space available in download folder!")
+                else:
+                    raise
 
         if not self.zip_file:
             raise DownloaderError("ZIP download failed")
 
-        if abs(os.path.getsize(self.zip_file) - file_size) > 0.15*file_size:
-            raise DownloaderError("File size difference is more than 15%")
+        if abs(os.path.getsize(self.zip_file) - file_size) > 0.05 * file_size:
+            raise DownloaderError("File size difference is more than 5%")
 
-        logging.info(f"File is downloaded to: {self.zip_file}")
+    def print_download_progress(self, offset, total_size):
+        msg = "Downloaded {}/{}MB...[{}%]".format(
+            int(offset / 1024 / 1024), int(total_size / 1024 / 1024), min(round(offset / total_size * 100, 2), 100)
+        )
+        logging.debug(msg)
+        self.update_installation_history(status="In-Progress", details=msg)
 
     def install(self, local_lang=False):
         """
@@ -633,17 +727,7 @@ class Downloader:
         :param local_lang: if not specified then use English as default installation language
         :return: None
         """
-        self.update_installation_history(status="In-Progress", details=f"Start unpacking")
-        self.target_unpack_dir = self.zip_file.replace(".zip", "")
-        try:
-            with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
-                zip_ref.extractall(self.target_unpack_dir)
-        except OSError:
-            raise DownloaderError("No disk space available in download folder!")
-        except (zipfile.BadZipFile, zlib.error):
-            raise DownloaderError("Zip file is broken. Please try again later or use another repository.")
-
-        logging.info(f"File is unpacked to {self.target_unpack_dir}")
+        self.unpack_archive()
 
         if "ElectronicsDesktop" in self.settings.version:
             self.install_edt()
@@ -655,6 +739,21 @@ class Downloader:
         self.update_installation_history(status="In-Progress", details=f"Clean temp directory")
         self.clean_temp()
 
+    def unpack_archive(self):
+        self.update_installation_history(status="In-Progress", details=f"Start unpacking")
+        self.target_unpack_dir = self.zip_file.replace(".zip", "")
+        try:
+            with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
+                zip_ref.extractall(self.target_unpack_dir)
+        except OSError as err:
+            if err.errno == errno.ENOSPC:
+                raise DownloaderError("No disk space available in download folder!")
+            else:
+                raise DownloaderError(f"Cannot unpack due to {err}")
+        except (zipfile.BadZipFile, zlib.error):
+            raise DownloaderError("Zip file is broken. Please try again later or use another repository.")
+        logging.info(f"File is unpacked to {self.target_unpack_dir}")
+
     def install_edt(self):
         """
         Install Electronics Desktop. Make verification that the same version is not yet installed and makes
@@ -662,35 +761,12 @@ class Downloader:
         Get Workbench installation path from environment variable and enables integration if exists.
         :return: None
         """
-        self.parse_iss()
-        self.uninstall_edt()
+        setup_exe, product_id, installshield_version = self.parse_iss_template(self.target_unpack_dir)
+        self.uninstall_edt(setup_exe, product_id, installshield_version)
 
-        install_iss_file = os.path.join(self.target_unpack_dir, "install.iss")
-        install_log_file = os.path.join(self.target_unpack_dir, "install.log")
+        install_iss_file, install_log_file = self.create_install_iss_file(installshield_version, product_id)
 
-        integrate_wb = 0
-        awp_env_var = "AWP_ROOT" + self.product_version
-        if awp_env_var in os.environ:
-            run_wb = os.path.join(os.environ[awp_env_var], "Framework", "bin", "Win64", "RunWB2.exe")
-            if os.path.isfile(run_wb):
-                integrate_wb = 1
-                logging.info("Integration with Workbench turned ON")
-
-        # the "shared files" is created at the same level as the "AnsysEMxx.x" so if installing to unique folders,
-        # the Shared Files folder will be unique as well. Thus we can check install folder for license
-        if os.path.isfile(os.path.join(self.settings.install_path, "AnsysEM", "Shared Files",
-                                       "Licensing", "ansyslmd.ini")):
-            install_iss = iss_templates.install_iss + iss_templates.existing_server
-            logging.info("Install using existing license configuration")
-        else:
-            install_iss = iss_templates.install_iss + iss_templates.new_server
-            logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
-
-        with open(install_iss_file, "w") as file:
-            file.write(install_iss.format(self.product_id, os.path.join(self.settings.install_path, "AnsysEM"),
-                                          os.environ["TEMP"], integrate_wb, self.installshield_version))
-
-        command = [f'"{self.setup_exe}"', '-s', fr'-f1"{install_iss_file}"', fr'-f2"{install_log_file}"']
+        command = [f'"{setup_exe}"', "-s", fr'-f1"{install_iss_file}"', fr'-f2"{install_log_file}"']
         command = " ".join(command)
         self.update_installation_history(status="In-Progress", details=f"Start installation")
         logging.info(f"Execute installation")
@@ -700,22 +776,56 @@ class Downloader:
         self.update_edt_registry()
         self.remove_aedt_shortcuts()
 
-    def uninstall_edt(self):
+    def create_install_iss_file(self, installshield_version, product_id):
+        install_iss_file = os.path.join(self.target_unpack_dir, "install.iss")
+        install_log_file = os.path.join(self.target_unpack_dir, "install.log")
+        integrate_wb = 0
+        awp_env_var = "AWP_ROOT" + self.product_version
+        if awp_env_var in os.environ:
+            run_wb = os.path.join(os.environ[awp_env_var], "Framework", "bin", "Win64", "RunWB2.exe")
+            if os.path.isfile(run_wb):
+                integrate_wb = 1
+                logging.info("Integration with Workbench turned ON")
+        # the "shared files" is created at the same level as the "AnsysEMxx.x" so if installing to unique folders,
+        # the Shared Files folder will be unique as well. Thus we can check install folder for license
+        if os.path.isfile(
+            os.path.join(self.settings.install_path, "AnsysEM", "Shared Files", "Licensing", "ansyslmd.ini")
+        ):
+            install_iss = iss_templates.install_iss + iss_templates.existing_server
+            logging.info("Install using existing license configuration")
+        else:
+            install_iss = iss_templates.install_iss + iss_templates.new_server
+            logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
+        with open(install_iss_file, "w") as file:
+            file.write(
+                install_iss.format(
+                    product_id,
+                    os.path.join(self.settings.install_path, "AnsysEM"),
+                    os.environ["TEMP"],
+                    integrate_wb,
+                    installshield_version,
+                )
+            )
+        return install_iss_file, install_log_file
+
+    def uninstall_edt(self, setup_exe, product_id, installshield_version):
         """
         Silently uninstall build of the same version
         :return: None
         """
-        if not os.path.isfile(self.setup_exe):
-            raise DownloaderError("setup.exe does not exist")
-
         if os.path.isfile(self.installed_product_info):
             uninstall_iss_file = os.path.join(self.target_unpack_dir, "uninstall.iss")
             uninstall_log_file = os.path.join(self.target_unpack_dir, "uninstall.log")
             with open(uninstall_iss_file, "w") as file:
-                file.write(iss_templates.uninstall_iss.format(self.product_id, self.installshield_version))
+                file.write(iss_templates.uninstall_iss.format(product_id, installshield_version))
 
-            command = [f'"{self.setup_exe}"', '-uninst', '-s', fr'-f1"{uninstall_iss_file}"',
-                       fr'-f2"{uninstall_log_file}"']
+            command = [
+                f'"{setup_exe}"',
+                "-uninst",
+                "-s",
+                fr'-f1"{uninstall_iss_file}"',
+                fr'-f2"{uninstall_log_file}"',
+            ]
             command = " ".join(command)
             logging.info(f"Execute uninstallation")
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
@@ -724,6 +834,9 @@ class Downloader:
             self.check_result_code(uninstall_log_file, False)
             em_main_dir = os.path.dirname(self.product_root_path)
             self.remove_path(em_main_dir)
+
+            if os.path.isdir(em_main_dir):
+                raise DownloaderError(f"Failed to remove {em_main_dir}. Probably directory is locked.")
         else:
             logging.info("Version is not installed, skip uninstallation")
 
@@ -760,47 +873,62 @@ class Downloader:
                     raise DownloaderError(msg)
 
     @staticmethod
-    def get_edt_build_date(product_info_file):
+    def get_edt_build_date(product_info_file="", file_content=None):
         """
         extract information about Electronics Desktop build date and version
-        :param product_info_file: path to the product.info
-        :return: build_date, product_version
+        Args:
+            product_info_file: path to the product.info
+            file_content (list): accepts list with file content as well instead of file
+
+        Returns: (int) build_date
+
         """
-        build_date = False
         if os.path.isfile(product_info_file):
             with open(product_info_file) as file:
-                for line in file:
-                    if "AnsProductBuildDate" in line:
-                        full_build_date = line.split("=")[1].replace('"', '').replace("-", "")
-                        build_date = full_build_date.split()[0]
-                        break
-        try:
-            build_date = int(build_date)
-        except ValueError:
-            return False
-        return build_date
+                file_content = file.readlines()
 
-    def parse_iss(self):
+        for line in file_content:
+            if "AnsProductBuildDate" in line:
+                full_build_date = line.split("=")[1].replace('"', "").replace("-", "")
+                build_date = full_build_date.split()[0]
+                break
+        else:
+            # cannot find line with build date
+            return 0
+
+        try:
+            return int(build_date)
+        except ValueError:
+            return 0
+
+    @staticmethod
+    def parse_iss_template(unpacked_dir):
         """
         Open directory with unpacked build of Electronics Desktop and search for SilentInstallationTemplate.iss to
         extract product ID which is GUID hash
-        :modify: self.product_id: GUID of downloaded version
-        :modify: self.iss_template_content: append lines from template file
-        :modify: self.setup_exe: set path to setup.exe if exists
-        :modify: self.installshield_version: set version from file
+        Args:
+            unpacked_dir: directory where AEDT package was unpacked
+        Returns:
+            product_id: product GUID extracted from iss template
+            setup_exe: set path to setup.exe if exists
+            installshield_version: set version from file
         """
         default_iss_file = ""
+        setup_exe = ""
         product_id_match = []
 
-        for dir_path, dir_names, file_names in os.walk(self.target_unpack_dir):
+        for dir_path, dir_names, file_names in os.walk(unpacked_dir):
             for filename in file_names:
                 if "AnsysEM" in dir_path and filename.endswith(".iss"):
                     default_iss_file = os.path.join(dir_path, filename)
-                    self.setup_exe = os.path.join(dir_path, "setup.exe")
+                    setup_exe = os.path.join(dir_path, "setup.exe")
                     break
 
         if not default_iss_file:
             raise DownloaderError("SilentInstallationTemplate.iss does not exist")
+
+        if not os.path.isfile(setup_exe):
+            raise DownloaderError("setup.exe does not exist")
 
         with open(default_iss_file, "r") as iss_file:
             for line in iss_file:
@@ -808,13 +936,15 @@ class Downloader:
                     guid_regex = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
                     product_id_match = re.findall(guid_regex, line)
                 if "InstallShield Silent" in line:
-                    self.installshield_version = next(iss_file).split("=")[1]
+                    installshield_version = next(iss_file).split("=")[1]
 
         if product_id_match:
-            self.product_id = product_id_match[0]
-            logging.info(f"Product ID is {self.product_id}")
+            product_id = product_id_match[0]
+            logging.info(f"Product ID is {product_id}")
         else:
             raise DownloaderError("Unable to extract product ID")
+
+        return setup_exe, product_id, installshield_version
 
     def install_license_manager(self):
         """
@@ -827,8 +957,17 @@ class Downloader:
             if not os.path.isfile(self.settings.license_file):
                 raise DownloaderError(f"No license file was detected under {self.settings.license_file}")
 
-            command = [self.setup_exe, '-silent', '-LM', '-install_dir', install_path, "-lang", "en",
-                       "-licfilepath", self.settings.license_file]
+            command = [
+                self.setup_exe,
+                "-silent",
+                "-LM",
+                "-install_dir",
+                install_path,
+                "-lang",
+                "en",
+                "-licfilepath",
+                self.settings.license_file,
+            ]
             self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation")
             self.subprocess_call(command)
@@ -846,31 +985,54 @@ class Downloader:
         """
         Check build date of installation package of License Manager
         """
+
         build_file = os.path.join(self.target_unpack_dir, "builddate.txt")
-        if os.path.isfile(build_file):
-            with open(build_file) as file:
-                for line in file:
-                    if "license management center" in line.lower():
-                        lm_build_date = line.split()[-1]
-                        try:
-                            lm_build_date = int(lm_build_date)
-                            return lm_build_date
-                        except TypeError:
-                            raise DownloaderError("Cannot extract build date of installation package")
-        else:
+        lm_center_archive = os.path.join(self.target_unpack_dir, "lmcenter", "WINX64.7z")
+
+        if not os.path.isfile(build_file) and os.path.isfile(lm_center_archive):
+            with py7zr.SevenZipFile(lm_center_archive, "r") as archive:
+                archive.extractall(path=os.path.join(self.target_unpack_dir, "lmcenter"))
+            build_file = os.path.join(
+                self.target_unpack_dir,
+                "lmcenter",
+                "Shared Files",
+                "licensing",
+                "tools",
+                "lmcenter",
+                "lmcenter_blddate.txt",
+            )
+
+        if not os.path.isfile(build_file):
+            # check again if file was unpacked
             logging.warning("builddate.txt was not found in installation package")
+            return
+
+        with open(build_file) as file:
+            for line in file:
+                if "license management center" in line.lower():
+                    lm_build_date = line.split()[-1]
+                    try:
+                        logging.info(f"Build date of License Manager in installation package {lm_build_date}")
+                        lm_build_date = int(lm_build_date)
+                        return lm_build_date
+                    except TypeError:
+                        raise DownloaderError("Cannot extract build date of installation package")
 
     def get_license_manager_build_date(self):
         """
         Check build date of installed License Manager
         """
         build_date_file = os.path.join(self.product_root_path, "lmcenter_blddate.txt")
+        if not os.path.isfile(build_date_file):
+            raise DownloaderError("lmcenter_blddate.txt is not available")
+
         with open(build_date_file) as file:
             lm_build_date = next(file).split()[-1]
             try:
+                logging.info(f"Newly installed build date of License Manager: {lm_build_date}")
                 lm_build_date = int(lm_build_date)
                 return lm_build_date
-            except TypeError:
+            except (TypeError, ValueError):
                 raise DownloaderError("Cannot extract build date of installed License Manager")
 
     def install_wb(self, local_lang=False):
@@ -884,26 +1046,25 @@ class Downloader:
             uninstall_exe = self.uninstall_wb()
 
             install_path = os.path.join(self.settings.install_path, "ANSYS Inc")
-            command = [self.setup_exe, '-silent', '-install_dir', install_path]
+            command = [self.setup_exe, "-silent", "-install_dir", install_path]
             if not local_lang:
                 command += ["-lang", "en"]
             command += self.settings.wb_flags.split()
 
             # the "shared files" is created at the same level as the "ANSYS Inc" so if installing to unique folders,
             # the Shared Files folder will be unique as well. Thus we can check install folder for license
-            if (os.path.isfile(os.path.join(install_path, "Shared Files", "Licensing", "ansyslmd.ini")) or
-                    "ANSYSLMD_LICENSE_FILE" in os.environ):
+            if (
+                os.path.isfile(os.path.join(install_path, "Shared Files", "Licensing", "ansyslmd.ini"))
+                or "ANSYSLMD_LICENSE_FILE" in os.environ
+            ):
                 logging.info("Install using existing license configuration")
             else:
-                command += ['-licserverinfo', '2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1']
+                command += ["-licserverinfo", "2325:1055:127.0.0.1,OTTLICENSE5,PITRH6LICSRV1"]
                 logging.info("Install using 127.0.0.1, Otterfing and HQ license servers")
 
             # convert command to string to easy append custom flags
             command = subprocess.list2cmdline(command)
-
-            if hasattr(self.settings, "custom_flags"):
-                # old Downloader version settings file did not have this flag
-                command += " " + self.settings.custom_flags
+            command += " " + self.settings.custom_flags
 
             self.update_installation_history(status="In-Progress", details=f"Start installation")
             logging.info(f"Execute installation")
@@ -912,8 +1073,18 @@ class Downloader:
             if os.path.isfile(uninstall_exe):
                 logging.info("New build was installed")
             else:
-                raise DownloaderError("Workbench installation failed. " +
-                                      f"If you see this error message by mistake please report to {__email__}")
+                raise DownloaderError(
+                    "Workbench installation failed. "
+                    + f"If you see this error message by mistake please report to {__email__}"
+                )
+
+            if self.settings.wb_assoc:
+                wb_assoc_exe = os.path.join(self.settings.wb_assoc, "commonfiles", "tools", "winx64", "fileassoc.exe")
+                if not os.path.isfile(wb_assoc_exe):
+                    self.warnings_list.append(f"Cannot find {wb_assoc_exe}")
+                else:
+                    logging.info("Run WB file association")
+                    self.subprocess_call(wb_assoc_exe)
         else:
             raise DownloaderError("No Workbench setup.exe file detected")
 
@@ -924,7 +1095,7 @@ class Downloader:
 
         uninstall_exe = os.path.join(self.product_root_path, "Uninstall.exe")
         if os.path.isfile(uninstall_exe):
-            command = [uninstall_exe, '-silent']
+            command = [uninstall_exe, "-silent"]
             self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
             logging.info(f"Execute uninstallation")
             self.subprocess_call(command)
@@ -942,6 +1113,7 @@ class Downloader:
         :param path:
         :return:
         """
+
         def hard_remove():
             try:
                 # try this dirty method to force remove all files in directory
@@ -951,11 +1123,13 @@ class Downloader:
 
                 command = ["rmdir", "/Q", "/S", path]
                 self.subprocess_call(command, shell=True)
-            except:
-                logging.warning("Failed to remove directory")
+            except Exception as err:
+                logging.error(str(err))
+                logging.error("Failed to remove directory via hard_remove")
+                self.warnings_list.append("Failed to remove directory")
 
+        logging.info(f"Removing {path}")
         if os.path.isdir(path):
-            logging.info("Remove previous installation directory")
             try:
                 shutil.rmtree(path)
             except PermissionError:
@@ -963,45 +1137,36 @@ class Downloader:
                 hard_remove()
                 self.warnings_list.append("Clean remove failed due to Permissions Error")
             except (FileNotFoundError, OSError, Exception):
+                logging.warning("FileNotFoundError or other error. Switch to CMD force mode")
                 hard_remove()
                 self.warnings_list.append("Clean remove failed due to Not Found or OS Error")
 
         elif os.path.isfile(path):
             os.remove(path)
 
-    def get_build_info_file_from_artifactory(self, url, recursion=False):
+    def get_build_info_file_from_artifactory(self, build_info):
         """
         Downloads product info file from artifactory
-        :param (bool) recursion: Some artifactories do not have cached folders with Workbench  and we need recursively
-        run the same function but with new_url, however to prevent infinity loop we need this arg
-        :param (str) url: url to the package_id file
-        :return: (NoneType/str): None if some issue occurred during retrieving ID or package_id if extracted
+
+        :param (ArtifactoryPath) build_info: arti path to the package_id file
+        :return: (int): package_id if extracted
         """
-        password = getattr(self.settings.password, self.settings.artifactory)
-
-        with requests.get(url, auth=(self.settings.username, password), timeout=TIMEOUT, stream=True) as url_request:
-            if url_request.status_code == 404 and not recursion:
-                # in HQ cached build does not exist and will return 404. Recursively start download with new url
-                return self.get_build_info_file_from_artifactory(url.replace("-cache", ""), recursion=True)
-
-            if url_request.status_code == 200:
+        product_info = 0
+        package_info = build_info.read_text()
+        try:
+            if "Workbench" in self.settings.version:
+                first_line = package_info.split("\n")[0]
+                product_info = first_line.rstrip().split()[-1]
                 try:
-                    if "Workbench" in self.settings.version:
-                        first_line = url_request.text.split("\n")[0]
-                        product_info = first_line.rstrip().split()[-1]
-                        try:
-                            product_info = int(product_info.split("P")[0])
-                        except ValueError:
-                            return False
-                    else:
-                        prod_info_file = os.path.join(os.environ["TEMP"], "new_prod.info")
-                        with open(prod_info_file, "w") as file:
-                            file.write(url_request.text)
-                        product_info = self.get_edt_build_date(prod_info_file)
-                    return product_info
-                except IndexError:
+                    product_info = int(product_info.split("P")[0])
+                except ValueError:
                     pass
-        return None
+            else:
+                product_info = self.get_edt_build_date(file_content=package_info.split("\n"))
+        except IndexError:
+            pass
+
+        return product_info
 
     def clean_temp(self):
         """
@@ -1023,17 +1188,25 @@ class Downloader:
         """
         Function to remove newly created AEDT shortcuts and replace them with new one
         """
-        if not hasattr(self.settings, "replace_shortcut"):
-            # old Downloader version settings file
+        if not self.settings.replace_shortcut:
             return
 
-        if self.settings.replace_shortcut:
-            desktop = r"C:\Users\Public\Desktop"
-            for shortcut in ["ANSYS Savant", "ANSYS EMIT", "ANSYS SIwave", "ANSYS Twin Builder"]:
+        # include Public, user folder and user folder when OneDrive sync is enabled
+        for user in ["Public", os.getenv("username"), os.path.join(os.getenv("username"), "OneDrive - ANSYS, Inc")]:
+            desktop = os.path.join("C:\\", "Users", user, "Desktop")
+
+            for shortcut in [
+                "ANSYS Savant",
+                "ANSYS EMIT",
+                "ANSYS SIwave",
+                "ANSYS Twin Builder",
+                "Ansys Nuhertz FilterSolutions",
+            ]:
                 self.remove_path(os.path.join(desktop, shortcut + ".lnk"))
 
-            new_name = os.path.join(desktop,
-                                    f"20{self.product_version[:2]}R{self.product_version[2:]} Electronics Desktop.lnk")
+            new_name = os.path.join(
+                desktop, f"20{self.product_version[:2]}R{self.product_version[2:]} Electronics Desktop.lnk"
+            )
             aedt_shortcut = os.path.join(desktop, "ANSYS Electronics Desktop.lnk")
             if not os.path.isfile(new_name):
                 try:
@@ -1064,7 +1237,7 @@ class Downloader:
             for file in os.listdir(hpc_folder):
                 if ".acf" in file:
                     options_file = os.path.join(hpc_folder, file)
-                    command = [update_registry_exe, '-ProductName', product_version, '-FromFile', options_file]
+                    command = [update_registry_exe, "-ProductName", product_version, "-FromFile", options_file]
                     logging.info(f"Update registry")
                     self.subprocess_call(command)
 
@@ -1085,18 +1258,13 @@ class Downloader:
 
         self.get_installation_history()  # in case if file was deleted during run of installation
         time_now = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
-        try:
-            shorten_path = self.settings_path.replace(os.environ["APPDATA"], "%APPDATA%")
-        except KeyError:
-            shorten_path = self.settings_path
+        shorten_path = self.settings_path.replace(os.getenv("APPDATA", "@@@"), "%APPDATA%")
 
         if status == "Failed" or status == "Success":
             if self.warnings_list:
                 details += "\nSome warnings occurred during process:\n" + "\n".join(self.warnings_list)
 
-        self.history[self.hash] = [
-            status, self.settings.version, time_now, shorten_path, details, self.pid
-        ]
+        self.history[self.hash] = [status, self.settings.version, time_now, shorten_path, details, self.pid]
         with open(self.history_file, "w") as file:
             json.dump(self.history, file, indent=4)
 
@@ -1117,12 +1285,7 @@ class Downloader:
             root_path = os.path.dirname(os.path.realpath(__file__))
             icon_path = os.path.join(root_path, "notifications", icon)  # dev path
 
-        notification.notify(
-            title=status,
-            message=details,
-            app_icon=icon_path,
-            timeout=15
-        )
+        notification.notify(title=status, message=details, app_icon=icon_path, timeout=15)
 
     def get_installation_history(self):
         """
@@ -1149,11 +1312,11 @@ class Downloader:
         """
 
         version, tool = self.settings.version.split("_")
-        time_now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-        self.settings._replace(username=os.getenv("username", self.settings.username))
+        time_now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.settings.username = os.getenv("username", self.settings.username)
 
         if self.settings.artifactory == "SharePoint":
-            self.send_statistics_to_sharepoint(version, tool, time_now, error)
+            self.send_statistics_to_sharepoint(tool, version, time_now, error)
         else:
             self.send_statistics_to_influx(tool, version, time_now, error)
 
@@ -1179,12 +1342,10 @@ class Downloader:
                     "version": version,
                     "tool": tool,
                     "artifactory": self.settings.artifactory,
-                    "downloader_ver": __version__
+                    "downloader_ver": __version__,
                 },
                 "time": time_now,
-                "fields": {
-                    "count": 1
-                }
+                "fields": {"count": 1},
             }
         ]
 
@@ -1193,7 +1354,7 @@ class Downloader:
 
         client.write_points(json_body)
 
-    def send_statistics_to_sharepoint(self, version, tool, time_now, error):
+    def send_statistics_to_sharepoint(self, tool, version, time_now, error):
         """
         Send statistics to SharePoint list
         Args:
@@ -1213,11 +1374,11 @@ class Downloader:
             "tool": tool,
             "version": version,
             "in_influx": False,
-            "downloader_ver": __version__
+            "downloader_ver": __version__,
         }
 
         if error:
-            error = error.replace('\n', '#N').replace('\r', '')
+            error = error.replace("\n", "#N").replace("\r", "")
             item["error"] = error
 
         target_list.add_item(item)
@@ -1247,10 +1408,9 @@ class Downloader:
             logging.info(command_str)
 
             if popen:
-                p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
+                p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-                output = p.stdout.read().decode('utf-8')
+                output = p.stdout.read().decode("utf-8")
                 p.communicate()
             else:
                 subprocess.call(command, shell=shell)
@@ -1258,7 +1418,7 @@ class Downloader:
             return output
         except OSError:
             raise DownloaderError("Please run as administrator and disable Windows UAC")
-    
+
     @staticmethod
     def parse_args(version):
         """
@@ -1268,7 +1428,7 @@ class Downloader:
         parser = argparse.ArgumentParser()
         # Add long and short argument
         parser.add_argument("--path", "-p", help="set path to the settings file generated by UI")
-        parser.add_argument("--version", "-V", action='version', version=f'%(prog)s {version}')
+        parser.add_argument("--version", "-V", action="version", version=f"%(prog)s version: {version}")
         args = parser.parse_args()
 
         if args.path:
@@ -1302,8 +1462,12 @@ def set_logger(logging_file):
 
     # add logging to console and log file
     # If you set the log level to INFO, it will include INFO, WARNING, ERROR, and CRITICAL messages
-    logging.basicConfig(filename=logging_file, format='%(asctime)s (%(levelname)s) %(message)s', level=logging.INFO,
-                        datefmt='%d.%m.%Y %H:%M:%S')
+    logging.basicConfig(
+        filename=logging_file,
+        format="%(asctime)s (%(levelname)s) %(message)s",
+        level=logging.INFO,
+        datefmt="%d.%m.%Y %H:%M:%S",
+    )
     logging.getLogger().addHandler(logging.StreamHandler())
 
 

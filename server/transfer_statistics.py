@@ -5,8 +5,9 @@ import sys
 
 root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_folder)
-from sharepoint_uploader import app_principal, site_url
+from sharepoint_uploader import app_principal
 import downloader_backend
+from downloader_backend import SHAREPOINT_SITE_URL
 
 
 class DataHolder:
@@ -16,11 +17,11 @@ class TransferStats(downloader_backend.Downloader):
     def __init__(self):
         self.settings = DataHolder()
 
-        context_auth = AuthenticationContext(url=site_url)
+        context_auth = AuthenticationContext(url=SHAREPOINT_SITE_URL)
         context_auth.acquire_token_for_app(client_id=app_principal['client_id'],
                                            client_secret=app_principal['client_secret'])
 
-        self.ctx = ClientContext(site_url, context_auth)
+        self.ctx = ClientContext(SHAREPOINT_SITE_URL, context_auth)
 
     def run(self):
         """

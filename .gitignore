@@ -1,7 +1,10 @@
-unittests/input
+tests/integration_tests/input
 dist
 .vscode
 venv
+python_build
+*.spec
+htmlcov
 
 # User-specific files
 *.rsuser
