@@ -1,6 +1,5 @@
 steps:
-  - script: |
-    pushd ..\
+- script: |
     if exist py_venv (
       call py_venv\Scripts\deactivate.bat
       del /f /s /q py_venv >nul
@@ -22,5 +21,4 @@ steps:
       del /f /s /q electron_ui\dist >nul
       rmdir /q /s electron_ui\dist >nul
     )
-    popd
   displayName: 'Clean environment'

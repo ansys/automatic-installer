@@ -1,11 +1,9 @@
 import json
-import sys
 import unittest
 from pathlib import Path
+import downloader_backend
 
 root_folder = Path(__file__).parent.parent.parent
-sys.path.append(root_folder)
-import downloader_backend
 
 
 class TestVersion(unittest.TestCase):
@@ -37,11 +35,7 @@ class TestVersion(unittest.TestCase):
         Returns:
 
         """
-        with open(root_folder.joinpath("electron_ui", "js", "whats_new.json")) as file:
+        with open(root_folder.joinpath("electron_ui", "web_pages", "js", "whats_new.json")) as file:
             whats_new = json.load(file)
 
         self.assertIn(self.version, whats_new)
-
-
-if __name__ == "__main__":
-    unittest.main()

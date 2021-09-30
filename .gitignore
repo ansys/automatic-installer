@@ -5,6 +5,7 @@ venv
 python_build
 *.spec
 htmlcov
+py_venv
 
 # User-specific files
 *.rsuser

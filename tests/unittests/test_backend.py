@@ -102,11 +102,16 @@ class DownloaderTest(BaseSetup):
         )
 
     def test_subprocess_call(self):
+        """
+        Need to run always with shell since echo is a shell command
+        Returns:
+
+        """
         result = self.downloader.subprocess_call("echo test_str", shell=True, popen=True)
-        self.assertEqual(result, "test_str\n")
+        self.assertEqual(result, "test_str")
 
         result = self.downloader.subprocess_call(["echo", "test_str"], shell=True, popen=True)
-        self.assertEqual(result, "test_str\n")
+        self.assertEqual(result, "test_str")
 
         with patch("subprocess.call") as call:
             result = self.downloader.subprocess_call(["echo", "test_str"], shell=True)
@@ -114,7 +119,7 @@ class DownloaderTest(BaseSetup):
             call.assert_called_with(["echo", "test_str"], shell=True)
             self.assertEqual(result, "")
 
-        result = self.downloader.subprocess_call(["echo", "test_str"])
+        result = self.downloader.subprocess_call(["echo", "test_str"], shell=True)
         self.assertEqual(result, "")
 
         with patch("subprocess.call", side_effect=OSError("Test error")):

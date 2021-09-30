@@ -718,7 +718,7 @@ class Downloader:
         msg = "Downloaded {}/{}MB...[{}%]".format(
             int(offset / 1024 / 1024), int(total_size / 1024 / 1024), min(round(offset / total_size * 100, 2), 100)
         )
-        logging.debug(msg)
+        logging.info(msg)
         self.update_installation_history(status="In-Progress", details=msg)
 
     def install(self, local_lang=False):
@@ -1408,9 +1408,12 @@ class Downloader:
             logging.info(command_str)
 
             if popen:
-                p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                p = subprocess.Popen(
+                    command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell
+                )
 
-                output = p.stdout.read().decode("utf-8")
+                byte_output = p.stdout.read()
+                output = byte_output.decode("utf-8").rstrip()
                 p.communicate()
             else:
                 subprocess.call(command, shell=shell)
