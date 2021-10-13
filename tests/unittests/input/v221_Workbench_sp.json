@@ -1,0 +1,21 @@
+{
+    "username": "mbeliaev",
+    "install_path": "C:\\Program Files",
+    "artifactory": "SharePoint",
+    "password": {
+        "Otterfing": "dummy_api",
+        "Canonsburg": "dummy_api"
+    },
+    "delete_zip": true,
+    "download_path": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp",
+    "version": "v221_Workbench",
+    "wb_flags": "-ensight -fluent -optislang -speos -dcs",
+    "custom_flags": "",
+    "days": [
+        "tu",
+        "th",
+        "sa"
+    ],
+    "time": "01:30",
+    "force_install": false
+}

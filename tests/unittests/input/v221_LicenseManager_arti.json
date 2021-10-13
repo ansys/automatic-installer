@@ -1,0 +1,23 @@
+{
+    "artifactory": "Canonsburg",
+    "username": "mbeliaev",
+    "password": {
+        "Otterfing": "dummy_api",
+        "Canonsburg": "dummy_api"
+    },
+    "version": "v221_LicenseManager",
+    "install_path": "C:\\Program Files",
+    "download_path": "C:\\Users\\mbeliaev\\AppData\\Local\\Temp",
+    "license_file": "C:\\Users\\mbeliaev\\License_2020_2021_DARMBELIAEV2.txt",
+    "delete_zip": false,
+    "force_install": false,
+    "replace_shortcut": true,
+    "wb_flags": "",
+    "custom_flags": "",
+    "days": [
+        "tu",
+        "th",
+        "sa"
+    ],
+    "time": "01:30"
+}

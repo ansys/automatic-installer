@@ -1,0 +1,12 @@
+psutil==5.8.0
+requests==2.25.1
+dohq-artifactory==0.7.742
+artifactory-du==1.0.5
+urllib3==1.26.5
+pyinstaller==4.3
+influxdb==5.3.1
+adal==1.2.7
+Office365-REST-Python-Client==2.3.7
+plyer==2.0.0
+pid==3.0.4
+py7zr==0.16.1

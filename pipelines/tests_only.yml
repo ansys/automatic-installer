@@ -1,0 +1,24 @@
+trigger: none
+pool:
+  name: Ansys
+steps:
+- template: templates\cleaning_env.yml
+- script: |
+    echo "Create py -3.7 dev virtual environment"
+    mkdir py_venv_dev
+    py -3.7 -m pip install --user pipenv
+    py -3.7 -m venv py_venv_dev
+
+    :: activate virtual environment only via .bat
+    set act_bat=py_venv_dev\Scripts\activate.bat
+    if not exist %act_bat% (
+        echo %act_bat% doesn't exist
+        exit 2
+    )
+    call %act_bat%
+    python -m pip install -r requirements-dev.txt
+    echo "Python dev dependencies are installed"
+  displayName: 'Install Python Dev Dependencies'
+
+- template: templates\run_tests.yml
+- template: templates\cleaning_env.yml

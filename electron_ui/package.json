@@ -1,0 +1,53 @@
+{
+  "name": "ansys_build_downloader",
+  "version": "3.0.0",
+  "main": "electron_main_win.js",
+  "description": "Application to download or schedule autoupdate of Ansys internal beta builds",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder build --win --x64 --publish never",
+    "deploy": "electron-builder build --win --x64 --publish always"
+  },
+  "author": {
+    "name": "Maksim Beliaev",
+    "email": "maksim.beliaev@ansys.com"
+  },
+  "dependencies": {
+    "axios": "^0.19.2",
+    "electron-updater": "^4.3.8",
+    "fast-xml-parser": "^3.17.3",
+    "ps-node": "^0.1.6"
+  },
+  "build": {
+    "appId": "com.ansys_downloader.app",
+    "asar": true,
+    "asarUnpack": [
+      "**/python_build/*",
+      "**/python_build/notifications/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "beliaev-maksim",
+        "repo": "beta_build_downloader",
+        "files": "!electron_backend.py"
+      }
+    ],
+    "win": {
+      "requestedExecutionLevel": "highestAvailable"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": false,
+      "runAfterFinish": true,
+      "include": "build.nsh",
+      "shortcutName": "Ansys Pre-Release Installer",
+      "uninstallDisplayName": "Ansys Pre-Release Installer ${version}"
+    }
+  },
+  "devDependencies": {
+    "electron": "11.0.1",
+    "electron-builder": "22.9.1"
+  }
+}

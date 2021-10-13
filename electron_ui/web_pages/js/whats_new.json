@@ -1,0 +1,75 @@
+{
+    "3.0.0": [
+        "- Now you can install License Manager<br>",
+        "- In settings you can add file associations for Workbench. ",
+        "This will allow you to open your WB products in official version using double click<br>",
+        "- Now you can get existing API key from Artifactory. Useful when use Installer on multiple machines<br>",
+        "- If you run Ansys product during update, then instead of aborting you are notified couple of times to ",
+        "allow you to close instance of Ansys product<br>",
+        "- Validate MD5 checksum for AEDT package zip file<br>",
+        "- Pre-Release Installer installation path is forced to be under ",
+        "'%PROGRAMFILES%\\Ansys Inc\\Pre Release Installer' due to performance issues<br>",
+        "- Minor: Now tool checks if Artifactory status is not in replication state to ensure package safety<br>",
+        "- Minor: Now tool compares Pre-Release Installer frontend and backend versions on start to ensure safety<br>",
+        "- Minor: Fix select all button on WB flags"
+    ],
+    "2.2.1": [
+        "- From next version of BetaDownloader auto-update won't require to click finish after app restart<br>",
+        "- Boulder artifactory new URL<br>"
+    ],
+    "2.2.0": [
+        "- Added possibility to add custom WB flags in addition to products list<br>",
+        "- Now you can request Artifactory API key directly from the main page<br>",
+        "- Release server will be moved to GitHub to avoid VPN dependence during app auto-update<br>",
+        "- Added 'First time configuration' message during first run for the most impatient users :)<br>",
+        "- Release of AEDT 2022R1 uses different installation path, adopted to this change<br>",
+        "- Added Azure Artifactory to the list of repositories, removed Gothenburg, Milton Park, ",
+        "updated URL for Boulder, Waterloo<br>",
+        "- Minor UI and backend bug fixes"
+    ],
+    "2.1.1": "Minor fixes",
+    "2.1.0": [
+        "- Available versions are not refreshed each time you switch between windows<br>",
+        "- Username is no more required for SharePoint download<br>",
+        "- Allow to install app for all users on machine<br>",
+        "- App name (shortcuts and start menu) was changed to Ansys Pre-Release Installer<br>",
+        "- Catch error when user tries install AEDT of the same version (eg 212) in parallel to the different location"
+    ],
+    "2.0.3": [
+        "- SharePoint product list loading hang issue (caused by TLS) is fixed<br>",
+        "- New force clean up method for installation folder<br>",
+        "- Show warnings in the status"
+    ],
+    "2.0.2": "Tooltip text fix",
+    "2.0.1": "Additional error catching",
+    "2.0.0": [
+        "- Added support of SharePoint as build source. No VPN needed anymore!",
+        "<p style=\"color:rgb(255,0,0);\">Note: First time configuration takes around 2 min. Please be patient!</p>",
+        "- Electronics Desktop shortcuts could be replaced after installation (see advanced settings)<br>",
+        "- Added desktop notification when new version is installed"
+    ],
+    "1.1.3": "Minor improvements in error catching",
+    "1.1.2": [
+        "- Verification that target software is not running before download and before installation.<br>",
+        "- This will ensure that files will not be corrupted during installation on locked folder"
+    ],
+    "1.1.1": [
+        "- Download process will be attempted 4 times in case of network issues<br>",
+        "- Software by default will start as elevated user to avoid permissions issues"
+    ],
+    "1.0.4": "Minor fixes",
+    "1.0.3": "Minor fixes",
+    "1.0.2": "Autoupdate server IP address was changed",
+    "1.0.1": "Minor UI fixes",
+    "1.0.0": [
+        "Public release of the software<br>",
+        "- Software allows to download and install recent beta build of Electronics Desktop or Workbench<br>",
+        "- Live installation progress could be seen on Installation History tab<br>",
+        "- Also user can enable scheduled installation of the software without manual interaction<br>",
+        "- Before download process software compares local and remote builds, ",
+        "starts download and installation process only if newer build is available on artifactory<br>",
+        "- For AEDT user can specify additional HPC or user settings files to be applied during installation<br>",
+        "- For WB user can select which products to install on the machine<br>",
+        "- BetaDownloader Software is autoupdated when connected to VPN and opened"
+    ]
+}
