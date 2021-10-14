@@ -28,8 +28,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "beliaev-maksim",
-        "repo": "beta_build_downloader",
+        "owner": "ansys",
+        "repo": "pre-release-installer",
         "files": "!electron_backend.py"
       }
     ],
