@@ -132,7 +132,7 @@ function install_once(settings_file) {
 function get_sharepoint_builds() {
       let installed = execSync("powershell.exe Get-Module SharePointPnPPowerShellOnline -ListAvailable").toString();
 
-      if (installed === 0) {
+      if (!installed) {
             dialog.showMessageBox(null, {
                   type: 'info',
                   buttons: ['OK'],
