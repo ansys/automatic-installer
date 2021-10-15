@@ -180,7 +180,7 @@ class SharepointUpload(Downloader):
         """
         Get list of all items available on SP
         Args:
-            distribution: lin or win
+            distribution: linx64 or winx64
 
         Returns: (list) list of all items
 
