@@ -366,6 +366,12 @@ body {
   font-weight: 400;
 }
 
+.logo-text {
+  font-size: 50px;
+  color: #bdc0cd;
+  font-family: Montserrat, sans-serif;
+}
+
 h1 {
   margin-top: 20px;
   margin-bottom: 15px;
