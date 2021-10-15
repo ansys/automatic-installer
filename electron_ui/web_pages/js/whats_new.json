@@ -1,4 +1,9 @@
 {
+    "3.0.1": [
+        "- Fixed issue with Sharepoint on new Ansys machines<br>",
+        "- Minor: API key is readonly field, use key button to request key<br>",
+        "- Minor: Fixed issue with backend executable, new way of compilation<br>"
+    ],
     "3.0.0": [
         "- Now you can install License Manager<br>",
         "- In settings you can add file associations for Workbench. ",
