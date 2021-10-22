@@ -1,0 +1,61 @@
+name: Manual publish workflow
+
+
+on:
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+        
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '12'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -r requirements.txt
+        
+    - name: test version
+      run: |
+        python -m unittest tests.unittests.test_version
+        
+    - name: build backend
+      run: |       
+        pushd electron_ui
+        pyinstaller.exe ..\downloader_backend.py --distpath python_build --workpath %TEMP% --exclude-module tkinter --onefile --noconsole  --hidden-import plyer.platforms.win.notification
+        Xcopy /E /I ..\notifications python_build\notifications
+        popd
+        
+    - name: node.js install
+      run: |
+        pushd electron_ui
+        echo "Current working directory is %CD%"
+        npm ci
+        echo "Dependencies are installed"
+        popd
+        
+    - name: publish
+      run: |
+        set GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+        pushd electron_ui
+        npm run deploy
+        popd
+        
+    
+    
+    
