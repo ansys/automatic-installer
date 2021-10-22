@@ -22,7 +22,7 @@ const about_options = {
         buttons: ['OK'],
         defaultId: 2,
         title: 'About',
-        message: 'Ansys Beta Build Downloader v' + version,
+        message: 'Ansys Pre-Release Installer v' + version,
         detail: 
             "Contact: betadownloader@ansys.com" +
             "\nCreated by: Maksim Beliaev" +
@@ -86,15 +86,19 @@ let submenu_list = [
     }
 ]
 
-if (!app.isPackaged || app.commandLine.hasSwitch("debug")) {
-    var app_width = 2*1000;    // debug flag is sent or exe not built
-        submenu_list.push({
-            label:'Developer Tools',
-            accelerator:process.platform == 'darwin' ? 'Command+R' : 'Ctrl+Shift+I',
-            role: "toggleDevTools"
-        })
+if (
+    (app.isPackaged && !app.commandLine.hasSwitch("debug")) ||
+    app.commandLine.hasSwitch("no-debug")
+) {
+    // for testing we may want to provide --no-debug flag to verify UI
+    app_width = 1000;
 } else {
-        var app_width = 1000;
+    app_width = 2*1000;    // debug flag is sent or exe not built
+    submenu_list.push({
+        label:'Developer Tools',
+        accelerator: 'Ctrl+Shift+I',
+        role: "toggleDevTools"
+    })
 }
 
 function create_settings_window() {

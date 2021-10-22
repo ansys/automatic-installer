@@ -50,7 +50,7 @@ npm run build
 ~~~
 
 # Distribution
-Releases of the tool are published on [GitHub](https://github.com/beliaev-maksim/beta_build_downloader/releases).
+Releases of the tool are published on [GitHub](https://github.com/ansys/pre-release-installer/releases).
 In order to publish a release you will need a Personal Access Token to GitHub set as `GH_TOKEN` environment variable 
 and then just run
 ~~~
@@ -64,7 +64,7 @@ builds from SP.
 # Statistics
 We collect statistics in two ways:
 1. Download count for each version via 
-[GitHub API](https://api.github.com/repos/beliaev-maksim/beta_build_downloader/releases). 
+[GitHub API](https://api.github.com/repos/ansys/pre-release-installer/releases). 
 2. Downloads count sent from user machine. See send_statistics() function in backend. This will send data to the 
 [InfluxDB](https://www.influxdata.com/). 
 To postprocess data [Grafana](https://grafana.com/) is used. To open Grafana use in web browser http://ottbld02:3000 and

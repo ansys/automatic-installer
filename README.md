@@ -12,10 +12,15 @@ from Ansys Sharepoint (no VPN)
 
 # Ansys Build Downloader Installation
 You can download latest version of Ansys Beta Build Installer from 
-[GitHub Releases](https://github.com/beliaev-maksim/beta_build_downloader/releases).
+[GitHub Releases](https://github.com/ansys/pre-release-installer/releases).
 If you have any version of Ansys Build Downloader already installed it will be [auto-updated](#tool-autoupdate) on next 
 launch.
 ![img](docs/images/ui.jpg)
+
+
+User can always monitor download and installation progress on _Installation History_ panel_.
+If you want to abort the process you can do it from the same page just by clicking on the row with running process.
+![img](docs/images/install_history.jpg)
 
 # Usage
 Almost every menu item is supplied with tooltips to help with navigation.
@@ -38,21 +43,19 @@ If you want, you can set the following advanced settings:
 4. Decide to keep or delete installation package after installation
 
 
-User can always monitor download and installation progress on _Installation History_ panel_.
-If you want to abort the process you can do it from the same page just by clicking on the row with running process.
-
 # FAQ and Features
 1. If you run Ansys software (the same BETA version e.g. 2022R1), then download and installation would be skipped. 
 This is done to prevent corruption of the build since during software run some files might be locked and thus can 
 cause damaged package. 
 2. Software will be downloaded and installed only if newer version exists in selected repository.
-3. You cannot download the partial installation package of Workbench, instead, schedule installation outside of your working hours.
+3. You cannot download the partial installation package of Workbench, instead, schedule installation 
+    outside of your working hours.
 4. Currently the tool supports only Windows OS and should be run as an elevated user (admin).
 
 
 ## Tool Automatic Update
- App will be autoupdated on the start of the UI
-![img](docs/images/autoupdate.png)
+ App will be autoupdated on the start of the UI  
+![img](docs/images/autoupdate.jpg)
 
 # Contribution
 If you would like to contribute to the current project please do it in a way you can:
@@ -60,4 +63,4 @@ If you would like to contribute to the current project please do it in a way you
 2. Open an issue (defect) on GitHub issues
 3. Open user story (feature suggestion) on GitHub issues
 
-You can always write your suggestion directly to: [Maksim Beliaev](mailto:maksim.beliaev@ansys.com)
+You can always write your suggestion directly to: [Our Team](mailto:betadownloader@ansys.com)
