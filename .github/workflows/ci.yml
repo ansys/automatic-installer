@@ -9,7 +9,7 @@ on:
       - '*'
 
 jobs:
-  linting:
+  tests:
     runs-on: windows-latest
     strategy:
       fail-fast: false
