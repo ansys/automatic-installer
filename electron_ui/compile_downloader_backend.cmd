@@ -9,12 +9,18 @@ IF %ERRORLEVEL% NEQ 0 (
 pushd ..
 
 :: create python virtual environment
-mkdir py_venv
 python -m pip install --user pipenv
-python -m venv py_venv
+if not exist venv (
+    python -m venv venv
+)
 
 :: activate virtual environment only via .bat
-call py_venv\Scripts\activate.bat
+set act_bat=venv_dev\Scripts\activate.bat
+if not exist %act_bat% (
+    echo %act_bat% doesn't exist
+    exit 2
+)
+call %act_bat%
 
 python -m pip install -r requirements.txt
 
