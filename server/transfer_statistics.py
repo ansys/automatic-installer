@@ -13,13 +13,15 @@ from downloader_backend import SHAREPOINT_SITE_URL
 class DataHolder:
     pass
 
+
 class TransferStats(downloader_backend.Downloader):
     def __init__(self):
         self.settings = DataHolder()
 
         context_auth = AuthenticationContext(url=SHAREPOINT_SITE_URL)
-        context_auth.acquire_token_for_app(client_id=app_principal['client_id'],
-                                           client_secret=app_principal['client_secret'])
+        context_auth.acquire_token_for_app(
+            client_id=app_principal["client_id"], client_secret=app_principal["client_secret"]
+        )
 
         self.ctx = ClientContext(SHAREPOINT_SITE_URL, context_auth)
 
@@ -47,25 +49,27 @@ class TransferStats(downloader_backend.Downloader):
         """
         for item in items:
             self.settings.artifactory = "SharePoint"
-            self.settings.username = item.properties['Title']
+            self.settings.username = item.properties["Title"]
             error = item.properties.get("error", None)
 
-            if item.properties['downloader_ver']:
-                downloader_backend.__version__ = item.properties['downloader_ver']
+            if item.properties["downloader_ver"]:
+                downloader_backend.__version__ = item.properties["downloader_ver"]
             else:
                 downloader_backend.__version__ = "2.0.0"
 
             if not item.properties["in_influx"]:
-                item.set_property('in_influx', True)
+                item.set_property("in_influx", True)
                 item.update()
                 self.ctx.execute_query()
 
-                self.send_statistics_to_influx(tool=item.properties['tool'],
-                                               version=item.properties['version'],
-                                               time_now=item.properties['Date'],
-                                               error=error)
+                self.send_statistics_to_influx(
+                    tool=item.properties["tool"],
+                    version=item.properties["version"],
+                    time_now=item.properties["Date"],
+                    error=error,
+                )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     transfer = TransferStats()
     transfer.run()

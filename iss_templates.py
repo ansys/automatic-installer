@@ -1,6 +1,8 @@
 import textwrap
+
 # {{{0}}} left for formatting to insert product key
-uninstall_iss = textwrap.dedent("""\
+uninstall_iss = textwrap.dedent(
+    """\
                                     [InstallShield Silent]
                                     Version={1}
                                     File=Response File
@@ -16,11 +18,13 @@ uninstall_iss = textwrap.dedent("""\
                                     Result=1
                                     bOpt1=0
                                     bOpt2=0
-                                """)
+                                """
+)
 
 
 # format options: 0-GUID, 1-install dir, 2-temp dir, 3-integrate WB, 4-install shield version
-install_iss = textwrap.dedent("""\
+install_iss = textwrap.dedent(
+    """\
                                 [InstallShield Silent]
                                 Version={4}
                                 File=Response File
@@ -72,15 +76,19 @@ install_iss = textwrap.dedent("""\
                                 Result=1
                                 bOpt1=0
                                 bOpt2=0              
-                            """)
+                            """
+)
 
-existing_server = textwrap.dedent("""
+existing_server = textwrap.dedent(
+    """
                                     [{{{0}}}-DLG_ASKLICENSEOPTION-0]
                                     nLicenseOption=3
                                     Result=1
-                                  """)
+                                  """
+)
 
-new_server = textwrap.dedent("""
+new_server = textwrap.dedent(
+    """
                                 [{{{0}}}-DLG_ASKLICENSEOPTION-0]
                                 nLicenseOption=2
                                 Result=1
@@ -93,4 +101,5 @@ new_server = textwrap.dedent("""
                                 bSpecifyTCPPort=1
                                 sTCPPortNumber=1055
                                 Result=1
-                             """)
+                             """
+)

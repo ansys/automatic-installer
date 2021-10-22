@@ -15,46 +15,46 @@ class InstallUninstallTest(unittest.TestCase):
         root_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
         settings_file = os.path.join(root_folder, test_settings["settings_file"])
 
-        with mock.patch('sys.argv', ["__file__", r'-p', settings_file]):
+        with mock.patch("sys.argv", ["__file__", r"-p", settings_file]):
             self.downloader = downloader_backend.Downloader(version="Test")
             if self.downloader.settings.artifactory == "SharePoint":
                 self.downloader.ctx = self.downloader.authorize_sharepoint()
 
     def test_01_download_file(self):
         """
-            Test getting link according to settings file and download of the build from server
-            Uses following mock up is used:
-                arguments mock up of settings_file
+        Test getting link according to settings file and download of the build from server
+        Uses following mock up is used:
+            arguments mock up of settings_file
         """
         self.downloader.get_build_link()
         self.downloader.download_file()
 
     def test_02_uninstall_wb(self):
         """
-            Test uninstallation of Workbench
-            Uses following mock up from settings file:
-                downloader.settings.install_path
-                downloader.settings.version
+        Test uninstallation of Workbench
+        Uses following mock up from settings file:
+            downloader.settings.install_path
+            downloader.settings.version
         """
         self.downloader.uninstall_wb()
 
     def test_03_install_wb(self):
         """
-            Test installation of Workbench
-            Uses following mock up:
-                arguments mock up of settings_file
-                downloader.target_unpack_dir
+        Test installation of Workbench
+        Uses following mock up:
+            arguments mock up of settings_file
+            downloader.target_unpack_dir
         """
         self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
         self.downloader.install_wb()
 
     def test_04_uninstall_edt(self):
         """
-            Test uninstallation of ElectronicsDesktop
-            Uses following mock up:
-                arguments mock up of settings_file
-                downloader.target_unpack_dir
-                downloader.installed_product
+        Test uninstallation of ElectronicsDesktop
+        Uses following mock up:
+            arguments mock up of settings_file
+            downloader.target_unpack_dir
+            downloader.installed_product
         """
         self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
         # todo fix test
@@ -63,32 +63,32 @@ class InstallUninstallTest(unittest.TestCase):
 
     def test_05_install_edt(self):
         """
-            Test installation of ElectronicsDesktop
-            Uses following mock up:
-                arguments mock up of settings_file
-                downloader.target_unpack_dir
+        Test installation of ElectronicsDesktop
+        Uses following mock up:
+            arguments mock up of settings_file
+            downloader.target_unpack_dir
         """
         self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
         self.downloader.install_edt()
 
     def test_06_install_all(self):
         """
-            Test installation of ElectronicsDesktop or Workbench depending on settings
-            !! be careful not to check delete zip in settings
-            Uses following mock up:
-                arguments mock up of settings_file
-                downloader.zip_file
+        Test installation of ElectronicsDesktop or Workbench depending on settings
+        !! be careful not to check delete zip in settings
+        Uses following mock up:
+            arguments mock up of settings_file
+            downloader.zip_file
         """
         self.downloader.zip_file = test_settings["zip_file"]
         self.downloader.install()
 
     def test_07_clean_temp(self):
         """
-            Test cleaning of temp directory from ZIP and unpacked folder
-            Uses following mock up:
-                arguments mock up of settings_file
-                downloader.target_unpack_dir
-                downloader.zip_file
+        Test cleaning of temp directory from ZIP and unpacked folder
+        Uses following mock up:
+            arguments mock up of settings_file
+            downloader.target_unpack_dir
+            downloader.zip_file
         """
         self.downloader.target_unpack_dir = test_settings["target_unpack_dir"]
         self.downloader.clean_temp()
@@ -110,9 +110,9 @@ class InstallUninstallTest(unittest.TestCase):
 
     def test_09_write_history(self):
         """
-            Test if the history of installation was written correct
-            Uses following mock up:
-                arguments mock up of settings_file
+        Test if the history of installation was written correct
+        Uses following mock up:
+            arguments mock up of settings_file
         """
         self.downloader.update_installation_history("Failed", "VPN turned off")
 
@@ -141,11 +141,11 @@ class InstallUninstallTest(unittest.TestCase):
     def test_14_get_folder_size(self):
         self.downloader.get_build_link()
         size = self.downloader.get_artifactory_folder_size()
-        self.assertAlmostEqual(size, 14647834464, delta=0.1*14647834464)
+        self.assertAlmostEqual(size, 14647834464, delta=0.1 * 14647834464)
         print(size)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(InstallUninstallTest("full_run"))
     runner = unittest.TextTestRunner()

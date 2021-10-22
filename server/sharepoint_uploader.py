@@ -19,15 +19,14 @@ from pathlib import Path
 from office365.sharepoint.client_context import ClientContext
 from office365.runtime.auth.authentication_context import AuthenticationContext
 
-app_principal = {
-    'client_id': os.environ["client_id"],
-    'client_secret': os.environ["client_secret"]
-}
+app_principal = {"client_id": os.environ["client_id"], "client_secret": os.environ["client_secret"]}
 
 __version__ = "v2.0.0"
 
+
 class UploaderError(Exception):
     pass
+
 
 def main():
     """
@@ -74,7 +73,7 @@ def upload_to_sharepoint(settings_file, distribution):
 
     all_items = sp.get_list_items(distribution=distribution)
     for item in all_items:
-        if item.properties['Title'] == sp.settings.version and item.properties['build_date'] == build_date:
+        if item.properties["Title"] == sp.settings.version and item.properties["build_date"] == build_date:
             logging.info(f"Build is up to date {item.properties['build_date']} == {build_date}")
             return
 
@@ -97,8 +96,9 @@ class SharepointUpload(Downloader):
     def __init__(self, settings_path):
         super().__init__(__version__, r"/home/electron/downloader_settings", settings_path)
         context_auth = AuthenticationContext(url=SHAREPOINT_SITE_URL)
-        context_auth.acquire_token_for_app(client_id=app_principal['client_id'],
-                                           client_secret=app_principal['client_secret'])
+        context_auth.acquire_token_for_app(
+            client_id=app_principal["client_id"], client_secret=app_principal["client_secret"]
+        )
 
         self.ctx = ClientContext(SHAREPOINT_SITE_URL, context_auth)
 
@@ -139,11 +139,15 @@ class SharepointUpload(Downloader):
         """
 
         file_size = file_path.stat().st_size
-        result_file = target_folder.files.create_upload_session(str(file_path), size_chunk,
-                                                                self.print_upload_progress, file_size)
+        result_file = target_folder.files.create_upload_session(
+            str(file_path), size_chunk, self.print_upload_progress, file_size
+        )
 
-        self.ctx.execute_query_retry(max_retry=100, exceptions=(Exception,),
-                                     failure_callback=lambda attempt, err: self.log_fail(attempt, err, total=100))
+        self.ctx.execute_query_retry(
+            max_retry=100,
+            exceptions=(Exception,),
+            failure_callback=lambda attempt, err: self.log_fail(attempt, err, total=100),
+        )
 
         remote_size = result_file.length
         if remote_size is None or abs(file_size - remote_size) > 0.03 * file_size:
@@ -152,7 +156,7 @@ class SharepointUpload(Downloader):
             self.ctx.execute_query()
             raise UploaderError("File size difference is more than 3%")
 
-        logging.info('File {0} has been uploaded successfully'.format(result_file.serverRelativeUrl))
+        logging.info("File {0} has been uploaded successfully".format(result_file.serverRelativeUrl))
 
     @retry(Exception, 4, logger=logging)
     def add_list_item(self, file_url, build_date, folder_url, distribution):
@@ -169,10 +173,14 @@ class SharepointUpload(Downloader):
         title = "product_list" if distribution == "winx64" else "linux_product_list"
 
         product_list = self.ctx.web.lists.get_by_title(title)
-        product_list.add_item({"Title": self.settings.version,
-                               "build_date": build_date,
-                               "relative_url": file_url,
-                               "shareable_folder": f"{SHAREPOINT_SITE_URL}/{folder_url}"})
+        product_list.add_item(
+            {
+                "Title": self.settings.version,
+                "build_date": build_date,
+                "relative_url": file_url,
+                "shareable_folder": f"{SHAREPOINT_SITE_URL}/{folder_url}",
+            }
+        )
         self.ctx.execute_query()
 
     @retry(Exception, 4, logger=logging)
@@ -194,16 +202,18 @@ class SharepointUpload(Downloader):
 
     @staticmethod
     def print_upload_progress(offset, total_size):
-        logging.info("Uploaded '{}' MB from '{}'...[{}%]".format(round(offset/1024/1024, 2),
-                                                                 round(total_size/1024/1024, 0),
-                                                                 round(offset/total_size * 100, 2)))
+        logging.info(
+            "Uploaded '{}' MB from '{}'...[{}%]".format(
+                round(offset / 1024 / 1024, 2), round(total_size / 1024 / 1024, 0), round(offset / total_size * 100, 2)
+            )
+        )
 
     @staticmethod
     def log_fail(attempt, err, total):
         logging.warning(f"Attempt: {attempt}/{total}. Execution failed due to {err}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         main()
     except PidFileError:

@@ -1,4 +1,3 @@
-
 # see https://github.com/ArekSredzki/electron-release-server/blob/master/docs/urls.md
 # see https://github.com/ArekSredzki/electron-release-server/blob/master/docs/api.md
 # see https://github.com/ArekSredzki/electron-release-server/issues/79#issuecomment-263068900
@@ -12,11 +11,8 @@ import yaml
 
 def login(base_url, ca_file, username, password):
     response = requests.post(
-        base_url+"/api/auth/login",
-        verify=ca_file,
-        json={
-            "username": username,
-            "password": password})
+        base_url + "/api/auth/login", verify=ca_file, json={"username": username, "password": password}
+    )
     response.raise_for_status()
     return response.json()["token"]
 
@@ -35,25 +31,16 @@ def parse_version(path):
 
 def create_version_if_needed(base_url, ca_file, token, channel, version, notes=""):
     response = requests.get(
-        base_url+"/api/version/%s"%version,
-        verify=ca_file,
-        headers={
-            "Authorization": "Bearer %s" % token
-        })
+        base_url + "/api/version/%s" % version, verify=ca_file, headers={"Authorization": "Bearer %s" % token}
+    )
     if response.status_code == 200:
         return
     response = requests.post(
-        base_url+"/api/version",
+        base_url + "/api/version",
         verify=ca_file,
-        headers={
-            "Authorization": "Bearer %s" % token
-        },
-        json={
-            "name": version,
-            "notes": notes,
-            "channel": {
-                "name": channel
-            }})
+        headers={"Authorization": "Bearer %s" % token},
+        json={"name": version, "notes": notes, "channel": {"name": channel}},
+    )
     response.raise_for_status()
 
 
@@ -67,29 +54,30 @@ def create_asset(base_url, ca_file, token, version, platform, path):
             raise SystemExit("No executable was found for upload")
 
     response = requests.post(
-        base_url+"/api/asset",
+        base_url + "/api/asset",
         verify=ca_file,
-        headers={
-            "Authorization": "Bearer %s" % token
-        },
+        headers={"Authorization": "Bearer %s" % token},
         data={
             "version": version,
             "platform": platform,
         },
-        files={
-            "file": open(path, "rb")})
+        files={"file": open(path, "rb")},
+    )
     response.raise_for_status()
 
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     description="Publishes an asset to the electron-release-server.",
-    epilog=textwrap.dedent('''
+    epilog=textwrap.dedent(
+        """
         example:
           export ERS_USERNAME=vagrant
           export ERS_PASSWORD=vagrant
           %(prog)s stable 1.0.0 windows_64 hello-world-electron/dist/*1.0.0.exe
-        '''))
+        """
+    ),
+)
 parser.add_argument("--channel", choices=["stable", "rc", "beta", "alpha"])
 parser.add_argument("--version", default="")
 parser.add_argument("--platform", choices=["windows_64", "windows_32", "osx_64", "linux_64", "linux_32"])
