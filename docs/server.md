@@ -136,6 +136,7 @@ In vim editor write:
 ~~~
 0 */1 * * * . $HOME/.bash_profile; python3.7 /home/electron/git/beta_downloader/server/sharepoint_uploader.py
 0 */1 * * * . $HOME/.bash_profile; python3.7 /home/electron/git/beta_downloader/server/transfer_statistics.py
+35 7 * * SUN . $HOME/.bash_profile; cd /home/electron/git/beta_downloader &&  /usr/local/bin/python3.7 ./server/sharepoint_cleaner.py
 ~~~
 
 Now activate cron to take this settings
