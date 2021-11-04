@@ -29,7 +29,7 @@
       {
         "provider": "github",
         "owner": "ansys",
-        "repo": "pre-release-installer",
+        "repo": "automatic-installer",
         "files": "!electron_backend.py"
       }
     ],
