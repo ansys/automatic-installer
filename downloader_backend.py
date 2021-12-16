@@ -475,7 +475,7 @@ class Downloader:
 
         art_path = ArtifactoryPath(server, auth=(self.settings.username, password), timeout=TIMEOUT)
         try:
-            repos_list = art_path.get_repositories()
+            repos_list = art_path.get_repositories(lazy=True)
         except requests.exceptions.HTTPError as err:
             if err.response.status_code in [401, 403]:
                 raise DownloaderError(
@@ -499,10 +499,8 @@ class Downloader:
                 continue
 
             if version not in artifacts_dict:
-                if "cache" in repo.description:
-                    repo_name += "-cache"
-
-                artifacts_dict[version] = repo_name
+                # extract real repo name in case it is cached
+                artifacts_dict[version] = art_path.joinpath(repo_name).stat().repo
 
         try:
             repo = artifacts_dict[self.settings.version]
