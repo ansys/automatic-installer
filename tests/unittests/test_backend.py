@@ -419,7 +419,7 @@ def add_responses_for_aedt_folders():
     for date in ["20210901", "20210902", "20210903"]:
         responses.add(
             responses.GET,
-            url=f"{arti_link}/api/storage/v221_EBU_Certified/{date}",
+            url=f"{arti_link}/api/storage/v221_EBU_Certified-cache/{date}",
             status=200,
             json={
                 "repo": "v221_EBU_Certified-cache",
@@ -440,7 +440,7 @@ def add_responses_for_aedt_folders():
 
     responses.add(
         responses.GET,
-        url=f"{arti_link}/api/storage/v221_EBU_Certified/Electronics_221_winx64",
+        url=f"{arti_link}/api/storage/v221_EBU_Certified-cache/Electronics_221_winx64",
         status=200,
         json={
             "repo": "v221_EBU_Certified-cache",
@@ -464,32 +464,33 @@ class ArtifactoryElectronicsTest(BaseSetup):
 
         artifactory_link = "http://ottvmartifact.win.ansys.com:8080/artifactory"
         bld_path = f"{artifactory_link}/api/storage/v221_EBU_Certified"
-        responses.add(
-            responses.GET,
-            url=bld_path,
-            status=200,
-            json={
-                "repo": "v221_EBU_Certified-cache",
-                "path": "/",
-                "created": "2021-03-31T15:47:13.460+02:00",
-                "lastModified": "2021-03-31T15:47:13.460+02:00",
-                "lastUpdated": "2021-03-31T15:47:13.460+02:00",
-                "children": [
-                    {"uri": "/20210901", "folder": True},
-                    {"uri": "/20210902", "folder": True},
-                    {"uri": "/20210903", "folder": True},
-                    {"uri": "/Electronics_221_winx64", "folder": True},
-                ],
-                "uri": f"{artifactory_link}/api/storage/v221_EBU_Certified-cache",
-            },
-        )
+        for url in [bld_path, bld_path+"-cache"]:
+            responses.add(
+                responses.GET,
+                url=url,
+                status=200,
+                json={
+                    "repo": "v221_EBU_Certified-cache",
+                    "path": "/",
+                    "created": "2021-03-31T15:47:13.460+02:00",
+                    "lastModified": "2021-03-31T15:47:13.460+02:00",
+                    "lastUpdated": "2021-03-31T15:47:13.460+02:00",
+                    "children": [
+                        {"uri": "/20210901", "folder": True},
+                        {"uri": "/20210902", "folder": True},
+                        {"uri": "/20210903", "folder": True},
+                        {"uri": "/Electronics_221_winx64", "folder": True},
+                    ],
+                    "uri": f"{artifactory_link}/api/storage/v221_EBU_Certified-cache",
+                },
+            )
         add_responses_for_aedt_folders()
         self.downloader.get_build_link()
 
         self.assertIsInstance(self.downloader.build_artifactory_path, downloader_backend.ArtifactoryPath)
         self.assertEqual(
             str(self.downloader.build_artifactory_path),
-            f"{artifactory_link}/v221_EBU_Certified/20210903/Electronics_221_winx64.zip",
+            f"{artifactory_link}/v221_EBU_Certified-cache/20210903/Electronics_221_winx64.zip",
         )
 
     @responses.activate
