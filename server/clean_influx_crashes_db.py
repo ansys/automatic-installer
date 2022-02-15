@@ -6,8 +6,8 @@ from influxdb import InfluxDBClient
 root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_folder)
 
-from downloader_backend import STATISTICS_SERVER, STATISTICS_PORT
-
+from downloader_backend import STATISTICS_PORT  # noqa: E402
+from downloader_backend import STATISTICS_SERVER  # noqa: E402
 
 client = InfluxDBClient(host=STATISTICS_SERVER, port=STATISTICS_PORT)
 

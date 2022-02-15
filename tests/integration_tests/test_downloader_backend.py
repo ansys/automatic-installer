@@ -131,7 +131,7 @@ class InstallUninstallTest(unittest.TestCase):
         """
         Gets latest url for the build located on SP
         """
-        list_str = self.downloader.get_sharepoint_build_info()
+        self.downloader.get_sharepoint_build_info()
         print(self.downloader.build_artifactory_path)
 
     def test_13_remove_shortcuts(self):

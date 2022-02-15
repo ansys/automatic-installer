@@ -3,9 +3,10 @@
 # see https://github.com/ArekSredzki/electron-release-server/issues/79#issuecomment-263068900
 
 import argparse
-import textwrap
-import requests
 import os
+import textwrap
+
+import requests
 import yaml
 
 

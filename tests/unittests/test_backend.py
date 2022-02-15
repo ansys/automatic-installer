@@ -7,8 +7,8 @@ from collections import namedtuple
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
-from zlib import error as zlib_err
 from zipfile import BadZipFile
+from zlib import error as zlib_err
 
 import psutil
 import responses
@@ -300,13 +300,28 @@ class SharepointWorkbenchTest(BaseSetup):
 
 
 def add_responses_for_repos(mocked_data, status=200):
-    arti_get_repos = mocked_data["arti_get_repos"]
-    responses.add(
-        responses.GET,
-        url="http://ottvmartifact.win.ansys.com:8080/artifactory/api/repositories",
-        status=status,
-        json=arti_get_repos,
-    )
+    if status == 200:
+        arti_get_repos = mocked_data["arti_get_repos"]
+        responses.add(
+            responses.GET,
+            url="http://ottvmartifact.win.ansys.com:8080/artifactory/api/repositories",
+            status=status,
+            json=arti_get_repos,
+        )
+    elif status == 403:
+        responses.add(
+            responses.GET,
+            url="http://ottvmartifact.win.ansys.com:8080/artifactory/api/repositories",
+            status=status,
+            json={"errors": ["Bad credentials"]},
+        )
+    else:
+        responses.add(
+            responses.GET,
+            url="http://ottvmartifact.win.ansys.com:8080/artifactory/api/repositories",
+            status=status,
+            json={"errors": ["some error"]},
+        )
 
     responses.add(
         responses.GET,
@@ -366,52 +381,36 @@ def add_responses_for_repos(mocked_data, status=200):
         url="http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Certified",
         status=200,
         json={
-  "repo" : "v221_Certified-cache",
-  "path" : "/",
-  "created" : "2020-04-29T18:50:05.135+02:00",
-  "lastModified" : "2020-04-29T18:50:05.135+02:00",
-  "lastUpdated" : "2020-04-29T18:50:05.135+02:00",
-  "children" : [ {
-    "uri" : "/linx64",
-    "folder" : True
-  }, {
-    "uri" : "/winx64",
-    "folder" : True
-  } ],
-  "uri" : "http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Certified-cache"
-}
+            "repo": "v221_Certified-cache",
+            "path": "/",
+            "created": "2020-04-29T18:50:05.135+02:00",
+            "lastModified": "2020-04-29T18:50:05.135+02:00",
+            "lastUpdated": "2020-04-29T18:50:05.135+02:00",
+            "children": [{"uri": "/linx64", "folder": True}, {"uri": "/winx64", "folder": True}],
+            "uri": "http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Certified-cache",
+        },
     )
 
     responses.add(
         responses.GET,
-        url='http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Licensing_Certified',
+        url="http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Licensing_Certified",
         status=200,
         json={
-  "repo" : "v221_Licensing_Certified-cache",
-  "path" : "/",
-  "created" : "2020-09-22T16:50:03.439+02:00",
-  "lastModified" : "2020-09-22T16:50:03.439+02:00",
-  "lastUpdated" : "2020-09-22T16:50:03.439+02:00",
-  "children" : [ {
-    "uri" : "/enterprise",
-    "folder" : True
-  }, {
-    "uri" : "/licregs",
-    "folder" : True
-  }, {
-    "uri" : "/linx64",
-    "folder" : True
-  }, {
-    "uri" : "/lsclient",
-    "folder" : True
-  }, {
-    "uri" : "/winx64",
-    "folder" : True
-  } ],
-  "uri" : "http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Licensing_Certified-cache"
-}
+            "repo": "v221_Licensing_Certified-cache",
+            "path": "/",
+            "created": "2020-09-22T16:50:03.439+02:00",
+            "lastModified": "2020-09-22T16:50:03.439+02:00",
+            "lastUpdated": "2020-09-22T16:50:03.439+02:00",
+            "children": [
+                {"uri": "/enterprise", "folder": True},
+                {"uri": "/licregs", "folder": True},
+                {"uri": "/linx64", "folder": True},
+                {"uri": "/lsclient", "folder": True},
+                {"uri": "/winx64", "folder": True},
+            ],
+            "uri": "http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Licensing_Certified-cache",
+        },
     )
-
 
 
 def add_responses_for_aedt_folders():
@@ -454,6 +453,30 @@ def add_responses_for_aedt_folders():
     )
 
 
+def add_aedt_responses(artifactory_link):
+    bld_path = f"{artifactory_link}/api/storage/v221_EBU_Certified"
+    for url in [bld_path, bld_path + "-cache"]:
+        responses.add(
+            responses.GET,
+            url=url,
+            status=200,
+            json={
+                "repo": "v221_EBU_Certified-cache",
+                "path": "/",
+                "created": "2021-03-31T15:47:13.460+02:00",
+                "lastModified": "2021-03-31T15:47:13.460+02:00",
+                "lastUpdated": "2021-03-31T15:47:13.460+02:00",
+                "children": [
+                    {"uri": "/20210901", "folder": True},
+                    {"uri": "/20210902", "folder": True},
+                    {"uri": "/20210903", "folder": True},
+                    {"uri": "/Electronics_221_winx64", "folder": True},
+                ],
+                "uri": f"{artifactory_link}/api/storage/v221_EBU_Certified-cache",
+            },
+        )
+
+
 class ArtifactoryElectronicsTest(BaseSetup):
     def setUp(self, settings_file=""):
         super().setUp("v221_ElectronicsDesktop_arti.json")
@@ -463,27 +486,7 @@ class ArtifactoryElectronicsTest(BaseSetup):
         add_responses_for_repos(self.mocked_data)
 
         artifactory_link = "http://ottvmartifact.win.ansys.com:8080/artifactory"
-        bld_path = f"{artifactory_link}/api/storage/v221_EBU_Certified"
-        for url in [bld_path, bld_path+"-cache"]:
-            responses.add(
-                responses.GET,
-                url=url,
-                status=200,
-                json={
-                    "repo": "v221_EBU_Certified-cache",
-                    "path": "/",
-                    "created": "2021-03-31T15:47:13.460+02:00",
-                    "lastModified": "2021-03-31T15:47:13.460+02:00",
-                    "lastUpdated": "2021-03-31T15:47:13.460+02:00",
-                    "children": [
-                        {"uri": "/20210901", "folder": True},
-                        {"uri": "/20210902", "folder": True},
-                        {"uri": "/20210903", "folder": True},
-                        {"uri": "/Electronics_221_winx64", "folder": True},
-                    ],
-                    "uri": f"{artifactory_link}/api/storage/v221_EBU_Certified-cache",
-                },
-            )
+        add_aedt_responses(artifactory_link)
         add_responses_for_aedt_folders()
         self.downloader.get_build_link()
 
@@ -501,10 +504,7 @@ class ArtifactoryElectronicsTest(BaseSetup):
 
         self.assertEqual(
             str(err.exception),
-            (
-                "Cannot retrieve repositories. Error: 404 Client Error: Not Found for "
-                "url: http://ottvmartifact.win.ansys.com:8080/artifactory/api/repositories"
-            ),
+            ("Cannot retrieve repositories. Error: some error"),
         )
 
     @responses.activate
@@ -515,7 +515,7 @@ class ArtifactoryElectronicsTest(BaseSetup):
 
         self.assertEqual(
             str(err.exception),
-            "Bad credentials, please verify your username and password for Otterfing",
+            "Cannot retrieve repositories. Error: Bad credentials",
         )
 
     def test_get_build_link_error_auth(self):
@@ -592,12 +592,14 @@ class ArtifactoryWorkbenchTest(BaseSetup):
     @responses.activate
     def test_get_build_link(self):
         add_responses_for_repos(self.mocked_data)
+        artifactory_link = "http://ottvmartifact.win.ansys.com:8080/artifactory"
+        add_aedt_responses(artifactory_link)
         self.downloader.get_build_link()
 
         self.assertIsInstance(self.downloader.build_artifactory_path, downloader_backend.ArtifactoryPath)
         self.assertEqual(
             str(self.downloader.build_artifactory_path),
-            "http://ottvmartifact.win.ansys.com:8080/artifactory/v221_Certified-cache/winx64",
+            f"{artifactory_link}/v221_Certified-cache/winx64",
         )
 
     @responses.activate

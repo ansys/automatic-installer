@@ -8,16 +8,20 @@ import datetime
 import logging
 import os
 import sys
+from pathlib import Path
 
-from pid import PidFile, PidFileError
+from office365.runtime.auth.authentication_context import AuthenticationContext
+from office365.sharepoint.client_context import ClientContext
+from pid import PidFile
+from pid import PidFileError
 
 root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_folder)
 
-from downloader_backend import Downloader, set_logger, retry, SHAREPOINT_SITE_URL
-from pathlib import Path
-from office365.sharepoint.client_context import ClientContext
-from office365.runtime.auth.authentication_context import AuthenticationContext
+from downloader_backend import SHAREPOINT_SITE_URL  # noqa: E402
+from downloader_backend import Downloader  # noqa: E402
+from downloader_backend import retry  # noqa: E402
+from downloader_backend import set_logger  # noqa: E402
 
 app_principal = {"client_id": os.environ["client_id"], "client_secret": os.environ["client_secret"]}
 
@@ -45,7 +49,7 @@ def main():
                 for dist in ["winx64", "linx64"]:
                     try:
                         upload_to_sharepoint(settings_file, distribution=dist)
-                    except:
+                    except Exception:
                         continue
 
 

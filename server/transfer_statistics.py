@@ -1,13 +1,16 @@
 import os
-from office365.sharepoint.client_context import ClientContext
-from office365.runtime.auth.authentication_context import AuthenticationContext
 import sys
+
+from office365.runtime.auth.authentication_context import AuthenticationContext
+from office365.sharepoint.client_context import ClientContext
 
 root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_folder)
-from sharepoint_uploader import app_principal
-import downloader_backend
-from downloader_backend import SHAREPOINT_SITE_URL
+
+from sharepoint_uploader import app_principal  # noqa: E402
+
+import downloader_backend  # noqa: E402
+from downloader_backend import SHAREPOINT_SITE_URL  # noqa: E402
 
 
 class DataHolder:

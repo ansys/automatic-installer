@@ -18,9 +18,10 @@ from types import SimpleNamespace
 
 import psutil
 import py7zr
-import requests
-from artifactory import ArtifactoryPath, md5sum
+from artifactory import ArtifactoryPath
+from artifactory import md5sum
 from artifactory_du import artifactory_du
+from dohq_artifactory import ArtifactoryException
 from influxdb import InfluxDBClient
 from office365.runtime.auth.authentication_context import AuthenticationContext
 from office365.runtime.client_request_exception import ClientRequestException
@@ -297,7 +298,7 @@ class Downloader:
                 self.check_process_lock()
             else:
                 if not self.settings.license_file:
-                    raise DownloaderError(f"No license file defined. Please select it in Advanced Settings")
+                    raise DownloaderError("No license file defined. Please select it in Advanced Settings")
 
                 if not os.path.isfile(self.settings.license_file):
                     raise DownloaderError(f"No license file was detected under {self.settings.license_file}")
@@ -316,7 +317,7 @@ class Downloader:
                 self.install()
                 try:
                     self.send_statistics()
-                except:
+                except Exception:
                     self.warnings_list.append("Connection to product improvement server failed")
                 self.update_installation_history(status="Success", details="Normal completion")
             else:
@@ -458,7 +459,7 @@ class Downloader:
         If use SharePoint then readdress to SP list
         :modify: (str) self.build_artifactory_path: URL link to the latest build that will be used to download archive
         """
-        self.update_installation_history(status="In-Progress", details=f"Search latest build URL")
+        self.update_installation_history(status="In-Progress", details="Search latest build URL")
         if self.settings.artifactory == "SharePoint":
             self.get_sharepoint_build_info()
             return
@@ -476,13 +477,8 @@ class Downloader:
         art_path = ArtifactoryPath(server, auth=(self.settings.username, password), timeout=TIMEOUT)
         try:
             repos_list = art_path.get_repositories(lazy=True)
-        except requests.exceptions.HTTPError as err:
-            if err.response.status_code in [401, 403]:
-                raise DownloaderError(
-                    "Bad credentials, please verify your username and password for {}".format(self.settings.artifactory)
-                )
-            else:
-                raise DownloaderError(f"Cannot retrieve repositories. Error: {err}")
+        except ArtifactoryException as err:
+            raise DownloaderError(f"Cannot retrieve repositories. Error: {err}")
 
         # fill the dictionary with Electronics Desktop and Workbench keys since builds could be different
         # still parse the list because of different names on servers
@@ -675,7 +671,7 @@ class Downloader:
             chunk_size: (int) chunk size in bytes when download
         Returns: None
         """
-        self.update_installation_history(status="In-Progress", details=f"Downloading file from SharePoint")
+        self.update_installation_history(status="In-Progress", details="Downloading file from SharePoint")
         remote_file = self.ctx.web.get_file_by_server_relative_url(
             f"/sites/BetaDownloader/{self.build_artifactory_path}"
         )
@@ -734,11 +730,11 @@ class Downloader:
         else:
             self.install_license_manager()
 
-        self.update_installation_history(status="In-Progress", details=f"Clean temp directory")
+        self.update_installation_history(status="In-Progress", details="Clean temp directory")
         self.clean_temp()
 
     def unpack_archive(self):
-        self.update_installation_history(status="In-Progress", details=f"Start unpacking")
+        self.update_installation_history(status="In-Progress", details="Start unpacking")
         self.target_unpack_dir = self.zip_file.replace(".zip", "")
         try:
             with zipfile.ZipFile(self.zip_file, "r") as zip_ref:
@@ -766,8 +762,8 @@ class Downloader:
 
         command = [f'"{setup_exe}"', "-s", fr'-f1"{install_iss_file}"', fr'-f2"{install_log_file}"']
         command = " ".join(command)
-        self.update_installation_history(status="In-Progress", details=f"Start installation")
-        logging.info(f"Execute installation")
+        self.update_installation_history(status="In-Progress", details="Start installation")
+        logging.info("Execute installation")
         self.subprocess_call(command)
 
         self.check_result_code(install_log_file)
@@ -825,8 +821,8 @@ class Downloader:
                 fr'-f2"{uninstall_log_file}"',
             ]
             command = " ".join(command)
-            logging.info(f"Execute uninstallation")
-            self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
+            logging.info("Execute uninstallation")
+            self.update_installation_history(status="In-Progress", details="Uninstall previous build")
             self.subprocess_call(command)
 
             self.check_result_code(uninstall_log_file, False)
@@ -966,14 +962,14 @@ class Downloader:
                 "-licfilepath",
                 self.settings.license_file,
             ]
-            self.update_installation_history(status="In-Progress", details=f"Start installation")
-            logging.info(f"Execute installation")
+            self.update_installation_history(status="In-Progress", details="Start installation")
+            logging.info("Execute installation")
             self.subprocess_call(command)
 
             package_build = self.parse_lm_installer_builddate()
             installed_build = self.get_license_manager_build_date()
             if all([package_build, installed_build]) and package_build == installed_build:
-                self.update_installation_history(status="Success", details=f"Normal completion")
+                self.update_installation_history(status="Success", details="Normal completion")
             else:
                 raise DownloaderError("License Manager was not installed")
         else:
@@ -1064,8 +1060,8 @@ class Downloader:
             command = subprocess.list2cmdline(command)
             command += " " + self.settings.custom_flags
 
-            self.update_installation_history(status="In-Progress", details=f"Start installation")
-            logging.info(f"Execute installation")
+            self.update_installation_history(status="In-Progress", details="Start installation")
+            logging.info("Execute installation")
             self.subprocess_call(command)
 
             if os.path.isfile(uninstall_exe):
@@ -1094,8 +1090,8 @@ class Downloader:
         uninstall_exe = os.path.join(self.product_root_path, "Uninstall.exe")
         if os.path.isfile(uninstall_exe):
             command = [uninstall_exe, "-silent"]
-            self.update_installation_history(status="In-Progress", details=f"Uninstall previous build")
-            logging.info(f"Execute uninstallation")
+            self.update_installation_history(status="In-Progress", details="Uninstall previous build")
+            logging.info("Execute uninstallation")
             self.subprocess_call(command)
             logging.info("Previous build was uninstalled using uninstaller")
         else:
@@ -1230,13 +1226,13 @@ class Downloader:
         with open(productlist_file) as file:
             product_version = next(file).rstrip()  # get first line
 
-        self.update_installation_history(status="In-Progress", details=f"Update registry")
+        self.update_installation_history(status="In-Progress", details="Update registry")
         if os.path.isdir(hpc_folder):
             for file in os.listdir(hpc_folder):
                 if ".acf" in file:
                     options_file = os.path.join(hpc_folder, file)
                     command = [update_registry_exe, "-ProductName", product_version, "-FromFile", options_file]
-                    logging.info(f"Update registry")
+                    logging.info("Update registry")
                     self.subprocess_call(command)
 
     def update_installation_history(self, status, details):
@@ -1249,7 +1245,7 @@ class Downloader:
         if status == "Failed" or status == "Success":
             try:
                 self.toaster_notification(status, details)
-            except:
+            except Exception:
                 msg = "Toaster notification did not work"
                 logging.error(msg)
                 self.warnings_list.append(msg)

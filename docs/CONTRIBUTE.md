@@ -1,4 +1,3 @@
-
 # Getting Started
 Current software is build on [Electron framework](https://www.electronjs.org/)  
 Python is used as backend to download the software (compiled to .exe to avoid Python dependency)
