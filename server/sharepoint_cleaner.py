@@ -49,8 +49,8 @@ class SharepointCleaner(SharepointUpload):
                         f"/sites/BetaDownloader/{folder_url}"
                     )
                     self.ctx.execute_query()
-                    remote_folder.recycle()
-                    item_to_delete.recycle()
+                    remote_folder.delete_object()
+                    item_to_delete.delete_object()
 
             if dry_run:
                 print("#" * 30)

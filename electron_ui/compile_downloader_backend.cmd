@@ -10,8 +10,8 @@ pushd ..
 
 :: create python virtual environment
 python -m pip install --user pipenv
-if not exist venv (
-    python -m venv venv
+if not exist venv_dev (
+    python -m venv venv_dev
 )
 
 :: activate virtual environment only via .bat
