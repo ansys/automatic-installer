@@ -1,7 +1,7 @@
 tests/integration_tests/input
 dist
 .vscode
-venv
+venv*
 python_build
 *.spec
 htmlcov
