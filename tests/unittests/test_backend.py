@@ -360,6 +360,59 @@ def add_responses_for_repos(mocked_data, status=200):
         },
     )
 
+    # add responses for .stat()
+    responses.add(
+        responses.GET,
+        url="http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Certified",
+        status=200,
+        json={
+  "repo" : "v221_Certified-cache",
+  "path" : "/",
+  "created" : "2020-04-29T18:50:05.135+02:00",
+  "lastModified" : "2020-04-29T18:50:05.135+02:00",
+  "lastUpdated" : "2020-04-29T18:50:05.135+02:00",
+  "children" : [ {
+    "uri" : "/linx64",
+    "folder" : True
+  }, {
+    "uri" : "/winx64",
+    "folder" : True
+  } ],
+  "uri" : "http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Certified-cache"
+}
+    )
+
+    responses.add(
+        responses.GET,
+        url='http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Licensing_Certified',
+        status=200,
+        json={
+  "repo" : "v221_Licensing_Certified-cache",
+  "path" : "/",
+  "created" : "2020-09-22T16:50:03.439+02:00",
+  "lastModified" : "2020-09-22T16:50:03.439+02:00",
+  "lastUpdated" : "2020-09-22T16:50:03.439+02:00",
+  "children" : [ {
+    "uri" : "/enterprise",
+    "folder" : True
+  }, {
+    "uri" : "/licregs",
+    "folder" : True
+  }, {
+    "uri" : "/linx64",
+    "folder" : True
+  }, {
+    "uri" : "/lsclient",
+    "folder" : True
+  }, {
+    "uri" : "/winx64",
+    "folder" : True
+  } ],
+  "uri" : "http://ottvmartifact.win.ansys.com:8080/artifactory/api/storage/v221_Licensing_Certified-cache"
+}
+    )
+
+
 
 def add_responses_for_aedt_folders():
     arti_link = "http://ottvmartifact.win.ansys.com:8080/artifactory"
