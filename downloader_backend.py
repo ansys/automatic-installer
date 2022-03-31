@@ -496,7 +496,9 @@ class Downloader:
 
             if version not in artifacts_dict:
                 # extract real repo name in case it is cached
-                artifacts_dict[version] = art_path.joinpath(repo_name).stat().repo
+                if art_path.joinpath(repo_name).exists():
+                    # repo might be syncing (happens on new release addition)
+                    artifacts_dict[version] = art_path.joinpath(repo_name).stat().repo
 
         try:
             repo = artifacts_dict[self.settings.version]
