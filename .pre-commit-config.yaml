@@ -31,14 +31,7 @@ repos:
       - id: flake8
         args: ['--max-line-length', '120', '--max-doc-length', '120']
   - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
-    rev: v1.1.1
+    rev: v1.1.2
     hooks:
       - id: markdown-toc
-        name: README.md-toc
-        files: ^README\.md$
-      - id: markdown-toc
-        name: configuration.md-toc
-        files: .*/configuration\.md$
-      - id: markdown-toc
-        name: CONTRIBUTE.md-toc
-        files: .*/CONTRIBUTE\.md$
+        name: Table of Contents

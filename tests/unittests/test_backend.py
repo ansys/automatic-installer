@@ -60,7 +60,7 @@ class DownloaderTest(BaseSetup):
 
     def test_check_free_space(self):
         _ntuple_diskusage = namedtuple("usage", "free")
-        with patch("shutil.disk_usage", return_value=_ntuple_diskusage(free=10 * (2 ** 30))):
+        with patch("shutil.disk_usage", return_value=_ntuple_diskusage(free=10 * (2**30))):
             with self.assertRaises(downloader_backend.DownloaderError) as err:
                 self.downloader.check_free_space("some/path", required=20)
 

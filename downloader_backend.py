@@ -360,7 +360,7 @@ class Downloader:
         :param required: value in GB that should be available on drive to pass the check
         :return:
         """
-        free_space = shutil.disk_usage(path).free // (2 ** 30)
+        free_space = shutil.disk_usage(path).free // (2**30)
         if free_space < required:
             err = f"Disk space in {path} is less than {required}GB. This would not be enough to proceed"
             raise DownloaderError(err)
@@ -760,7 +760,7 @@ class Downloader:
 
         install_iss_file, install_log_file = self.create_install_iss_file(installshield_version, product_id)
 
-        command = [f'"{setup_exe}"', "-s", fr'-f1"{install_iss_file}"', fr'-f2"{install_log_file}"']
+        command = [f'"{setup_exe}"', "-s", rf'-f1"{install_iss_file}"', rf'-f2"{install_log_file}"']
         command = " ".join(command)
         self.update_installation_history(status="In-Progress", details="Start installation")
         logging.info("Execute installation")
@@ -817,8 +817,8 @@ class Downloader:
                 f'"{setup_exe}"',
                 "-uninst",
                 "-s",
-                fr'-f1"{uninstall_iss_file}"',
-                fr'-f2"{uninstall_log_file}"',
+                rf'-f1"{uninstall_iss_file}"',
+                rf'-f2"{uninstall_log_file}"',
             ]
             command = " ".join(command)
             logging.info("Execute uninstallation")
