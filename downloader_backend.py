@@ -704,7 +704,7 @@ class Downloader:
                         raise DownloaderError("No disk space available in download folder!")
                     raise
         except PermissionError as err:
-            msg = str(err).replace("PermissionError: [Errno 13] ", "")
+            msg = str(err).replace("[Errno 13]", "").strip()
             raise DownloaderError(msg)
 
         if not self.zip_file:
