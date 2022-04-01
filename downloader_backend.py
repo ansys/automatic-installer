@@ -856,13 +856,9 @@ class Downloader:
         with open(log_file) as file:
             for line in file:
                 code = re.findall(regex, line)
-                if code:
-                    if code[0] == "0":
-                        logging.info(success)
-                        break
-                    elif code[0] == "-3" and installation:
-                        msg += " Electronics Desktop cannot coexist in another location. Change installation path"
-                        raise DownloaderError(msg)
+                if code and code[0] == "0":
+                    logging.info(success)
+                    break
             else:
                 if not installation:
                     msg = "Official uninstaller failed, make hard remove"
