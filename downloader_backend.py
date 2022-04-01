@@ -34,7 +34,7 @@ import iss_templates
 
 __author__ = "Maksim Beliaev"
 __email__ = "maksim.beliaev@ansys.com"
-__version__ = "3.0.1"
+__version__ = "3.0.2"
 
 STATISTICS_SERVER = "OTTBLD02"
 STATISTICS_PORT = 8086
@@ -690,19 +690,22 @@ class Downloader:
         file_size = remote_file.length
         self.check_free_space(self.settings.download_path, file_size / 1024 / 1024 / 1024)
 
-        with open(self.zip_file, "wb") as zip_file:
-            try:
-                remote_file.download_session(
-                    zip_file,
-                    lambda offset: self.print_download_progress(offset, total_size=file_size),
-                    chunk_size=chunk_size,
-                )
-                self.ctx.execute_query()
-            except OSError as err:
-                if err.errno == errno.ENOSPC:
-                    raise DownloaderError("No disk space available in download folder!")
-                else:
+        try:
+            with open(self.zip_file, "wb") as zip_file:
+                try:
+                    remote_file.download_session(
+                        zip_file,
+                        lambda offset: self.print_download_progress(offset, total_size=file_size),
+                        chunk_size=chunk_size,
+                    )
+                    self.ctx.execute_query()
+                except OSError as err:
+                    if err.errno == errno.ENOSPC:
+                        raise DownloaderError("No disk space available in download folder!")
                     raise
+        except PermissionError as err:
+            msg = str(err).replace("PermissionError: [Errno 13] ", "")
+            raise DownloaderError(msg)
 
         if not self.zip_file:
             raise DownloaderError("ZIP download failed")

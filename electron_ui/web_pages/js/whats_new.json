@@ -1,4 +1,5 @@
 {
+    "3.0.2": "Minor fixes and error catchers.",
     "3.0.1": [
         "- Fixed issue with Sharepoint on new Ansys machines<br>",
         "- Moved repository to Ansys organization on GitHub<br>",
