@@ -1,0 +1,22 @@
+version: "3.0"
+services:
+  influxdb:
+    image: "influxdb:1.8"
+    ports:
+      - "9977:8086"
+    environment:
+      - INFLUXDB_HTTP_AUTH_ENABLED=false
+    volumes:
+      - influxdb:/var/lib/influxdb
+
+  grafana:
+    build: grafana/.
+    ports:
+      - "3333:3000"
+    volumes:
+      - grafanadb:/var/lib/grafana
+
+volumes:
+  influxdb:
+  grafanadb:
+
