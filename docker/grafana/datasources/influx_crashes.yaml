@@ -1,7 +1,7 @@
 apiVersion: 1
 
 datasources:
-  - name: InfluxDB_downloads
+  - name: InfluxDB_crashes
     type: influxdb
     access: proxy
     database: crashes
