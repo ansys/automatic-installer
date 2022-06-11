@@ -1,11 +1,8 @@
-import os
-
 from office365.runtime.auth.authentication_context import AuthenticationContext
 from office365.sharepoint.client_context import ClientContext
 from sharepoint_uploader import SHAREPOINT_SITE_URL
 from sharepoint_uploader import SharepointUpload
-
-app_principal = {"client_id": os.environ["client_id"], "client_secret": os.environ["client_secret"]}
+from sharepoint_uploader import app_principal
 
 
 class SharepointCleaner(SharepointUpload):

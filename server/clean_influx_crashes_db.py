@@ -1,15 +1,7 @@
-import os
-import sys
-
 from influxdb import InfluxDBClient
+from sharepoint_uploader import downloader_backend
 
-root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(root_folder)
-
-from downloader_backend import STATISTICS_PORT  # noqa: E402
-from downloader_backend import STATISTICS_SERVER  # noqa: E402
-
-client = InfluxDBClient(host=STATISTICS_SERVER, port=STATISTICS_PORT)
+client = InfluxDBClient(host=downloader_backend.STATISTICS_SERVER, port=downloader_backend.STATISTICS_PORT)
 
 db_list = client.get_list_database()
 print(db_list)
