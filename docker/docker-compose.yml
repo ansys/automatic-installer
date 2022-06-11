@@ -2,6 +2,7 @@ version: "3.0"
 services:
   influxdb:
     image: "influxdb:1.8"
+    restart: always
     ports:
       - "9977:8086"
     environment:
@@ -11,6 +12,7 @@ services:
 
   grafana:
     build: grafana/.
+    restart: always
     ports:
       - "3333:3000"
     volumes:
