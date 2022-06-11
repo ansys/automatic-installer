@@ -17,7 +17,7 @@ sudo yum install git
 
 ### Server Side for SP
 We need to provide regular builds to SP. This is done via running _cron_ on CentOS machine. 
-Cron runs [sharepoint_uploader.py](../server/sharepoint_uploader.py) multiple times per day and python code gets new 
+Cron runs [sharepoint_uploader.py](../docker/sharepoint/sharepoint_uploader.py) multiple times per day and python code gets new 
 builds from Artifactory, uploads them SP and adds information about new build to SP List.
 
 Secret keys configuration you can find in  [Upload To SharePoint](upload_to_SharePoint.md)

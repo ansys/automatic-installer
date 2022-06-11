@@ -58,6 +58,10 @@ class SharepointCleaner(SharepointUpload):
         self.ctx.execute_query()
 
 
-if __name__ == "__main__":
+def main():
     cleaner = SharepointCleaner()
     cleaner.remove_files(dry_run=False)
+
+
+if __name__ == "__main__":
+    main()

@@ -61,6 +61,10 @@ class TransferStats(Downloader):
                 )
 
 
-if __name__ == "__main__":
+def main():
     transfer = TransferStats()
     transfer.run()
+
+
+if __name__ == "__main__":
+    main()

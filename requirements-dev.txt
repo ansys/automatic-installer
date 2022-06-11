@@ -1,5 +1,4 @@
 -r requirements.txt
-black==21.8b
 coverage>=6.3.1,<7
 PyYAML==5.4.1
 responses>=0.18.0

@@ -10,3 +10,4 @@ Office365-REST-Python-Client==2.3.7
 plyer==2.0.0
 pid==3.0.4
 py7zr==0.16.1
+schedule==1.1.0

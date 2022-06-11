@@ -1,5 +1,6 @@
 from influxdb import InfluxDBClient
-from sharepoint_uploader import downloader_backend
+
+import downloader_backend
 
 client = InfluxDBClient(host=downloader_backend.STATISTICS_SERVER, port=downloader_backend.STATISTICS_PORT)
 
