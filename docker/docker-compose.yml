@@ -19,6 +19,8 @@ services:
       - grafanadb:/var/lib/grafana
 
   python-sharepoint:
+    # in order to build you need to create a hard link to downloader_backend.py and requirements.txt
+    # to ./sharepoint/code location
     build: sharepoint/.
     restart: always
     environment:
