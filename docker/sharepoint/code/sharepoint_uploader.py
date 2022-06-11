@@ -15,7 +15,7 @@ from office365.sharepoint.client_context import ClientContext
 from pid import PidFile
 from pid import PidFileError
 
-root_folder = Path(__file__).parent.parent.absolute()
+root_folder = Path(__file__).parent.parent.parent.parent.absolute()
 sys.path.append(str(root_folder))
 
 import downloader_backend as downloader_backend  # noqa: E402  # need for reimport!
@@ -39,7 +39,7 @@ def main():
     Returns:
 
     """
-    settings_folder = r"/home/electron/downloader_settings"
+    settings_folder = r"/settings"
     downloader_backend.set_logger(os.path.join(settings_folder, "uploader.log"))
     with PidFile():
         for file in os.listdir(settings_folder):
@@ -98,7 +98,7 @@ def upload_to_sharepoint(settings_file, distribution):
 
 class SharepointUpload(Downloader):
     def __init__(self, settings_path):
-        super().__init__(__version__, r"/home/electron/downloader_settings", settings_path)
+        super().__init__(__version__, r"/settings", settings_path)
         context_auth = AuthenticationContext(url=SHAREPOINT_SITE_URL)
         context_auth.acquire_token_for_app(
             client_id=app_principal["client_id"], client_secret=app_principal["client_secret"]

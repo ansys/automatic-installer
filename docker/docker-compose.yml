@@ -18,6 +18,16 @@ services:
     volumes:
       - grafanadb:/var/lib/grafana
 
+  python-sharepoint:
+    build: sharepoint/.
+    restart: always
+    environment:
+      # do not forget to set these envs on the host
+      - client_id=${client_id}
+      - client_secret=${client_secret}
+    volumes:
+      - ./settings:/settings
+
 volumes:
   influxdb:
   grafanadb:
