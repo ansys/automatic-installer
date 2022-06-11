@@ -23,7 +23,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "InfluxDB",
+      "datasource": "InfluxDB_downloads",
       "fieldConfig": {
         "defaults": {
           "links": []

@@ -19,7 +19,7 @@
   "links": [],
   "panels": [
     {
-      "datasource": "InfluxDB-crashes",
+      "datasource": "InfluxDB_crashes",
       "gridPos": {
         "h": 30,
         "w": 24,
