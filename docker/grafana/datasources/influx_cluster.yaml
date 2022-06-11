@@ -4,7 +4,7 @@ datasources:
   - name: InfluxDB_downloads
     type: influxdb
     access: proxy
-    database: downloads
+    database: aedt_hpc_launcher
     url: http://ottbld02:8086
     jsonData:
       httpMode: GET

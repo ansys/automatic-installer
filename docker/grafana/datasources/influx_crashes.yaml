@@ -4,7 +4,7 @@ datasources:
   - name: InfluxDB_downloads
     type: influxdb
     access: proxy
-    database: downloads
+    database: crashes
     url: http://ottbld02:8086
     jsonData:
       httpMode: GET
