@@ -96,7 +96,7 @@
       "type": "logs"
     },
     {
-      "datasource": "InfluxDB-crashes",
+      "datasource": "InfluxDB_crashes",
       "fieldConfig": {
         "defaults": {
           "custom": {

@@ -145,7 +145,7 @@
       }
     },
     {
-      "datasource": "InfluxDB-clusters",
+      "datasource": "InfluxDB_cluster",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -232,7 +232,7 @@
       "type": "gauge"
     },
     {
-      "datasource": "InfluxDB-clusters",
+      "datasource": "InfluxDB_cluster",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -334,7 +334,7 @@
       "type": "table"
     },
     {
-      "datasource": "InfluxDB-clusters",
+      "datasource": "InfluxDB_cluster",
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -470,7 +470,7 @@
       "type": "gauge"
     },
     {
-      "datasource": "InfluxDB-clusters",
+      "datasource": "InfluxDB_cluster",
       "fieldConfig": {
         "defaults": {
           "custom": {

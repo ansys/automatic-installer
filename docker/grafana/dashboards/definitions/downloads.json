@@ -148,7 +148,7 @@
       }
     },
     {
-      "datasource": "InfluxDB",
+      "datasource": "InfluxDB_downloads",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -264,7 +264,7 @@
       "type": "stat"
     },
     {
-      "datasource": "InfluxDB",
+      "datasource": "InfluxDB_downloads",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -368,7 +368,7 @@
       "type": "gauge"
     },
     {
-      "datasource": "InfluxDB",
+      "datasource": "InfluxDB_downloads",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -490,7 +490,7 @@
       "type": "table"
     },
     {
-      "datasource": "InfluxDB",
+      "datasource": "InfluxDB_downloads",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -669,7 +669,7 @@
       "type": "table"
     },
     {
-      "datasource": "InfluxDB",
+      "datasource": "InfluxDB_downloads",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -845,7 +845,7 @@
       "type": "stat"
     },
     {
-      "datasource": "InfluxDB",
+      "datasource": "InfluxDB_downloads",
       "fieldConfig": {
         "defaults": {
           "custom": {
