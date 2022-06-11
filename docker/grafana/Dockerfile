@@ -1,5 +1,5 @@
 from grafana/grafana-oss:8.5.4
 USER root
-COPY grafana.db /var/lib/grafana/grafana.db
-RUN chown grafana:root  /var/lib/grafana/grafana.db
+COPY  datasources/* /etc/grafana/provisioning/datasources
+RUN chown -R grafana:root  /etc/grafana/
 USER grafana

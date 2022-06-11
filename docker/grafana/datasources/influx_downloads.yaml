@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB_downloads
+    type: influxdb
+    access: proxy
+    database: site
+    url: http://ottbld02:8086
+    jsonData:
+      httpMode: GET
