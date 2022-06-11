@@ -15,8 +15,8 @@ from office365.sharepoint.client_context import ClientContext
 from pid import PidFile
 from pid import PidFileError
 
-root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(root_folder)
+root_folder = Path(__file__).parent.parent.absolute()
+sys.path.append(str(root_folder))
 
 from downloader_backend import SHAREPOINT_SITE_URL  # noqa: E402
 from downloader_backend import Downloader  # noqa: E402

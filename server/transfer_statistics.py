@@ -1,23 +1,15 @@
-import os
-import sys
-
 from office365.runtime.auth.authentication_context import AuthenticationContext
 from office365.sharepoint.client_context import ClientContext
-
-root_folder = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(root_folder)
-
+from sharepoint_uploader import SHAREPOINT_SITE_URL  # noqa: E402
+from sharepoint_uploader import Downloader  # noqa: E402
 from sharepoint_uploader import app_principal  # noqa: E402
-
-import downloader_backend  # noqa: E402
-from downloader_backend import SHAREPOINT_SITE_URL  # noqa: E402
 
 
 class DataHolder:
     pass
 
 
-class TransferStats(downloader_backend.Downloader):
+class TransferStats(Downloader):
     def __init__(self):
         self.settings = DataHolder()
 
@@ -55,11 +47,6 @@ class TransferStats(downloader_backend.Downloader):
             self.settings.username = item.properties["Title"]
             error = item.properties.get("error", None)
 
-            if item.properties["downloader_ver"]:
-                downloader_backend.__version__ = item.properties["downloader_ver"]
-            else:
-                downloader_backend.__version__ = "2.0.0"
-
             if not item.properties["in_influx"]:
                 item.set_property("in_influx", True)
                 item.update()
@@ -70,6 +57,7 @@ class TransferStats(downloader_backend.Downloader):
                     version=item.properties["version"],
                     time_now=item.properties["Date"],
                     error=error,
+                    downloader_ver=item.properties.get("downloader_ver", "2.0.0"),
                 )
 
 

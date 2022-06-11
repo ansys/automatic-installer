@@ -1315,7 +1315,7 @@ class Downloader:
         else:
             self.send_statistics_to_influx(tool, version, time_now, error)
 
-    def send_statistics_to_influx(self, tool, version, time_now, error):
+    def send_statistics_to_influx(self, tool, version, time_now, error, downloader_ver=__version__):
         """
         Send statistics to InfluxDB
         Args:
@@ -1323,6 +1323,7 @@ class Downloader:
             version: version
             time_now: time
             error: error if some crash occurred
+            downloader_ver: version of the backend
         Returns:
             None
         """
@@ -1337,7 +1338,7 @@ class Downloader:
                     "version": version,
                     "tool": tool,
                     "artifactory": self.settings.artifactory,
-                    "downloader_ver": __version__,
+                    "downloader_ver": downloader_ver,
                 },
                 "time": time_now,
                 "fields": {"count": 1},
