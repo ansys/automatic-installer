@@ -15,7 +15,7 @@ from office365.sharepoint.client_context import ClientContext
 from pid import PidFile
 from pid import PidFileError
 
-root_folder = Path(__file__).parent.parent.parent.parent.absolute()
+root_folder = Path(__file__).parent.parent.absolute()
 sys.path.append(str(root_folder))
 
 import downloader_backend as downloader_backend  # noqa: E402  # need for reimport!

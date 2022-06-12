@@ -19,15 +19,12 @@ services:
       - grafanadb:/var/lib/grafana
 
   python-sharepoint:
-    # in order to build you need to create a hard link to
-    # downloader_backend.py, requirements.txt, iss_templates.py
-    # to ./sharepoint/code location
-    build: sharepoint/.
+    build: ../.
     restart: always
     environment:
       # do not forget to set these envs on the host
-      - client_id=${client_id}
-      - client_secret=${client_secret}
+      - client_id
+      - client_secret
     volumes:
       - ./settings:/settings
 
