@@ -26,6 +26,7 @@ services:
       - client_id
       - client_secret
     volumes:
+      # create folder "settings" in the same dir with this file and put there downloader config files
       - ./settings:/settings
 
 volumes:
