@@ -1,18 +1,18 @@
-In order to upload builds and collect statistics we run CentOS server with docker.
+In order to upload builds and collect statistics we run Ubuntu server with docker.
 
 ## Create new user
 First a new local user must be created on ottbld02:
 ~~~
-sudo adduser electron
+sudo useradd -m -d /home_local/electron electron
 sudo passwd electron
-sudo gpasswd -a electron wheel
+sudo usermod -aG sudo electron
 su - electron
 ~~~
 
 
 ## Install git
 ~~~
-sudo yum install git
+sudo apt install git
 ~~~
 
 ## Install Docker
